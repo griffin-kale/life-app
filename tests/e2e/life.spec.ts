@@ -103,11 +103,15 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   await test.step('Woche: Ziele, Stapel, Doppelte zusammengeführt', async () => {
     await page.goto('/woche');
     await warteBisRuhig(page);
-    await expect(page.locator('main')).toContainText('Plattform');
+    await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('offen');
     await expect(page.locator('main')).toContainText('Delegieren');
     await expect(page.locator('main')).toContainText('an Carlotta');
     await expect(page.locator('main')).toContainText('Streichen vorgeschlagen');
     await expect(page.locator('.ttitle', { hasText: 'KGSt' })).toHaveCount(1);
+    await page.locator('section[aria-label="Bereiche"]').getByRole('link', { name: /Ziele/ }).click();
+    await page.waitForURL('/woche/ziele');
+    await expect(page.locator('main')).toContainText('Plattform');
+    expect((await page.request.get('/woche/gibtsnicht')).status()).toBe(404);
   });
 
   await test.step('Eintrag öffnen und zurück', async () => {
@@ -126,7 +130,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -161,11 +165,18 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.waitForURL('/koerper');
     await expect(page.locator('.toast')).toContainText('WHOOP ist verbunden');
     await page.getByRole('button', { name: 'Jetzt abgleichen' }).click();
-    await expect(page.locator('.werte')).toContainText('6:00');
-    await expect(page.locator('.werte')).toContainText(/40\s?%/);
+    await expect(page.locator('.nacht-karte')).toContainText('6:00');
+    await expect(page.locator('.nacht-karte')).toContainText(/40\s?%/);
     await expect(page.locator('main')).toContainText('Drei Nächte unter 6,5 Stunden');
+    await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('40 Min.');
+    await page.locator('.nacht-karte').click();
+    await page.waitForURL('/koerper/nacht');
+    await expect(page.locator('.werte')).toContainText('6:00');
+    await page.goto('/koerper/bewegung');
     await expect(page.locator('main')).toContainText('40 / 180 Min.');
+    await page.goto('/koerper/essen');
     await expect(page.locator('.gnote', { hasText: 'Ziel: 1,6 g' })).toContainText('82 kg');
+    await page.goto('/koerper');
   });
 
   await test.step('Training: Satz abhaken, Pause, Feedback, Satzzahl steigt', async () => {
@@ -188,6 +199,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Essen: Barcode per Nummer und Mahlzeit per Satz', async () => {
+    await page.locator('section[aria-label="Bereiche"]').getByRole('link', { name: '+ Mahlzeit' }).click();
+    await page.waitForURL('/koerper/essen');
     await page.getByRole('button', { name: 'Barcode scannen' }).click();
     await page.getByLabel('Barcode-Nummer').fill('4000000000001');
     await page.getByRole('button', { name: 'Suchen' }).click();
@@ -234,14 +247,22 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
     await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
     await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('23,45 € · Testmarkt');
+    await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufenplan');
+    await page.locator('section[aria-label="Bereiche"]').getByRole('link', { name: /Monatlich/ }).click();
+    await page.waitForURL('/geld/monatlich');
     await page.getByLabel('Einnahmen: Name').fill('Gehalt');
     await page.getByLabel('Einnahmen: Betrag').fill('5000');
     await page.locator('section[aria-label="Monatlich"]').getByRole('button', { name: 'Hinzufügen' }).first().click();
+    await page.goto('/geld/plan');
     await expect(page.locator('section[aria-label="Stufenplan"]')).toContainText('Stufe 3 von 7');
+    await page.goto('/geld/taschengeld');
     await page.getByLabel('Kind: Name').fill('Testkind');
     await page.getByLabel('Kind: Betrag').fill('3');
     await page.locator('section[aria-label="Taschengeld"]').getByRole('button', { name: 'Hinzufügen' }).click();
     await expect(page.locator('section[aria-label="Taschengeld"]')).toContainText('Testkind · 3 € pro Woche');
+    await page.goto('/geld');
+    await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufe 3');
+    expect((await page.request.get('/geld/gibtsnicht')).status()).toBe(404);
     const c = await (await page.request.get('/api/coach')).json();
     expect(c.warnungen.join(' ')).toContain('Familie');
     const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
@@ -319,6 +340,51 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Festhalten-Feld');
   });
 
+  await test.step('Schnellzugriffe: Plus öffnet alle Wege, Essen führt zur Essen-Seite', async () => {
+    await page.goto('/');
+    const reihe = page.locator('section[aria-label="Schnellzugriffe"]');
+    await reihe.getByRole('button', { name: 'Alle Wege zum Festhalten' }).click();
+    const blatt = page.getByRole('dialog', { name: 'Festhalten' });
+    await expect(blatt.getByRole('button')).toHaveCount(6);
+    await page.keyboard.press('Escape');
+    await expect(blatt).toHaveCount(0);
+    await reihe.getByRole('link', { name: 'Ausgabe' }).click();
+    await page.waitForURL('/geld');
+    await expect(page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker')).toBeFocused();
+  });
+
+  await test.step('iPad und Mac: Seitenleiste, Leiste oben, Inspektor, Tastatur', async () => {
+    const alt = page.viewportSize()!;
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await expect(page.locator('.seitenleiste')).toBeVisible();
+    await expect(page.locator('.tabbar')).toBeHidden();
+    await expect(page.locator('.heute-spalten')).toBeVisible();
+    await page.locator('.seitenleiste').getByRole('link', { name: 'Körper' }).click();
+    await page.waitForURL('/koerper');
+    await expect(page.locator('.seitenleiste a[aria-current="page"]')).toHaveText('Körper');
+    await page.keyboard.press('Meta+k');
+    await page.waitForURL('/archiv');
+    await expect(page.getByLabel('Suchen')).toBeFocused();
+    await page.locator('.mi-liste a[href^="/eintrag/"]').first().click();
+    await expect(page).toHaveURL('/archiv');
+    await expect(page.locator('.mi-rechts')).toContainText('Einordnung');
+    if (process.env.SCREENSHOTS) for (const [g, w, h] of [['mac', 1280, 800], ['ipad', 834, 1112]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      for (const [p2, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/geld', 'geld'], ['/woche', 'woche'], ['/archiv', 'logbuch']]) {
+        await page.goto(p2); await page.waitForTimeout(500);
+        await page.screenshot({ path: `test-results/design/${g}-${n}.png` });
+      }
+    }
+    await page.setViewportSize({ width: 834, height: 1112 });
+    await page.goto('/');
+    await expect(page.locator('.tabpille')).toBeVisible();
+    await page.getByRole('button', { name: 'Seitenleiste' }).click();
+    await expect(page.locator('.seitenleiste')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.setViewportSize(alt);
+  });
+
   await test.step('Menschen: anlegen, Kontakt mit Stunden, Vorschlag aus Einträgen', async () => {
     await page.goto('/menschen');
     await page.getByLabel('Name').fill('Testfreundin');
@@ -346,7 +412,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await erledigt.getByRole('radio', { name: 'gab Kraft' }).first().click();
     await expect(erledigt.getByRole('radio', { name: 'gab Kraft' }).first()).toHaveAttribute('aria-checked', 'true');
     await page.goto('/woche');
+    await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('1 : 0');
+    await page.goto('/woche/energie');
     await expect(page.locator('section[aria-label="Energie-Bilanz"]')).toContainText('Gab dir Kraft');
+    await page.goto('/woche/zeit-kaufen');
     await page.getByLabel('Was du abgeben könntest').fill('Fenster putzen');
     await page.getByRole('radio', { name: '2 Std. im Monat' }).click();
     await page.getByLabel('Kosten im Monat').fill('60');
