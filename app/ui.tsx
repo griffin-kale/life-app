@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 export type Item = {
   id: string; created_at: string; status: string; typ: string; text: string; roh: string | null; url: string | null;
   titel: string | null; quelle: string | null; kategorie: string | null; art: string | null; schritt: string | null;
-  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null;
+  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null; wenn?: string | null; energie?: number | null;
   ziel: string | null; hebel: number | null; aufwand_min: number | null; frist: string | null; wer: string | null; delegieren_an: string | null;
   stapel: string | null; rang: number | null; grund: string | null; sortiert_am: string | null; zeit: string | null; zeit_tag: string | null;
   erledigt_at: string | null; merged_into: string | null; manuell_tag: string | null; manuell_stapel: string | null;
@@ -15,10 +15,11 @@ export type Item = {
 /** Antwort von /api/heute */
 export type Stand = {
   tag: string; items: Item[]; erledigtHeute: Item[]; erledigtWoche: number; zuletzt: Item[]; engpass: string;
+  kraft?: { gab: string[]; kostete: string[] };
   ziele: { ziel: string; offen: number; erledigt: number }[]; sortiertAm: string | null; fehler: string | null; laeuft: boolean;
 };
 
-export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Geparkt', streichen: 'Streichen vorgeschlagen' };
+export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Parkplatz', streichen: 'Streichen vorgeschlagen' };
 export const aufwandLabel = (m: number | null) => (m ? (m <= 20 ? '15 Min.' : m <= 90 ? '1 Std.' : 'halber Tag') : null);
 
 export const TYP: Record<string, string> = { gedanke: 'Gedanke', zitat: 'Zitat', video: 'Video', buch: 'Buch', link: 'Artikel' };
@@ -157,12 +158,12 @@ export function usePressFeedback() {
   useEffect(() => { const f = () => {}; document.addEventListener('touchstart', f, { passive: true }); return () => document.removeEventListener('touchstart', f); }, []);
 }
 
-const TABS: [string, string, ReactNode][] = [
-  ['/', 'Heute', <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" /></>],
-  ['/woche', 'Woche', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>],
-  ['/koerper', 'Körper', <><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></>],
-  ['/archiv', 'Logbuch', <><path d="M9 7h11M9 12h11M9 17h7" /><circle cx="4.8" cy="7" r=".9" fill="currentColor" /><circle cx="4.8" cy="12" r=".9" fill="currentColor" /><circle cx="4.8" cy="17" r=".9" fill="currentColor" /></>],
-  ['/einstellungen', 'Einstellungen', <><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2.2" /><circle cx="9" cy="17" r="2.2" /></>],
+const TABS: [string, string, ReactNode, string[]][] = [
+  ['/', 'Heute', <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" /></>, []],
+  ['/woche', 'Woche', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>, []],
+  ['/koerper', 'Körper', <><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></>, []],
+  ['/geld', 'Geld', <><rect x="3" y="6.5" width="18" height="12" rx="2.5" /><circle cx="12" cy="12.5" r="2.6" /><path d="M6.5 9.5v.01M17.5 15.5v.01" /></>, []],
+  ['/mehr', 'Mehr', <><circle cx="5.5" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="18.5" cy="12" r="1.3" fill="currentColor" /></>, ['/archiv', '/einstellungen', '/eintrag', '/menschen', '/kompass']],
 ];
 
 export function TabBar() {
@@ -170,8 +171,8 @@ export function TabBar() {
   usePressFeedback();
   return (
     <nav className="tabbar" aria-label="Bereiche">
-      {TABS.map(([href, label, icon]) => {
-        const on = href === '/' ? path === '/' : path.startsWith(href);
+      {TABS.map(([href, label, icon, auch]) => {
+        const on = href === '/' ? path === '/' : path.startsWith(href) || auch.some((a) => path.startsWith(a));
         return (
           <Link key={href} href={href} aria-current={on ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icon}</svg>

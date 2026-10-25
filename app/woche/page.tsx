@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useToast, type Item, type Stand } from '../ui';
 import { Fragebogen } from '../fragebogen';
 import { useCheckins } from '../coach';
+import { ZeitKaufen } from '../zeit-kaufen';
 
 const REIHE = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
 
@@ -101,10 +102,24 @@ export default function Woche() {
                 </TaskRow>
               ))}
             </ul>
+            {s === 'geparkt' ? <p className="gnote">Der Parkplatz für Ideen ohne Bezug zum Engpass. Entscheide montags in der Wochenrunde, was davon in die Woche kommt.</p> : null}
             {s === 'streichen' ? <p className="gnote">Claude schlägt vor, das zu streichen. Gestrichenes liegt im Logbuch unter Archiviert.</p> : null}
           </section>
         );
       })}
+
+      {st?.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? (
+        <section className="gsec" aria-label="Energie-Bilanz">
+          <h2 className="glabel">Energie-Bilanz der Woche</h2>
+          <div className="group pad">
+            {st.kraft.gab.length ? <div className="fb-q"><span className="fb-frage okc">Gab dir Kraft</span>{st.kraft.gab.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
+            {st.kraft.kostete.length ? <div className="fb-q"><span className="fb-frage warn">Kostete Kraft</span>{st.kraft.kostete.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
+          </div>
+          <p className="gnote">Aus deinen Tipps nach dem Abhaken. Was oft Kraft kostet, ist ein Kandidat zum Delegieren oder für „Zeit kaufen“.</p>
+        </section>
+      ) : null}
+
+      <ZeitKaufen onToast={(t, k) => setToast(t, k)} />
 
       {neu.length ? (
         <section className="gsec">

@@ -5,6 +5,8 @@ import { heuteBerlin, offene } from './priorisieren';
 import { senden } from './push';
 import { warnsignale } from './coach-regeln';
 import { abgleichen, verbunden, whoopBereit } from './whoop';
+import { geldStand } from './geld';
+import { kompassStand } from './kompass';
 
 /**
  * Läuft jede Minute im Server: WHOOP abgleichen und Mitteilungen zur richtigen Zeit schicken.
@@ -49,10 +51,18 @@ export async function tick(userId = 'peter') {
     (await senden({ title: 'Der Tag', body: 'Drei Fragen, eine Minute. Dann ist der Plan für morgen fertig.', url: '/', tag: 'abend' }, userId)) > 0);
   if (p.warnung && minuten(uhr) >= minuten(p.morgenZeit) + 5 && minuten(uhr) <= 21 * 60) await einmal('warnung', tag, async () => {
     const k = await koerperStand(userId);
-    const w = [...k.warnungen, ...warnsignale(await offene())];
+    const g = await geldStand(userId).catch(() => null);
+    const w = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(await offene())];
     if (!w.length) return false;
     return (await senden({ title: 'Achtung', body: w[0], url: '/', tag: 'warnung' }, userId)) > 0;
   });
+  // Meilensteine stündlich prüfen. Neu freigeschaltete kommen als Mitteilung.
+  const stunde = uhr.slice(0, 2);
+  if ((await getSetting('kompass_stunde')) !== `${tag} ${stunde}`) {
+    await setSetting('kompass_stunde', `${tag} ${stunde}`);
+    const k = await kompassStand(userId).catch(() => null);
+    if (k?.neu.length && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) await senden({ title: 'Meilenstein', body: `${k.neu.join(', ')}. Im Kompass steht, was als Nächstes kommt.`, url: '/kompass', tag: 'meilenstein' }, userId);
+  }
   if (p.training) {
     const k = await koerperStand(userId);
     if (k.trainingstagHeute && faellig(uhr, k.stand.uhrzeit)) await einmal('training', tag, async () =>

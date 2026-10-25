@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 25. Oktober 2026, Version 0.8.0.
+Stand: 25. Oktober 2026, Version 0.11.0.
 
 ## Worum es geht
 
@@ -24,6 +24,10 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 | Essen per Barcode, Foto, Satz | 0.7 | `lib/essen.ts`, `app/koerper/essen.tsx` |
 | Mitteilungen aufs iPhone (Web Push) mit Zeitplan | 0.7 | `lib/push.ts`, `lib/zeitplan.ts`, `instrumentation.ts`, `public/sw.js` |
 | Ruhe: Stille, Atem, NSDR, Wim Hof, Runterfahren | 0.8 | `lib/ruhe.ts`, `app/koerper/ruhe` |
+| Geld: Wochentöpfe, Bon, Stufenplan, Sparziele, Taschengeld | 0.9 | `lib/geld.ts`, `lib/geld-regeln.ts`, `app/geld` |
+| Menschen, Wenn-dann-Pläne, Energie-Bilanz, Parkplatz, Zeit kaufen | 0.11 | `lib/menschen.ts`, `app/menschen`, `app/wenn.tsx`, `app/zeit-kaufen.tsx` |
+| Kompass: fünf Ringe, Verlauf, Level, Meilensteine | 0.10 | `lib/kompass.ts`, `lib/kompass-regeln.ts`, `app/kompass` |
+| Rückmeldungen ins Backlog, optional als GitHub-Issue | 0.9 | `lib/rueckmeldung.ts`, `app/rueckmeldung.tsx` |
 
 Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU, 1 GB RAM, 2 GB Swap, Ubuntu 24.04), Docker Compose mit App, Postgres und Caddy.
 
@@ -31,10 +35,11 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 
 1. **Anthropic-Schlüssel** in der Console der Griffin & Kale GmbH anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen, Schlüssel in `/opt/life/deploy/.env` als `ANTHROPIC_API_KEY=` eintragen, dann `docker compose up -d --force-recreate app`. Ohne Schlüssel sortiert nichts und der Coach schweigt.
 2. **WHOOP-App** auf developer.whoop.com registrieren. Weiterleitung `https://life.gneuss.xyz/api/whoop/callback`, Scopes: offline, read:recovery, read:cycles, read:sleep, read:workout, read:body_measurement. `WHOOP_CLIENT_ID` und `WHOOP_CLIENT_SECRET` in die `.env`, App neu starten, in Life unter Körper „WHOOP verbinden“.
-3. **Pull Requests** `feature/fundament`, `feature/koerper` und `feature/ruhe` nach `main` mergen, danach Tag auf die neueste Version. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
+3. **Pull Requests** `feature/fundament`, `feature/koerper`, `feature/ruhe`, `feature/geld` `feature/kompass` und `feature/menschen` nach `main` mergen, danach Tag auf die neueste Version. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
 4. **Mitteilungen einschalten:** Life vom Home-Bildschirm öffnen, Einstellungen, „Mitteilungen einschalten“, „Probe schicken“.
-5. **`SETUP_TOKEN` leeren**, sobald alle Geräte eingerichtet sind.
-6. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
+5. **GitHub-Schlüssel für Rückmeldungen** (optional): Fine-grained Token nur für `griffin-kale/life-app`, nur „Issues: Read and write“, als `GITHUB_ISSUES_TOKEN=` in die `.env`. Ohne Schlüssel bleiben Meldungen nur in Life.
+6. **`SETUP_TOKEN` leeren**, sobald alle Geräte eingerichtet sind.
+7. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
 
@@ -52,6 +57,7 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 | 25.10. | Mitteilungen per Web Push, 7:00 und 20:30 | Alle vier Arten gewünscht: Morgen, Abend, Warnsignale, Training. |
 | 25.10. | Alles bauen, Stück für Stück live | Jede Stufe geht online, sobald sie fertig ist. |
 | 25.10. | Fragen immer klickbar, eigene Worte zusätzlich | Peters Regel für die App und für Rückfragen. |
+| 25.10. | Dashboard mit Gamification, ohne Tagesserien | Peter mag Dashboards und Spiel-Elemente. Gerissene Serien frustrieren, ein verpasster Tag ändert laut Studie fast nichts. Deshalb Wochenpunkte und bleibende Meilensteine. |
 
 ## Fahrplan
 
@@ -64,7 +70,7 @@ Peters Wahl: Vorlagen 5, 10 und 20 Minuten, Gong am Anfang und Ende, Wochenstati
 - Runterfahren am Abend: Atmung, dann direkt die Abendfragen.
 - Minuten pro Woche auf „Körper“ und im Coach.
 
-### Stufe 4: Geld für die Familie
+### Stufe 4: Geld für die Familie, gebaut in 0.9
 Peters Wahl: wenige Töpfe pro Woche, Ausgaben per Sprache und Foto vom Kassenbon, Alltag, feste Kosten, Sparziele, ganze Familie mit Taschengeld, Familieneinkommen dabei. Stufenplan nach Studienlage, angelehnt an Dave Ramseys Baby Steps und die Verbraucherzentrale.
 
 - Töpfe pro Woche, Anzeige als Spanne gegen Ende der Woche (genaue Restbeträge erhöhen laut Studie die Ausgaben).
@@ -72,8 +78,16 @@ Peters Wahl: wenige Töpfe pro Woche, Ausgaben per Sprache und Foto vom Kassenbo
 - Peters Frau kommt als zweite Person in den Haushalt. Davor muss jede Abfrage nach `user_id` filtern und die Anmeldung pro Person laufen.
 - Kein Bankzugang. CSV-Import der Bank ist eine spätere Option.
 
-### Stufe 5: Menschen und Zeit
+### Stufe 5: Menschen und Zeit, gebaut in 0.11
 Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, Familienzeit zählen, Geburtstage, Stunden mit Freunden schätzen, Kreise Familie, Freunde, Team, Netzwerk. Für die Zeit: Wenn-dann-Plan zu jeder Top-Aufgabe, Energie-Bilanz nach Terminen, Ablenkungs-Parkplatz, Liste „Zeit kaufen“. Der Coach schlägt täglich eine kleine Geste vor.
+
+## Was als Nächstes sinnvoll ist
+
+- Zwei Wochen Alltag, dann aus den Rückmeldungen und dem Kompass entscheiden, was nachgeschärft wird.
+- Peters Frau als zweite Person: Anmeldung pro Person, jede Abfrage nach `user_id` filtern, Geld auf Haushaltsebene ist vorbereitet.
+- Apple Health per Kurzbefehl für Schritte (WHOOP liefert keine).
+- Kalender: Blöcke für „Jetzt dran“ und die Energie-Bilanz nach echten Terminen.
+- Webhooks von WHOOP statt Abruf alle zwei Stunden.
 
 ## Arbeitsweise
 

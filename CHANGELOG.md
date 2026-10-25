@@ -2,6 +2,49 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.11.0] – 2026-10-25
+
+### Hinzugefügt
+- **Menschen** unter Mehr: Kreise Familie, Freunde, Team, Netzwerk und Kunden. Letzter Kontakt, Takt pro Person, Erinnerung, wenn es länger her ist, Geburtstage.
+- Kontakt mit einem Tipp: Treffen, Abend, Telefonat, Nachricht. Stunden mit Freunden zählen bis zur nächsten Freundschaftsstufe (50, 90, 200 Stunden nach Hall 2018).
+- Steht ein bekannter Name in einem Eintrag, zählt Life das als Kontakt, ohne Claude. Neue Namen aus Einträgen schlägt Life zum Zuordnen vor.
+- Der Coach kennt fällige Kontakte und nahe Geburtstage und schlägt die tägliche Geste bevorzugt dafür vor.
+- **Wenn-dann-Plan** zu jeder Aufgabe in „Jetzt dran“: Tageszeit und Ort antippen.
+- **Energie-Bilanz:** nach dem Abhaken „gab Kraft“, „neutral“ oder „kostete Kraft“. Die Woche zeigt die Bilanz.
+- **Parkplatz** für Ideen ohne Bezug zum Engpass (vorher „Geparkt“).
+- **Zeit kaufen:** Liste, was du abgeben könntest, mit Stunden im Monat und Preis pro gewonnener Stunde. Montags bringt der Coach eine Idee daraus in die Wochenrunde.
+- Kompass: Sozial zählt Zeit mit Menschen und Kontakte, Zeit zählt Aufgaben nach Wenn-dann-Plan.
+
+### Sicherheit
+- Alle Namen aus „Menschen“ gehören ab jetzt zu den geschützten Namen und gehen nur als Platzhalter an Claude.
+
+## [0.10.0] – 2026-10-25
+
+### Hinzugefügt
+- **Kompass** als Dashboard: fünf Ringe für Zeit, Sozial, Mental, Körper und Geld, gefüllt aus echten Daten der Woche (Aufgaben mit Hebel, Pläne, Ruhe, Abendfragen, Training, Schlaf, Protein, Töpfe im Rahmen).
+- Verlauf über acht Wochen pro Konto, WHO-5-Kurve, dein eigenes Gefühl aus dem Wochenbogen daneben.
+- **Level** pro Konto und ein Life-Level: ein voller Ring bringt 100 Punkte pro Woche, die Stufen werden langsam größer.
+- **Meilensteine**, die bleiben: erste Krafteinheit, 100 Minuten Ruhe, Woche im Rahmen, Perfekte Woche und mehr. Neue kommen als Mitteilung.
+- Auf „Heute“ eine Leiste mit den fünf Ringen, ein Tipp öffnet den Kompass.
+
+### Bewusst nicht
+- Keine Tagesserien, die reißen. Punkte gibt es pro Woche.
+
+## [0.9.0] – 2026-10-25
+
+### Hinzugefügt
+- **Geld** als eigener Bereich für den Haushalt: wenige Wochentöpfe, Ausgaben per Satz („12,50 Bäcker“) oder Foto vom Kassenbon, Claude ordnet dem passenden Topf zu.
+- Ab Freitag zeigt Life den Rest als Spanne, übrig Gebliebenes wandert eine Woche weiter. Grund: Genaue Restbeträge gegen Ende verleiten laut Studie zum Ausgeben.
+- Stufenplan in sieben Stufen nach Dave Ramsey und Verbraucherzentrale, mit Peters Ziel von einem Jahr Puffer. Einnahmen, feste Kosten, Konsumschulden, Rücklage und Sparrate monatlich.
+- Sparziele und Taschengeld für die Kinder, jeden Montag kommt der Wochenbetrag dazu.
+- Warnsignal und Mitteilung, wenn ein Topf über dem Rahmen ist. Der Coach bekommt nur Zählungen, keine Beträge.
+- **Fehler oder Verbesserung melden** in den Einstellungen, für alle, die Life nutzen. Jede Meldung landet im Backlog, mit GitHub-Schlüssel automatisch als Aufgabe im Repo.
+- Neue Leiste unten: Heute, Woche, Körper, Geld, Mehr (Logbuch und Einstellungen).
+
+### Sicherheit
+- Bon-Fotos werden im Browser neu gespeichert (ohne Ortsdaten) und nicht aufbewahrt. Claude liest nur Laden und Summe.
+- Namen der Kinder bleiben auf dem Server. GitHub-Aufgaben bekommen Platzhalter statt Namen.
+
 ## [0.8.0] – 2026-10-25
 
 ### Hinzugefügt

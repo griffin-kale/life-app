@@ -126,7 +126,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -217,6 +217,101 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.clock.fastForward('05:02');
     await expect(page.locator('main')).toContainText('Die Minuten sind festgehalten');
     await expect(page.locator('header')).toContainText('5 Min. an 1 Tag');
+  });
+
+  await test.step('Geld: Töpfe anlegen, Ausgaben per Satz und Bon, Stufenplan, Taschengeld', async () => {
+    await page.goto('/geld');
+    await page.getByRole('button', { name: 'Töpfe anlegen' }).click();
+    await expect(page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker')).toBeVisible();
+    await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('12,50 Bäcker');
+    await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Alltag' }).click();
+    await page.getByRole('button', { name: 'Festhalten' }).click();
+    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('12,50 € · Bäcker');
+    await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Claude ordnet zu' }).click();
+    await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('Tanken 80');
+    await page.getByRole('button', { name: 'Festhalten' }).click();
+    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('80 € · Tanken');
+    await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('23,45 € · Testmarkt');
+    await page.getByLabel('Einnahmen: Name').fill('Gehalt');
+    await page.getByLabel('Einnahmen: Betrag').fill('5000');
+    await page.locator('section[aria-label="Monatlich"]').getByRole('button', { name: 'Hinzufügen' }).first().click();
+    await expect(page.locator('section[aria-label="Stufenplan"]')).toContainText('Stufe 3 von 7');
+    await page.getByLabel('Kind: Name').fill('Testkind');
+    await page.getByLabel('Kind: Betrag').fill('3');
+    await page.locator('section[aria-label="Taschengeld"]').getByRole('button', { name: 'Hinzufügen' }).click();
+    await expect(page.locator('section[aria-label="Taschengeld"]')).toContainText('Testkind · 3 € pro Woche');
+    const c = await (await page.request.get('/api/coach')).json();
+    expect(c.warnungen.join(' ')).toContain('Familie');
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    expect(prompts.join(' ')).not.toContain('Testkind');
+  });
+
+  await test.step('Rückmeldung: klickbar, wird GitHub-Aufgabe mit Platzhaltern', async () => {
+    await page.goto('/einstellungen');
+    const r = page.locator('section[aria-label="Rückmeldung"]');
+    await expect(r.getByRole('button', { name: 'Melden' })).toBeDisabled();
+    await r.getByRole('radiogroup', { name: 'Art' }).getByRole('radio', { name: 'Fehler' }).click();
+    await r.getByRole('radiogroup', { name: 'Bereich' }).getByRole('radio', { name: 'Geld' }).click();
+    await r.getByRole('radiogroup', { name: 'Gewicht' }).getByRole('radio', { name: 'nervt' }).click();
+    await r.getByLabel('Beschreibung').fill('Carlotta sieht den Topf doppelt');
+    await r.getByRole('button', { name: 'Melden' }).click();
+    await expect(page.locator('.toast')).toContainText('Aufgabe Nr. 42');
+    await expect(r).toContainText('eingegangen · Nr. 42');
+    const issues = await (await page.request.get('http://127.0.0.1:4010/issues')).json();
+    expect(issues[0].auth).toBe('Bearer github-test-token');
+    expect(issues[0].title).toContain('Fehler (Geld)');
+    expect(JSON.stringify(issues[0])).not.toContain('Carlotta');
+    expect(issues[0].labels).toContain('bug');
+  });
+
+  await test.step('Kompass: fünf Ringe, Level, Meilensteine aus echten Daten', async () => {
+    await page.goto('/kompass');
+    await expect(page.locator('.ringreihe .ringzelle')).toHaveCount(5);
+    await expect(page.locator('section[aria-label="Körper"]')).toContainText('Kraft');
+    await expect(page.locator('section[aria-label="Körper"]')).toContainText('1 / 3');
+    await expect(page.locator('section[aria-label="Meilensteine"] .meilenstein.an')).toContainText(['Erste Krafteinheit']);
+    await expect(page.locator('main')).toContainText('Life-Level');
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
+  });
+
+  await test.step('Menschen: anlegen, Kontakt mit Stunden, Vorschlag aus Einträgen', async () => {
+    await page.goto('/menschen');
+    await page.getByLabel('Name').fill('Testfreundin');
+    await page.getByRole('radiogroup', { name: 'Kreis' }).getByRole('radio', { name: 'Freunde' }).click();
+    await page.getByRole('button', { name: 'Hinzufügen' }).click();
+    const freunde = page.locator('section[aria-label="Freunde"]');
+    await expect(freunde).toContainText('Testfreundin');
+    await freunde.getByRole('button', { name: 'Abend 3 Std.' }).click();
+    await expect(freunde).toContainText('noch 47 Stunden bis zur nächsten Stufe');
+    const vorschlag = page.locator('section[aria-label="Vorschläge"]');
+    await expect(vorschlag).toContainText('Jonas');
+    await vorschlag.getByRole('button', { name: 'Team' }).first().click();
+    await expect(page.locator('section[aria-label="Team"]')).toContainText('Jonas');
+  });
+
+  await test.step('Zeit: Wenn-dann-Plan, Energie nach dem Abhaken, Zeit kaufen', async () => {
+    await page.goto('/');
+    const jetzt = page.locator('section[aria-label="Jetzt dran"] .task').first();
+    await jetzt.getByRole('button', { name: 'Wenn …' }).click();
+    await jetzt.getByRole('radiogroup', { name: 'Wann' }).getByRole('radio', { name: 'am Vormittag' }).click();
+    await jetzt.getByRole('radiogroup', { name: 'Wo' }).getByRole('radio', { name: 'am Schreibtisch' }).click();
+    await jetzt.getByRole('button', { name: 'Plan setzen' }).click();
+    await expect(page.locator('.wenn-satz').first()).toContainText('Wenn es am Vormittag ist und ich am Schreibtisch bin, dann:');
+    const erledigt = page.locator('section[aria-label="Heute erledigt"]');
+    await erledigt.getByRole('radio', { name: 'gab Kraft' }).first().click();
+    await expect(erledigt.getByRole('radio', { name: 'gab Kraft' }).first()).toHaveAttribute('aria-checked', 'true');
+    await page.goto('/woche');
+    await expect(page.locator('section[aria-label="Energie-Bilanz"]')).toContainText('Gab dir Kraft');
+    await page.getByLabel('Was du abgeben könntest').fill('Fenster putzen');
+    await page.getByRole('radio', { name: '2 Std. im Monat' }).click();
+    await page.getByLabel('Kosten im Monat').fill('60');
+    await page.getByRole('button', { name: 'Auf die Liste' }).click();
+    await expect(page.locator('section[aria-label="Zeit kaufen"]')).toContainText('30 € pro gewonnene Stunde');
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    expect(prompts.join(' ')).not.toContain('Testfreundin');
   });
 
   await test.step('Coach kennt das Warnsignal, Push nimmt nur echte Dienste', async () => {

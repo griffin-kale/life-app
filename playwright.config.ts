@@ -16,6 +16,8 @@ export const TEST_ENV = {
   WHOOP_BASE: 'http://127.0.0.1:4010',
   OFF_BASE: 'http://127.0.0.1:4010',
   LIFE_ZEITPLAN: 'aus',
+  GITHUB_ISSUES_TOKEN: 'github-test-token',
+  GITHUB_API: 'http://127.0.0.1:4010',
 };
 
 export default defineConfig({
