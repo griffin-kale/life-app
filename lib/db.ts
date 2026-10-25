@@ -108,6 +108,34 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now()
         )`;
       await sql`create table if not exists settings (key text primary key, value text not null)`;
+      // Version 0.6: mehrere Menschen pro Haushalt vorbereiten. Sichtbar ist vorerst nur Peter.
+      await sql`create table if not exists haushalte (id text primary key, name text not null, created_at timestamptz not null default now())`;
+      await sql`create table if not exists nutzer (id text primary key, haushalt_id text not null references haushalte(id), name text not null, rolle text not null default 'erwachsen', created_at timestamptz not null default now())`;
+      await sql`insert into haushalte (id, name) values ('gneuss', 'Familie') on conflict do nothing`;
+      await sql`insert into nutzer (id, haushalt_id, name) values ('peter', 'gneuss', 'Peter') on conflict do nothing`;
+      for (const t of ['items', 'korrekturen', 'credentials']) {
+        await sql.unsafe(`alter table ${t} add column if not exists user_id text not null default 'peter' references nutzer(id)`);
+      }
+      await sql`create index if not exists items_user on items (user_id, created_at desc)`;
+      await sql`
+        create table if not exists checkins (
+          id bigserial primary key,
+          user_id text not null default 'peter' references nutzer(id),
+          art text not null check (art in ('morgen', 'abend', 'woche')),
+          tag date not null,
+          antworten jsonb not null,
+          created_at timestamptz not null default now(),
+          unique (user_id, art, tag)
+        )`;
+      await sql`
+        create table if not exists coach (
+          user_id text not null default 'peter' references nutzer(id),
+          tag date not null,
+          art text not null check (art in ('morgen', 'abend')),
+          antwort jsonb not null,
+          created_at timestamptz not null default now(),
+          primary key (user_id, tag, art)
+        )`;
     })().catch((e) => { g.__schema = undefined; throw e; });
   }
   return g.__schema;

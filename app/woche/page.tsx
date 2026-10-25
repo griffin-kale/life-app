@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useToast, type Item, type Stand } from '../ui';
+import { Fragebogen } from '../fragebogen';
+import { useCheckins } from '../coach';
 
 const REIHE = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
 
@@ -14,6 +16,7 @@ export default function Woche() {
   const [st, setSt] = useState<Stand | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
   const [toast, setToast] = useToast();
+  const ci = useCheckins(true);
   const load = useCallback(async () => { setSt(await api<Stand>('/api/heute')); }, []);
   useEffect(() => { load().catch((e) => setToast((e as Error).message, 'err')); }, [load, setToast]);
   useEffect(() => {
@@ -54,6 +57,11 @@ export default function Woche() {
         <h1 className="title">Woche<i>.</i></h1>
         {st?.engpass ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p> : null}
       </header>
+      {ci.zeige === 'woche' ? (
+        <section className="gsec" aria-label="Wochenbogen">
+          <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
+        </section>
+      ) : ci.who5 !== null ? <p className="gnote">Wohlbefinden (WHO-5) diese Woche: {ci.who5} von 100{ci.who5 < 51 ? '. Unter 51 lohnt ein genauerer Blick, gern auch mit ärztlichem Rat.' : ''}</p> : null}
 
       {st?.ziele.length ? (
         <section className="gsec">

@@ -1,5 +1,6 @@
-// Attrappe für Amazon Bedrock in Tests: ordnet Einträge fest ein und sortiert nach Hebel.
-// Start: node tests/e2e/mock-bedrock.mjs (Port 4010). Wird von playwright.config.ts automatisch gestartet.
+// Attrappe für die Anthropic-API in Tests: ordnet Einträge fest ein, sortiert nach Hebel, spielt den Coach.
+// Merkt sich jede Anfrage, damit Tests prüfen können, dass Namen nur als Platzhalter ankommen (GET /prompts).
+// Start: node tests/e2e/mock-claude.mjs (Port 4010). Wird von playwright.config.ts automatisch gestartet.
 import http from 'node:http';
 const E = (o) => ({ typ: 'gedanke', kategorie: 'aufgabe', art: 'geld', titel: '', bereinigt: '', schritt: '', begruendung: '', kern: '', frage: '', ziel: '', hebel: 0, aufwand_min: 60, frist: '', wer: 'ich', delegieren_an: '', ...o });
 function einordnen(entry) {
@@ -11,8 +12,9 @@ function einordnen(entry) {
   if (/KGSt-Angebot rausschicken/.test(t)) return E({ titel: 'KGSt-Angebot', bereinigt: t, schritt: 'KGSt-Angebot rausschicken', ziel: 'Projekte', hebel: 1, aufwand_min: 15 });
   if (/Geschichten/.test(t)) return E({ kategorie: 'engpass', titel: 'Drei Behörden-Geschichten', bereinigt: t, schritt: 'Drei Behörden-Geschichten für die Plattform drehen', ziel: 'Plattform', hebel: 3, aufwand_min: 240 });
   if (/Newsletter/.test(t)) return E({ titel: 'Newsletter Plattform', bereinigt: t, schritt: 'Newsletter zum Plattform-Start an die Fachbereiche', ziel: 'Plattform', hebel: 3, aufwand_min: 60 });
-  if (/Carlotta/.test(t)) return E({ titel: 'Boutique-Rechnungen', bereinigt: t, schritt: 'Boutique-Rechnungen prüfen lassen', ziel: 'Boutique', hebel: 0, aufwand_min: 15, wer: 'delegieren', delegieren_an: 'Carlotta' });
-  if (/Jonas/.test(t)) return E({ titel: 'Content-Plan mit Jonas', bereinigt: t, schritt: 'Mit Jonas den Content-Plan abstimmen', ziel: 'Plattform', hebel: 2, aufwand_min: 15 });
+  if (/Rechnungen der Boutique/.test(t)) { const p = t.match(/\[Person \d+\]/)?.[0] || 'Carlotta'; return E({ titel: 'Boutique-Rechnungen', bereinigt: t, schritt: 'Boutique-Rechnungen prüfen lassen', ziel: 'Boutique', hebel: 0, aufwand_min: 15, wer: 'delegieren', delegieren_an: p }); }
+  if (/Jonas/.test(t)) return E({ titel: 'Content-Plan mit Jonas', bereinigt: t, schritt: 'Mit Jonas den Content-Plan abstimmen', ziel: 'Plattform', hebel: 2, aufwand_min: 15, namen: [{ name: 'Jonas', art: 'person' }] });
+  if (/Content-Plan/.test(t)) return E({ titel: 'Content-Plan', bereinigt: t, schritt: t.slice(0, 60), ziel: 'Plattform', hebel: 2, aufwand_min: 15 });
   if (/Messe-Notizen/.test(t)) return E({ kategorie: 'aufgabe', titel: 'Messe-Notizen', bereinigt: t, schritt: 'Messe-Notizen aus Leipzig sortieren', hebel: 0, aufwand_min: 60 });
   if (/Laternen/.test(t)) return E({ kategorie: 'privat', art: 'sozial', titel: 'Laternen basteln', bereinigt: t, schritt: 'Mit den Kindern Laternen basteln', ziel: 'Privat', hebel: 0, aufwand_min: 60 });
   return E({ bereinigt: t, schritt: t.slice(0, 60), hebel: 1 });
@@ -43,15 +45,24 @@ function sortieren(p) {
   }
   return { liste, doppelt };
 }
+function coach(p) {
+  const person = p.match(/Menschen in .*?: (\[Person \d+\])/)?.[1] || '';
+  return /COACH MORGEN/.test(p)
+    ? { text: 'Heute zählt der Newsletter. Du hast gut geschlafen, nimm dir den Vormittag dafür.', geste: person ? `Schick ${person} ein kurzes Danke für diese Woche.` : '' }
+    : { text: 'Der Tag war zäh, der Plan für morgen steht. Leg das Handy um 22 Uhr weg.' };
+}
+const prompts = [];
 http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/prompts') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(prompts)); }
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}');
     const p = body.messages?.[0]?.content || '';
-    const a = p.startsWith('SORTIERLAUF') ? sortieren(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+    prompts.push(p);
+    const a = p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [{ type: 'text', text: JSON.stringify(a) }], stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
     }, p.startsWith('SORTIERLAUF') ? 400 : 150);
-    console.log('mock', p.startsWith('SORTIERLAUF') ? 'sort' : 'enrich', body.model);
+    console.log('mock', p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);
   });
 }).listen(4010);

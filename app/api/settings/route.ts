@@ -1,16 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSetting, setSetting } from '@/lib/db';
+import { claudeBereit } from '@/lib/claude';
 
-const KEYS = ['kontext', 'ziele', 'team'] as const;
+const KEYS = ['kontext', 'ziele', 'team', 'namen', 'namen_auto'] as const;
 
 export async function GET() {
-  const [kontext, ziele, team] = await Promise.all(KEYS.map((k) => getSetting(k)));
-  return NextResponse.json({ kontext, ziele, team });
+  const werte = await Promise.all(KEYS.map((k) => getSetting(k)));
+  return NextResponse.json({ ...Object.fromEntries(KEYS.map((k, i) => [k, werte[i]])), claude: claudeBereit() });
 }
 
 export async function PUT(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   if (!KEYS.some((k) => typeof b[k] === 'string')) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
-  for (const k of KEYS) if (typeof b[k] === 'string') await setSetting(k, b[k].slice(0, 4000));
+  for (const k of KEYS) if (typeof b[k] === 'string') await setSetting(k, b[k].slice(0, 8000));
   return NextResponse.json({ ok: true });
 }

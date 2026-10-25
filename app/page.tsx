@@ -2,6 +2,8 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useToast, type Item, type Stand } from './ui';
+import { Fragebogen } from './fragebogen';
+import { Coach, useCheckins } from './coach';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
@@ -17,6 +19,7 @@ export default function Heute() {
   const [listening, setListening] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
   const [toast, setToast] = useToast();
+  const ci = useCheckins();
   const rec = useRef<Rec | null>(null);
   const base = useRef('');
 
@@ -114,6 +117,13 @@ export default function Heute() {
           ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p>
           : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
       </header>
+
+      {ci.zeige ? (
+        <section className="gsec" aria-label="Fragebogen">
+          <Fragebogen key={ci.zeige} art={ci.zeige} aufgaben={ci.aufgaben} onFertig={() => { ci.fertig(); setToast('Danke. Der Coach meldet sich gleich.'); }} onFehler={(m) => setToast(m, 'err')} />
+        </section>
+      ) : null}
+      <Coach stand={ci} />
 
       <section className="capture compact" aria-label="Festhalten">
         <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link"
