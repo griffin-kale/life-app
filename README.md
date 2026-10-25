@@ -4,7 +4,7 @@ Peters Logbuch: Gedanken, Zitate, Videos, Bücher und Artikel festhalten. Claude
 
 Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren.
 
-## Was drin ist (Version 0.1)
+## Was drin ist (Version 0.2)
 
 - **Erfassen:** Textfeld mit Mikrofon (wo der Browser es kann) oder Tastatur-Diktat. Auf dem iPhone zusätzlich per Kurzbefehl über Aktionstaste und Teilen-Menü (`POST /api/capture`).
 - **Einordnen:** Typ (Gedanke, Zitat, Video, Buch, Artikel), Kategorie (Engpass, Entscheidung, Aufgabe, Projekt, Privat, Notiz, Idee, Wissen), Art von Wohlstand nach Sahil Bloom, nächster Schritt. Ideen werden 72 Stunden geparkt.
@@ -12,6 +12,7 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
 - **Archiv:** Filter nach Typ, Suche, archivierte Einträge.
 - **Export:** alles als eine Markdown-Datei (`/api/export`).
 - **Anmeldung:** nur per Passkey (Face ID). Einrichten mit einmaligem Code unter `/setup`.
+- **Gestaltung:** nach Apples Gestaltungsregeln fürs Web: Schrift folgt der iPhone-Textgröße, Feedback beim Drücken, durchscheinende Leisten mit Scroll-Kante, Zurück-Navigation, Meldungen kommen und gehen auf demselben Weg, Rücksicht auf „Bewegung reduzieren“, „Transparenz reduzieren“ und „Kontrast erhöhen“.
 
 ## Aufbau
 

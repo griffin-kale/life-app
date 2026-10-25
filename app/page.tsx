@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Entry, TabBar, api, useToast, type Item } from './ui';
+import { Icon, Log, TabBar, TopBar, api, isPending, useToast, type Item } from './ui';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
@@ -8,6 +8,8 @@ export default function Erfassen() {
   const [text, setText] = useState('');
   const [items, setItems] = useState<Item[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [freshId, setFreshId] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
   const [toast, setToast] = useToast();
@@ -15,22 +17,26 @@ export default function Erfassen() {
   const base = useRef('');
   const area = useRef<HTMLTextAreaElement>(null);
 
-  const load = useCallback(async () => { setItems(await api<Item[]>('/api/items?limit=20')); }, []);
+  const load = useCallback(async () => { setItems(await api<Item[]>('/api/items?limit=30')); }, []);
   useEffect(() => { load().catch(() => setItems([])); }, [load]);
-  // Solange etwas eingeordnet wird, alle 3 Sekunden nachsehen (höchstens 2 Minuten).
+  // Solange Claude etwas einordnet, alle 3 Sekunden nachsehen.
   useEffect(() => {
-    if (!items?.some((i) => i.status === 'neu' && !i.fehler)) return;
+    if (!items?.some(isPending)) return;
     const t = setTimeout(() => load().catch(() => {}), 3000);
     return () => clearTimeout(t);
   }, [items, load]);
-  useEffect(() => { setCanSpeak(typeof window !== 'undefined' && !!((window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition)); }, []);
+  useEffect(() => { const W = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }; setCanSpeak(!!(W.SpeechRecognition || W.webkitSpeechRecognition)); }, []);
+  useEffect(() => { if (!done) return; const t = setTimeout(() => setDone(false), 1400); return () => clearTimeout(t); }, [done]);
 
   async function save() {
     const t = text.trim(); if (!t || busy) return;
     rec.current?.stop();
     setBusy(true);
-    try { await api('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) }); setText(''); setToast('Festgehalten'); await load(); }
-    catch (e) { setToast('Nicht gespeichert: ' + (e as Error).message); }
+    try {
+      const r = await api<{ id: string }>('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) });
+      setText(''); setFreshId(r.id); setDone(true);
+      await load();
+    } catch (e) { setToast('Nicht gespeichert. ' + (e as Error).message, 'err'); }
     finally { setBusy(false); area.current?.focus(); }
   }
 
@@ -46,38 +52,48 @@ export default function Erfassen() {
       setText(base.current + finalT + interim);
     };
     r.onend = () => setListening(false);
-    r.onerror = () => { setListening(false); setToast('Spracheingabe hier nicht verfügbar. Nimm das Mikrofon der Tastatur.'); };
+    r.onerror = () => { setListening(false); setToast('Spracheingabe geht hier nicht. Nimm das Mikrofon der Tastatur.', 'err'); };
     rec.current = r; r.start(); setListening(true);
   }
 
+  const today = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+  const hasText = !!text.trim();
+
   return (
     <main className="wrap">
+      <TopBar title="Lage" />
       <header className="head">
-        <span className="eyebrow">{new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</span>
+        <span className="eyebrow">{today}</span>
         <h1 className="title">Lage<i>.</i></h1>
       </header>
 
       <section className="capture" aria-label="Festhalten">
-        <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} placeholder="Gedanke, Zitat oder Link …" aria-label="Gedanke, Zitat oder Link" autoFocus
+        <textarea ref={area} value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Zitat oder Link" autoFocus enterKeyHint="done"
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }} />
         <div className="row">
-          <span className="hint">{listening ? 'Ich höre zu …' : 'Sprechen: Mikrofon oder Tastatur-Diktat'}</span>
-          <span style={{ display: 'flex', gap: 8 }}>
-            {canSpeak ? <button type="button" className={'btn mic' + (listening ? ' on' : '')} onClick={toggleMic} aria-pressed={listening} aria-label={listening ? 'Aufnahme beenden' : 'Sprechen'}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
-            </button> : null}
-            <button type="button" className="btn primary" onClick={save} disabled={!text.trim() || busy}>{busy ? 'Speichert …' : 'Festhalten'}</button>
+          <span className={'hint' + (listening ? ' live' : '')} aria-live="polite">
+            {listening ? <><span className="rec" />Ich höre zu</> : null}
+          </span>
+          <span className="tools">
+            {canSpeak ? (
+              <button type="button" className={'btn mic' + (listening ? ' on' : '')} onClick={toggleMic} aria-pressed={listening} aria-label={listening ? 'Aufnahme beenden' : 'Sprechen'}>
+                {listening ? Icon.stop : Icon.mic}
+              </button>
+            ) : null}
+            <button type="button" className={'btn primary' + (done ? ' done' : '')} onClick={save} disabled={(!hasText && !done) || busy}>
+              {done ? <>{Icon.check}Festgehalten</> : busy ? 'Speichert …' : 'Festhalten'}
+            </button>
           </span>
         </div>
       </section>
 
       <section className="section" aria-label="Logbuch">
-        <h2>Logbuch <small>Claude ordnet jeden Eintrag ein</small></h2>
-        {items === null ? <div className="empty">Lädt …</div> : items.length === 0 ? <div className="empty">Noch nichts festgehalten. Der erste Gedanke gehört oben ins Feld.</div> : (
-          <ul className="log">{items.map((it) => <Entry key={it.id} it={it} />)}</ul>
-        )}
+        <h2>Logbuch</h2>
+        {items === null ? <div className="loading">Lädt …</div>
+          : items.length === 0 ? <div className="empty"><b>Noch leer.</b>Schreib oder sprich oben den ersten Gedanken. Claude ordnet ihn ein und schlägt den nächsten Schritt vor.</div>
+          : <Log items={items} freshId={freshId} />}
       </section>
-      {toast ? <div className="toast" role="status">{toast}</div> : null}
+      {toast}
       <TabBar />
     </main>
   );
