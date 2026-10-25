@@ -13,3 +13,33 @@ export function Ring({ wert, farbe, groesse = 64, dicke = 7, label }: { wert: nu
 export const FARBE: Record<string, string> = { zeit: 'var(--k-zeit)', sozial: 'var(--k-sozial)', mental: 'var(--k-mental)', koerper: 'var(--k-koerper)', geld: 'var(--k-geld)' };
 export const NAME: Record<string, string> = { zeit: 'Zeit', sozial: 'Sozial', mental: 'Mental', koerper: 'Körper', geld: 'Geld' };
 export const KONTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
+
+/** Weg bis zum nächsten Level: Strecke mit Punkt für den Stand und Fahne am Ziel. */
+export function Weg({ anteil, level, naechstes }: { anteil: number; level: number; naechstes: number }) {
+  const p = Math.round(Math.max(0, Math.min(1, anteil)) * 100);
+  return (
+    <div className="weg-box">
+      <div className="weg" role="progressbar" aria-label={`Level ${level}`} aria-valuenow={p} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${naechstes} Punkte bis Level ${level + 1}`}>
+        <span className="weg-bahn" /><span className="weg-voll" style={{ width: `calc((100% - 22px) * ${p / 100})` }} /><span className="weg-ich" style={{ left: `calc((100% - 22px) * ${p / 100})` }} />
+        <svg className="weg-fahne" viewBox="0 0 22 26" aria-hidden="true"><path d="M3 25V2M3 3h15l-4 5 4 5H3" fill="var(--k-geld)" stroke="var(--ink)" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+      </div>
+      <div className="weg-text"><span>Level {level}</span><span className="num">noch {naechstes} Punkte bis Level {level + 1}</span></div>
+    </div>
+  );
+}
+
+const WT = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
+const WT_LANG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+/** Die Woche als sieben kleine Ringe. Ein Tag füllt sich mit Morgenfragen, Abendfragen und drei erledigten Aufgaben. */
+export function Tagesreihe({ tage, heute }: { tage: { tag: string; wert: number | null }[]; heute: string }) {
+  return (
+    <ol className="tagesreihe" aria-label="Diese Woche Tag für Tag">
+      {tage.map((t, i) => (
+        <li key={t.tag} className={t.tag === heute ? 'heute' : ''}>
+          <Ring wert={t.wert} farbe="var(--k-zeit)" groesse={28} dicke={4} label={`${WT_LANG[i]}: ${t.wert === null ? 'kommt noch' : Math.round(t.wert * 100) + ' Prozent'}`} />
+          <span aria-hidden="true">{WT[i]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}

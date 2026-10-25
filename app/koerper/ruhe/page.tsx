@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TopBar, api, useToast } from '../../ui';
+import { Icon, TopBar, api, useToast } from '../../ui';
 import { atemPhase, skript, VORLAGEN, vorlage, WIMHOF, WIMHOF_REGELN, type Art, type Hinweis } from '@/lib/ruhe';
 
 /** Gong aus mehreren Sinustönen mit langem Ausklang, im Browser erzeugt. */
@@ -98,7 +98,7 @@ export default function Ruhe() {
   if (wh?.phase === 'einatmen') { kreis = 1; kreisText = `halten ${Math.ceil(WIMHOF.haltenNachEinatmen - (jetzt - wh.seit) / 1000)}`; }
 
   if (lauf && v) return (
-    <main className="ruhe-lauf" aria-live="polite">
+    <main className="ruhe-lauf immer-dunkel" aria-live="polite">
       <span className="eyebrow">{v.name}</span>
       <div className="atemkreis" style={{ transform: `scale(${0.45 + kreis * 0.55})` }} aria-hidden="true" />
       <b className="ruhe-zeit num">{kreisText || (lauf.art === 'wimhof' ? '' : mmss(rest))}</b>
@@ -120,22 +120,22 @@ export default function Ruhe() {
         </div>
       ) : null}
       {VORLAGEN.map((x) => (
-        <section key={x.id} className="gsec" aria-label={x.name}>
-          <div className="group pad">
-            <div className="ue-kopf"><b>{x.name}</b><span className="muted small">{x.beschreibung}</span></div>
-            {x.id === 'wimhof' && !wimhofOffen ? <>
-              <p className="coach-warn">Die Atmung kann zu kurzer Ohnmacht führen. Mach sie nur unter diesen Bedingungen:</p>
-              <div className="fb-opts stack" role="group" aria-label="Sicherheit">
-                {WIMHOF_REGELN.map((r, i) => <button key={r} type="button" aria-pressed={regeln[i]} className="fb-chip" onClick={() => setRegeln((g) => g.map((y, j) => (j === i ? !y : y)))}>{r}</button>)}
-              </div>
-              <button type="button" className="btn" disabled={!regeln.every(Boolean)} onClick={() => setWimhofOffen(true)}>Verstanden</button>
-            </> : <>
+        <section key={x.id} className={`ruhekarte r-${x.id}`} aria-label={x.name}>
+          <div className="ruhekarte-kopf"><h2>{x.name}</h2><p>{x.beschreibung}</p></div>
+          {x.id === 'wimhof' && !wimhofOffen ? <>
+            <p className="ruhekarte-warn">Die Atmung kann zu kurzer Ohnmacht führen. Mach sie nur unter diesen Bedingungen:</p>
+            <div className="ruhekarte-regeln" role="group" aria-label="Sicherheit">
+              {WIMHOF_REGELN.map((r, i) => <button key={r} type="button" aria-pressed={regeln[i]} className="dpill" onClick={() => setRegeln((g) => g.map((y, j) => (j === i ? !y : y)))}>{regeln[i] ? Icon.check : null}{r}</button>)}
+            </div>
+            <button type="button" className="dpill hell" disabled={!regeln.every(Boolean)} onClick={() => setWimhofOffen(true)}>Verstanden</button>
+          </> : (
+            <div className="ruhekarte-fuss">
               {x.minuten.length > 1 ? (
-                <div className="fb-opts" role="radiogroup" aria-label={`Dauer ${x.name}`}>{x.minuten.map((m) => <button key={m} type="button" role="radio" aria-checked={(wahl[x.id] ?? x.minuten[0]) === m} className="fb-chip" onClick={() => setWahl((w) => ({ ...w, [x.id]: m }))}>{m} Min.</button>)}</div>
-              ) : <span className="muted small">Etwa {x.minuten[0]} Minuten</span>}
-              <button type="button" className="btn primary" onClick={() => starten(x.id, wahl[x.id] ?? x.minuten[0])}>Starten</button>
-            </>}
-          </div>
+                <div className="ruhekarte-dauer" role="radiogroup" aria-label={`Dauer ${x.name}`}>{x.minuten.map((m) => <button key={m} type="button" role="radio" aria-checked={(wahl[x.id] ?? x.minuten[0]) === m} className="dpill" onClick={() => setWahl((w) => ({ ...w, [x.id]: m }))}>{m} Min.</button>)}</div>
+              ) : <span className="dpill still">Etwa {x.minuten[0]} Min.</span>}
+              <button type="button" className="play" aria-label="Starten" onClick={() => starten(x.id, wahl[x.id] ?? x.minuten[0])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 8 5.2z" fill="currentColor" /></svg></button>
+            </div>
+          )}
         </section>
       ))}
       <p className="gnote">Der Bildschirm bleibt während der Sitzung an. Bei gesperrtem iPhone setzen Ton und Stimme aus. Hält Unruhe, Schwindel oder Herzrasen an, lass es ärztlich abklären.</p>

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Gedanken festhalten, priorisieren, weiterdenken',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0B1426',
-    theme_color: '#0B1426',
+    background_color: '#0A1326',
+    theme_color: '#0A1326',
     lang: 'de',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

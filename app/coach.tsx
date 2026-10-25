@@ -46,14 +46,13 @@ export function Coach({ stand }: { stand: ReturnType<typeof useCheckins> }) {
   const c = stand.coach; if (!c) return null;
   const k = (stunde() >= 17 && c.abend) ? c.abend : c.morgen;
   if (!k && !c.warnungen.length && !stand.warten) return null;
+  const abends = stunde() >= 17 && !!c.abend;
   return (
-    <section className="gsec" aria-label="Coach">
-      <h2 className="glabel">Coach</h2>
-      <div className="group pad coach">
-        {c.warnungen.map((w) => <p key={w} className="coach-warn">{w}</p>)}
-        {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : null}
-        {k?.geste ? <p className="coach-geste"><b>Kleine Geste</b>{k.geste}</p> : null}
-      </div>
+    <section className="hero coach" aria-label="Coach">
+      <span className="hero-kopf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg>Coach · {abends ? 'Abend' : 'Morgen'}</span>
+      {c.warnungen.length ? <ul className="hero-warn">{c.warnungen.map((w) => <li key={w}>{w}</li>)}</ul> : null}
+      {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : null}
+      {k?.geste ? <p className="coach-geste"><b>Kleine Geste</b>{k.geste}</p> : null}
     </section>
   );
 }

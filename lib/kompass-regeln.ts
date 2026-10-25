@@ -48,3 +48,17 @@ export function meilensteineAktualisieren(alt: Record<string, string>, s: Summen
   for (const m of MEILENSTEINE) if (!alle[m.id] && m.erreicht(s)) { alle[m.id] = heute; neu.push(m.id); }
   return { alle, neu };
 }
+
+/** Tagesring für die Wochenreihe auf Heute: Morgenfragen, Abendfragen und drei erledigte Aufgaben, je ein Drittel. */
+export function tagesRing(t: { morgen: boolean; abend: boolean; erledigt: number }): number {
+  return ((t.morgen ? 1 : 0) + (t.abend ? 1 : 0) + Math.min(1, Math.max(0, t.erledigt) / 3)) / 3;
+}
+
+/** Die sieben Tage ab Montag. Tage nach heute bleiben leer (null). */
+export function wochenTage(montag: string, heute: string, daten: Map<string, { morgen: boolean; abend: boolean; erledigt: number }>): { tag: string; wert: number | null }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const tag = new Date(Date.parse(montag + 'T12:00:00Z') + i * 864e5).toISOString().slice(0, 10);
+    const d = daten.get(tag);
+    return { tag, wert: tag > heute ? null : tagesRing(d ?? { morgen: false, abend: false, erledigt: 0 }) };
+  });
+}

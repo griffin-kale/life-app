@@ -2,6 +2,20 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.12.0] – 2026-10-25
+
+### Hinzugefügt
+- **Darstellung** in den Einstellungen: Dunkel (Standard), Hell oder wie das iPhone. Wirkt sofort und gilt pro Gerät. Der Server liefert die Seite gleich im richtigen Modus aus, ohne Aufblitzen.
+- **Coach** als Karte mit Verlauf in Imperial Blue. Warnsignale stehen oben als eigene Felder, die Geste darunter.
+- **Heute:** die Woche als sieben kleine Ringe (Morgenfragen, Abendfragen, drei erledigte Aufgaben), dazu im Kompass fünf Ringe mit Namen und der Weg mit Fahne bis zum nächsten Level.
+- **Körper:** WHOOP-Werte als große Zahlen in Kacheln. Erholung als Verlauf von Rot nach Grün mit Punkt und kurzem Hinweis.
+- **Ruhe:** jede Vorlage als eigene Verlaufskarte mit Dauer-Pillen und Play-Knopf.
+
+### Geändert
+- Jeder Bereich trägt seine Kontenfarbe: Punkt hinter dem Titel, aktiver Reiter unten, Balken mit Verlauf. Kräftigere Kontenfarben in beiden Modi.
+- Alle Farben laufen über Tokens. Keine festen Farbwerte mehr in den Komponenten.
+- Der Kompass zeigt das Life-Level als Weg statt als einfachen Balken.
+
 ## [0.11.0] – 2026-10-25
 
 ### Hinzugefügt

@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
 import { Coach, useCheckins } from './coach';
-import { FARBE, KONTEN, Ring } from './ringe';
+import { FARBE, KONTEN, NAME, Ring, Tagesreihe, Weg } from './ringe';
 import { EnergieChips, WennChip } from './wenn';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
+
+type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
 const nachZeit = (a: Item, b: Item) => (a.zeit && b.zeit ? a.zeit.localeCompare(b.zeit) : a.zeit ? -1 : b.zeit ? 1 : (a.rang ?? 99) - (b.rang ?? 99));
 
@@ -22,8 +24,9 @@ export default function Heute() {
   const [canSpeak, setCanSpeak] = useState(false);
   const [toast, setToast] = useToast();
   const ci = useCheckins();
-  const [ringe, setRinge] = useState<Record<string, number | null> | null>(null);
-  useEffect(() => { api<{ jetzt: { ringe: Record<string, number | null> } }>('/api/kompass').then((k) => setRinge(k.jetzt.ringe)).catch(() => {}); }, []);
+  const [kompass, setKompass] = useState<KompassKurz | null>(null);
+  useEffect(() => { api<KompassKurz>('/api/kompass').then(setKompass).catch(() => {}); }, []);
+  const ringe = kompass?.jetzt.ringe ?? null;
   const rec = useRef<Rec | null>(null);
   const base = useRef('');
 
@@ -105,6 +108,7 @@ export default function Heute() {
     rec.current = r; r.start(); setListening(true);
   }
 
+  const heuteTag = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
   const today = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   const items = st?.items ?? [];
   const jetzt = items.filter((i) => i.stapel === 'jetzt').sort(nachZeit);
@@ -120,14 +124,22 @@ export default function Heute() {
         {st ? (st.engpass
           ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p>
           : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
+        {kompass?.tage ? <Tagesreihe tage={kompass.tage} heute={heuteTag} /> : null}
       </header>
 
-      {ringe ? (
-        <Link href="/kompass" className="group ringleiste" aria-label="Kompass: fünf Konten dieser Woche">
-          <span className="mini">{KONTEN.map((x) => <Ring key={x} wert={ringe[x]} farbe={FARBE[x]} groesse={30} dicke={4} />)}</span>
-          <span>Kompass{Icon.chevronRight}</span>
-        </Link>
-      ) : null}
+      {ringe ? (() => {
+        const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
+        const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : null;
+        return (
+          <Link href="/kompass" className="group kompass-karte" aria-label={`Kompass: diese Woche ${schnitt ?? 0} Prozent`}>
+            <span className="kk-kopf"><b>Diese Woche</b><span>{schnitt !== null ? <><em className="num">{schnitt} %</em> · </> : null}Kompass{Icon.chevronRight}</span></span>
+            <span className="ringreihe">{KONTEN.map((x) => (
+              <span key={x} className="ringzelle"><Ring wert={ringe[x]} farbe={FARBE[x]} groesse={50} dicke={6} label={`${NAME[x]}: ${ringe[x] === null ? 'noch keine Daten' : Math.round(Math.min(1, ringe[x]!) * 100) + ' Prozent'}`} /><b>{NAME[x]}</b></span>
+            ))}</span>
+            {kompass ? <Weg anteil={kompass.gesamt.anteil} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} /> : null}
+          </Link>
+        );
+      })() : null}
       {ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
           <Fragebogen key={ci.zeige} art={ci.zeige} aufgaben={ci.aufgaben} onFertig={() => { ci.fertig(); setToast('Danke. Der Coach meldet sich gleich.'); }} onFehler={(m) => setToast(m, 'err')} />

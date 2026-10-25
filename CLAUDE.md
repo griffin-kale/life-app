@@ -11,7 +11,7 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 3. **Life gehört der Griffin & Kale GmbH.** Repo (`griffin-kale/life-app`), Server und Verträge mit Hetzner und Anthropic laufen über die Firma, damit Life später auch als Produkt vertrieben werden kann. Life ist trotzdem keine EHRENBEHÖRDE-Marke: Farbe ist Imperial Blue (Pantone 2768 C, `#001D51`), das EB-Royalblau `#3338CC` kommt nicht vor.
 4. **Peters Einträge sind privat.** Sie liegen nur in der Datenbank auf dem Server, nie im Repo, in Tests, Logs, Screenshots im Pull Request oder Fehlermeldungen. Testdaten sind erfunden.
 5. **Geheimnisse nie ins Repo und nie in den Chat.** Schlüssel trägt Peter selbst auf dem Server in `/opt/life/deploy/.env` ein. `.env` ist in `.gitignore`.
-6. **Dark Mode ist Standard.**
+6. **Dark Mode ist Standard.** Hell und „Wie das iPhone“ wählt man in den Einstellungen (Cookie `life-thema`, `lib/thema.ts`). Farben nur über die Tokens oben in `app/globals.css`, nie als feste Werte in Komponenten. Ausnahme: Verlaufskarten (Coach, Ruhe) und die laufende Ruhe-Sitzung bleiben in beiden Modi dunkel.
 
 ## Skills, die bei der Arbeit gelten
 

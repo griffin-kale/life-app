@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { Mitteilungen } from '../mitteilungen';
 import { Rueckmeldung } from '../rueckmeldung';
+import { Darstellung } from '../darstellung';
 
 type S = { kontext: string; ziele: string; team: string; namen: string; namen_auto: string };
 const LEER: S = { kontext: '', ziele: '', team: '', namen: '', namen_auto: '' };
@@ -35,6 +36,8 @@ export default function Einstellungen() {
     <main className="wrap">
       <TopBar title="Einstellungen" />
       <header className="head"><span className="eyebrow">Wie Life für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
+
+      <Darstellung />
 
       <section className="gsec">
         <h2 className="glabel">Was Claude beim Sortieren weiß</h2>
@@ -100,7 +103,7 @@ export default function Einstellungen() {
 
       <Rueckmeldung onToast={(t, k) => setToast(t, k)} />
 
-      <p className="foot">Life 0.11 · Server in Deutschland</p>
+      <p className="foot">Life 0.12 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

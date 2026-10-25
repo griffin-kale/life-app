@@ -13,6 +13,7 @@ type K = {
 };
 
 const hm = (min: number | null) => (min === null ? '–' : `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`);
+const erholFarbe = (e: number | null | undefined) => (e == null ? 'var(--faint)' : e < 34 ? 'var(--bad)' : e < 67 ? 'var(--warn)' : 'var(--ok)');
 const RIR = ['3 Wiederholungen vor Schluss', '2 Wiederholungen vor Schluss', '1 Wiederholung vor Schluss', '0 bis 1 Wiederholung vor Schluss', 'Entlastung, locker bleiben'];
 
 function Balken({ label, wert, ziel, einheit }: { label: string; wert: number; ziel: number; einheit?: string }) {
@@ -61,16 +62,23 @@ export default function Koerper() {
 
       <section className="gsec" aria-label="Heute">
         <h2 className="glabel">Letzte Nacht</h2>
-        <div className="group pad">
+        <div className={k?.whoop.verbunden ? 'kachelfeld' : 'group pad'}>
           {k === null ? <p className="muted small">Lädt …</p>
             : !k.whoop.bereit ? <p className="muted small">WHOOP ist auf dem Server noch nicht eingerichtet. Sobald WHOOP_CLIENT_ID und WHOOP_CLIENT_SECRET in der .env stehen, verbindest du hier.</p>
             : !k.whoop.verbunden ? <><p className="muted small">Verbinde WHOOP einmal. Danach holt Life Schlaf, Erholung, Puls und Trainings selbst ab.</p><a className="btn primary" href="/api/whoop/start">WHOOP verbinden</a></>
             : <>
               <div className="werte">
-                <div><b>{hm(n?.schlaf_min ?? null)}</b><span>Schlaf</span></div>
-                <div><b className={n?.erholung != null ? (n.erholung < 34 ? 'bad' : n.erholung < 67 ? 'mid' : 'ok') : ''}>{n?.erholung ?? '–'}{n?.erholung != null ? ' %' : ''}</b><span>Erholung</span></div>
-                <div><b>{n?.hrv != null ? Math.round(n.hrv) : '–'}</b><span>HRV ms</span></div>
-                <div><b>{n?.ruhepuls ?? '–'}</b><span>Ruhepuls</span></div>
+                <div className="kachel breit" style={{ '--c': erholFarbe(n?.erholung) } as React.CSSProperties}>
+                  <span className="kachel-name"><i />Erholung</span>
+                  <b>{n?.erholung ?? '–'}{n?.erholung != null ? <small>%</small> : null}</b>
+                  {n?.erholung != null ? <>
+                    <div className="erholung" role="img" aria-label={`Erholung ${n.erholung} von 100`}><span style={{ left: `${Math.max(0, Math.min(100, n.erholung))}%` }} /></div>
+                    <div className="erholung-achse"><span>0</span><span>{n.erholung < 34 ? 'Heute schonen' : n.erholung < 67 ? 'Mach heute locker' : 'Bereit für Belastung'}</span><span>100</span></div>
+                  </> : null}
+                </div>
+                <div className="kachel" style={{ '--c': 'var(--k-mental)' } as React.CSSProperties}><span className="kachel-name"><i />Schlaf</span><b>{hm(n?.schlaf_min ?? null)}</b></div>
+                <div className="kachel" style={{ '--c': 'var(--k-zeit)' } as React.CSSProperties}><span className="kachel-name"><i />HRV</span><b>{n?.hrv != null ? Math.round(n.hrv) : '–'}<small>ms</small></b></div>
+                <div className="kachel breit klein" style={{ '--c': 'var(--k-sozial)' } as React.CSSProperties}><span className="kachel-name"><i />Ruhepuls</span><b>{n?.ruhepuls ?? '–'}<small>Schläge pro Minute</small></b></div>
               </div>
               <p className="gnote flush">{k.whoop.zuletzt ? `Abgeglichen um ${fTime(k.whoop.zuletzt)}` : 'Noch nicht abgeglichen'} · <button type="button" className="linkbtn" onClick={abgleichen} disabled={busy}>{busy ? 'Gleicht ab …' : 'Jetzt abgleichen'}</button></p>
             </>}

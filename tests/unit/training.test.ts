@@ -153,3 +153,16 @@ test('Menschen: Takt, Geburtstage, Freundschaftsstunden, Wenn-dann', () => {
   assert.equal(freundschaftsStufe(10).naechste, 50);
   assert.equal(wennDann('am Vormittag', 'am Schreibtisch', 'Newsletter schreiben'), 'Wenn es am Vormittag ist und ich am Schreibtisch bin, dann: Newsletter schreiben.');
 });
+
+test('Tagesring: je ein Drittel für Morgen, Abend und drei Aufgaben; künftige Tage leer', async () => {
+  const { tagesRing, wochenTage } = await import('../../lib/kompass-regeln.ts');
+  assert.equal(tagesRing({ morgen: false, abend: false, erledigt: 0 }), 0);
+  assert.equal(tagesRing({ morgen: true, abend: true, erledigt: 5 }), 1);
+  assert.ok(Math.abs(tagesRing({ morgen: true, abend: false, erledigt: 1 }) - 4 / 9) < 1e-9);
+  const t = wochenTage('2026-10-19', '2026-10-21', new Map([['2026-10-19', { morgen: true, abend: true, erledigt: 3 }]]));
+  assert.equal(t.length, 7);
+  assert.equal(t[0].wert, 1);
+  assert.equal(t[1].wert, 0);
+  assert.equal(t[3].wert, null);
+  assert.equal(t[6].tag, '2026-10-25');
+});
