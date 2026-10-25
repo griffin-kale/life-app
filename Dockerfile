@@ -1,4 +1,4 @@
-# Lage – Build und Betrieb in einem schlanken Container
+# Life – Build und Betrieb in einem schlanken Container
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

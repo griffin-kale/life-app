@@ -23,7 +23,7 @@ async function fetchPage(raw: string): Promise<{ title: string; text: string; si
   const host = u.hostname;
   const ips = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address);
   if (ips.some(isPrivate)) return null;
-  const res = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'Mozilla/5.0 (Lage)', 'accept-language': 'de,en' } });
+  const res = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'Mozilla/5.0 (Life)', 'accept-language': 'de,en' } });
   if (!res.ok || !(res.headers.get('content-type') || '').includes('html')) return null;
   const buf = await res.arrayBuffer();
   const html = new TextDecoder().decode(buf.slice(0, 1_500_000));

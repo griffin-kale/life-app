@@ -24,7 +24,7 @@ export default function Einstellungen() {
   return (
     <main className="wrap">
       <TopBar title="Einstellungen" />
-      <header className="head"><span className="eyebrow">Wie Lage für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
+      <header className="head"><span className="eyebrow">Wie Life für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
 
       <section className="gsec">
         <h2 className="glabel">Was Claude beim Sortieren weiß</h2>
@@ -44,10 +44,10 @@ export default function Einstellungen() {
         <h2 className="glabel">Aktionstaste und Teilen-Menü</h2>
         <div className="group pad">
           <ol className="steps">
-            <li>Kurzbefehle-App öffnen, neuer Kurzbefehl „Lage“.</li>
+            <li>Kurzbefehle-App öffnen, neuer Kurzbefehl „Life“.</li>
             <li>Aktion <b>Text diktieren</b> hinzufügen, Sprache Deutsch.</li>
             <li>Aktion <b>Inhalte von URL abrufen</b>: Adresse <code>{origin}/api/capture</code>, Methode POST, Header <code>Authorization</code> mit <code>Bearer</code> plus Erfassungsschlüssel, Text als Anfragetext.</li>
-            <li>Einstellungen → Aktionstaste → Kurzbefehl → „Lage“.</li>
+            <li>Einstellungen → Aktionstaste → Kurzbefehl → „Life“.</li>
             <li>Im Kurzbefehl „Im Teilen-Menü anzeigen“ einschalten. Dann landen YouTube- und Safari-Links mit einem Tipp hier.</li>
           </ol>
         </div>
@@ -63,7 +63,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Lage 0.3 · Server in Deutschland</p>
+      <p className="foot">Life 0.4 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

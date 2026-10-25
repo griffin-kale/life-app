@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Lage',
-    short_name: 'Lage',
-    description: 'Peters Logbuch',
+    name: 'Life',
+    short_name: 'Life',
+    description: 'Gedanken festhalten, priorisieren, weiterdenken',
     start_url: '/',
     display: 'standalone',
     background_color: '#0B1426',

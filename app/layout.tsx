@@ -4,10 +4,10 @@ import '@fontsource/instrument-serif/latin-400-italic.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Lage',
-  description: 'Peters Logbuch: Gedanken, Zitate, Videos und Bücher festhalten und daraus lernen.',
-  applicationName: 'Lage',
-  appleWebApp: { capable: true, title: 'Lage', statusBarStyle: 'black-translucent' },
+  title: 'Life',
+  description: 'Gedanken, Aufgaben, Zitate und Videos festhalten, priorisieren und daraus lernen.',
+  applicationName: 'Life',
+  appleWebApp: { capable: true, title: 'Life', statusBarStyle: 'black-translucent' },
   robots: { index: false, follow: false },
   formatDetection: { telephone: false },
 };

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const existing = await sql`select id from credentials`;
   const { rpID } = rp(req);
   const options = await generateRegistrationOptions({
-    rpName: 'Lage', rpID, userName: 'peter', userDisplayName: 'Peter',
+    rpName: 'Life', rpID, userName: 'peter', userDisplayName: 'Peter',
     userID: new TextEncoder().encode('peter'),
     attestationType: 'none',
     authenticatorSelection: { residentKey: 'required', userVerification: 'required' },

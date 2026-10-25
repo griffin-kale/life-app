@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-export const SESSION_COOKIE = 'lage_session';
-export const CHALLENGE_COOKIE = 'lage_challenge';
+export const SESSION_COOKIE = 'life_session';
+export const CHALLENGE_COOKIE = 'life_challenge';
 const SESSION_DAYS = 30;
 
 function key(): Uint8Array {
