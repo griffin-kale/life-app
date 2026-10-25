@@ -16,7 +16,7 @@ Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https:
 ### Hinzugefügt
 - `/api/health` meldet, ob App und Datenbank laufen.
 - Tests im Repo: Ende-zu-Ende auf iPhone-Breite und Einheitstests für die Schutzfunktionen.
-- GitHub Actions prüft jede Änderung. Ein Versions-Tag baut das fertige Paket für den Server.
+- GitHub Actions prüft jede Änderung auf Ubuntu 24.04 (fest eingestellt, damit ein neues Runner-Image die Prüfung nicht unbemerkt verändert). Ein Versions-Tag baut das fertige Paket für den Server.
 - `deploy.sh` spielt eine bestimmte Version auf und wartet, bis sie antwortet. Zurückrollen heißt, eine ältere Version anzugeben.
 - `CLAUDE.md` mit den festen Regeln für die Arbeit am Projekt.
 - Life gehört der Griffin & Kale GmbH: Lizenzhinweis, Regeln für private Einträge.
