@@ -10,6 +10,7 @@ export default function Mehr() {
       <header className="head"><h1 className="title">Mehr<i>.</i></h1></header>
       <section className="gsec">
         <div className="group">
+          <Link className="cell" href="/kompass"><span>Kompass</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/archiv"><span>Logbuch</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/einstellungen"><span>Einstellungen</span>{Icon.chevronRight}</Link>
         </div>

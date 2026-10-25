@@ -2,6 +2,18 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.10.0] – 2026-10-25
+
+### Hinzugefügt
+- **Kompass** als Dashboard: fünf Ringe für Zeit, Sozial, Mental, Körper und Geld, gefüllt aus echten Daten der Woche (Aufgaben mit Hebel, Pläne, Ruhe, Abendfragen, Training, Schlaf, Protein, Töpfe im Rahmen).
+- Verlauf über acht Wochen pro Konto, WHO-5-Kurve, dein eigenes Gefühl aus dem Wochenbogen daneben.
+- **Level** pro Konto und ein Life-Level: ein voller Ring bringt 100 Punkte pro Woche, die Stufen werden langsam größer.
+- **Meilensteine**, die bleiben: erste Krafteinheit, 100 Minuten Ruhe, Woche im Rahmen, Perfekte Woche und mehr. Neue kommen als Mitteilung.
+- Auf „Heute“ eine Leiste mit den fünf Ringen, ein Tipp öffnet den Kompass.
+
+### Bewusst nicht
+- Keine Tagesserien, die reißen. Punkte gibt es pro Woche.
+
 ## [0.9.0] – 2026-10-25
 
 ### Hinzugefügt

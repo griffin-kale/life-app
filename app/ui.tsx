@@ -162,7 +162,7 @@ const TABS: [string, string, ReactNode, string[]][] = [
   ['/woche', 'Woche', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>, []],
   ['/koerper', 'Körper', <><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></>, []],
   ['/geld', 'Geld', <><rect x="3" y="6.5" width="18" height="12" rx="2.5" /><circle cx="12" cy="12.5" r="2.6" /><path d="M6.5 9.5v.01M17.5 15.5v.01" /></>, []],
-  ['/mehr', 'Mehr', <><circle cx="5.5" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="18.5" cy="12" r="1.3" fill="currentColor" /></>, ['/archiv', '/einstellungen', '/eintrag', '/menschen']],
+  ['/mehr', 'Mehr', <><circle cx="5.5" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="18.5" cy="12" r="1.3" fill="currentColor" /></>, ['/archiv', '/einstellungen', '/eintrag', '/menschen', '/kompass']],
 ];
 
 export function TabBar() {

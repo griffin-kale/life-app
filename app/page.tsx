@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
 import { Coach, useCheckins } from './coach';
+import { FARBE, KONTEN, Ring } from './ringe';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
@@ -20,6 +21,8 @@ export default function Heute() {
   const [canSpeak, setCanSpeak] = useState(false);
   const [toast, setToast] = useToast();
   const ci = useCheckins();
+  const [ringe, setRinge] = useState<Record<string, number | null> | null>(null);
+  useEffect(() => { api<{ jetzt: { ringe: Record<string, number | null> } }>('/api/kompass').then((k) => setRinge(k.jetzt.ringe)).catch(() => {}); }, []);
   const rec = useRef<Rec | null>(null);
   const base = useRef('');
 
@@ -118,6 +121,12 @@ export default function Heute() {
           : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
       </header>
 
+      {ringe ? (
+        <Link href="/kompass" className="group ringleiste" aria-label="Kompass: fünf Konten dieser Woche">
+          <span className="mini">{KONTEN.map((x) => <Ring key={x} wert={ringe[x]} farbe={FARBE[x]} groesse={30} dicke={4} />)}</span>
+          <span>Kompass{Icon.chevronRight}</span>
+        </Link>
+      ) : null}
       {ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
           <Fragebogen key={ci.zeige} art={ci.zeige} aufgaben={ci.aufgaben} onFertig={() => { ci.fertig(); setToast('Danke. Der Coach meldet sich gleich.'); }} onFehler={(m) => setToast(m, 'err')} />

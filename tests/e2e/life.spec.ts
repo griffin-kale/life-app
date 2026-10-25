@@ -126,7 +126,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/mehr', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/kompass', '/mehr', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -264,6 +264,17 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(issues[0].title).toContain('Fehler (Geld)');
     expect(JSON.stringify(issues[0])).not.toContain('Carlotta');
     expect(issues[0].labels).toContain('bug');
+  });
+
+  await test.step('Kompass: fünf Ringe, Level, Meilensteine aus echten Daten', async () => {
+    await page.goto('/kompass');
+    await expect(page.locator('.ringreihe .ringzelle')).toHaveCount(5);
+    await expect(page.locator('section[aria-label="Körper"]')).toContainText('Kraft');
+    await expect(page.locator('section[aria-label="Körper"]')).toContainText('1 / 3');
+    await expect(page.locator('section[aria-label="Meilensteine"] .meilenstein.an')).toContainText(['Erste Krafteinheit']);
+    await expect(page.locator('main')).toContainText('Life-Level');
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
   });
 
   await test.step('Coach kennt das Warnsignal, Push nimmt nur echte Dienste', async () => {

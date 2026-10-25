@@ -124,3 +124,18 @@ test('Geld: Stufenplan und Taschengeld', () => {
   assert.equal(taschengeldGuthaben(300, '2026-10-22', '2026-10-26', 0), 300);
   assert.equal(taschengeldGuthaben(300, '2026-10-26', '2026-11-09', 100), 800);
 });
+
+import { level, meilensteineAktualisieren, ring } from '../../lib/kompass-regeln.ts';
+
+test('Kompass: Ring, Level, Meilensteine gehen nicht verloren', () => {
+  assert.equal(ring([{ name: 'a', ist: 3, ziel: 3 }, { name: 'b', ist: 90, ziel: 180 }]), 0.75);
+  assert.equal(ring([{ name: 'a', ist: 9, ziel: 3 }]), 1);
+  assert.equal(ring([{ name: 'a', ist: 1, ziel: 0 }]), null);
+  assert.equal(level(0).level, 1); assert.equal(level(100).level, 2); assert.equal(level(399).level, 2); assert.equal(level(400).level, 3);
+  assert.equal(level(150).naechstes, 250);
+  const s = { kraft: 10, ruheMin: 50, abende: 0, wochenboegen: 0, who5Max: null, engpassErledigt: 0, wochenAlleRinge: 0, wochenToepfeImRahmen: 0, geldStufe: 1, protein: 0 };
+  const a = meilensteineAktualisieren({}, s, '2026-10-25');
+  assert.deepEqual(a.neu, ['kraft1', 'kraft10']);
+  const b = meilensteineAktualisieren(a.alle, { ...s, kraft: 0 }, '2026-10-26');
+  assert.deepEqual(b.neu, []); assert.equal(b.alle.kraft10, '2026-10-25');
+});
