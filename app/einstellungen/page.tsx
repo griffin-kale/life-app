@@ -10,8 +10,10 @@ export default function Einstellungen() {
   const [saved, setSaved] = useState<S>(LEER);
   const [origin, setOrigin] = useState('');
   const [toast, setToast] = useToast();
+  const [code, setCode] = useState<boolean | null>(null);
   useEffect(() => {
     setOrigin(window.location.origin);
+    api<{ aktiv: boolean }>('/api/auth/code').then((r) => setCode(r.aktiv)).catch(() => {});
     // Hat Peter schon getippt, bevor die Werte da sind, bleibt sein Text stehen.
     api<S>('/api/settings').then((s) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); }).catch(() => {});
   }, []);
@@ -19,6 +21,11 @@ export default function Einstellungen() {
   const set = (k: keyof S) => (e: React.ChangeEvent<HTMLTextAreaElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function save() {
     try { await api('/api/settings', { method: 'PUT', body: JSON.stringify(v) }); setSaved(v); }
+    catch (e) { setToast((e as Error).message, 'err'); }
+  }
+  async function codeAus() {
+    if (!window.confirm('Anmeldung mit Passwort und Code ausschalten? Danach geht es nur noch mit Face ID.')) return;
+    try { await api('/api/auth/code', { method: 'DELETE' }); setCode(false); setToast('Ausgeschaltet'); }
     catch (e) { setToast((e as Error).message, 'err'); }
   }
   return (
@@ -55,6 +62,16 @@ export default function Einstellungen() {
       </section>
 
       <section className="gsec">
+        <h2 className="glabel">Anmeldung</h2>
+        <div className="group">
+          <div className="cell static"><span>Face ID (Passkey)</span><span className="val">bevorzugt</span></div>
+          <div className="cell static"><span>Passwort und Code</span><span className="val">{code === null ? '…' : code ? 'an' : 'aus'}</span></div>
+          {code ? <button type="button" className="cell danger" onClick={codeAus}>Passwort und Code ausschalten</button> : null}
+        </div>
+        <p className="gnote">Passwort und Code sind der Weg für Geräte ohne Passkey. Sobald Face ID überall geht, schalte ihn hier aus.</p>
+      </section>
+
+      <section className="gsec">
         <h2 className="glabel">Deine Daten</h2>
         <div className="group">
           <a className="cell tint" href="/api/export" download><span>Export herunterladen</span>{Icon.chevronRight}</a>
@@ -63,7 +80,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Life 0.4 · Server in Deutschland</p>
+      <p className="foot">Life 0.5 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

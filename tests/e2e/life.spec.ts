@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { TEST_ENV } from '../../playwright.config';
+import { schritt, totp } from '../../lib/totp-core';
 
 // Ein Durchlauf wie im echten Leben: einrichten, festhalten, sortieren lassen, abhaken, korrigieren,
 // abmelden, wieder anmelden. Dazu die Schutzmechanismen, die nicht kaputtgehen dürfen.
@@ -139,6 +140,61 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   expect(fehler, fehler.join('\n')).toEqual([]);
+});
+
+test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', async ({ page, request }) => {
+  const PW = 'erfundenes-test-passwort-1234';
+  let secret = ''; let setupSchritt = 0;
+
+  await test.step('Einrichten mit kopierbarem Schlüssel', async () => {
+    await page.goto('/setup');
+    await page.getByRole('button', { name: 'Passwort und Code statt Passkey' }).click();
+    await page.fill('#tok', TEST_ENV.SETUP_TOKEN);
+    await page.fill('#pw', 'zu-kurz');
+    await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
+    await page.fill('#pw', PW);
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    secret = (await page.locator('.secret').innerText()).replace(/\s/g, '');
+    expect(secret).toMatch(/^[A-Z2-7]{32}$/);
+    await page.fill('#code', '000000');
+    await page.getByRole('button', { name: 'Fertig' }).click();
+    await expect(page.locator('.err')).toContainText('Code stimmt nicht');
+    setupSchritt = schritt(Date.now());
+    await page.fill('#code', totp(secret, setupSchritt * 30_000));
+    await page.getByRole('button', { name: 'Fertig' }).click();
+    await page.waitForURL('/');
+  });
+
+  await test.step('Einstellungen zeigen den Status', async () => {
+    await page.goto('/einstellungen');
+    await expect(page.locator('.cell', { hasText: 'Passwort und Code' }).first()).toContainText('an');
+  });
+
+  await test.step('Abmelden, falscher Code abgelehnt, richtiger Code meldet an', async () => {
+    await page.request.post('/api/auth/logout');
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Mit Passwort und Code anmelden' }).click();
+    await page.fill('#pw', PW);
+    await page.fill('#code', '123456');
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+    await expect(page.locator('.err')).toContainText('Anmeldung fehlgeschlagen');
+    // Der Code der Einrichtung ist verbraucht. Der nächste Zeitschritt liegt im erlaubten Fenster.
+    const code = totp(secret, (setupSchritt + 1) * 30_000);
+    await page.fill('#pw', PW);
+    await page.fill('#code', code);
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+    await page.waitForURL('/');
+    const nochmal = await page.request.post('/api/auth/code/login', { data: { password: PW, code } });
+    expect(nochmal.status()).toBe(401);
+    const falschesPw = await page.request.post('/api/auth/code/login', { data: { password: 'falsch-falsch-falsch-1', code: totp(secret) } });
+    expect(falschesPw.status()).toBe(401);
+  });
+
+  await test.step('Ohne Sitzung kein Status und kein Ausschalten', async () => {
+    expect((await request.get('/api/auth/code')).status()).toBe(401);
+    expect((await request.delete('/api/auth/code')).status()).toBe(401);
+    expect((await request.post('/api/auth/code/start', { data: { token: 'falsch', password: 'x'.repeat(20) } })).status()).toBe(403);
+  });
 });
 
 test('Kurzbefehl erfasst mit richtigem Schlüssel', async ({ request }) => {

@@ -38,6 +38,7 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 - **Claude-Antworten sind unsichere Eingaben.** Immer gegen feste Listen prüfen (siehe `lib/enrich.ts`, `lib/priorisieren.ts`), nie als HTML ausgeben, kein `dangerouslySetInnerHTML`.
 - **Abhängigkeiten:** neue nur nach Prüfung (Herkunft, Pflege, Alter, Installationsskripte). `.npmrc` verbietet Installationsskripte.
 - **CSP** in `next.config.mjs` nur verschärfen, nie lockern.
+- **Anmeldung:** Passkey ist der bevorzugte Weg. Passwort und Code (`lib/zweifaktor.ts`) sind die Ausweichlösung und fliegen raus, sobald Passkeys auf Peters Geräten gehen. Der Code-Schlüssel ist mit `SESSION_SECRET` verschlüsselt: wer `SESSION_SECRET` wechselt, muss Passwort und Code neu einrichten.
 
 ## Texte in der App
 
