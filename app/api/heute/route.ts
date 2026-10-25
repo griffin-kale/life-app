@@ -1,0 +1,44 @@
+import { NextResponse, after } from 'next/server';
+import { ensureSchema, getSetting, sql, type Item } from '@/lib/db';
+import { AKTIV, engpassAus, heuteBerlin, laeuftGerade, liste, offene, sortiere, tagesStartNoetig } from '@/lib/priorisieren';
+
+/** Alles für Heute und Woche: offene Stapel, heute Erledigtes, Ziele mit Fortschritt dieser Woche. */
+export async function GET() {
+  await ensureSchema();
+  const neuerTag = await tagesStartNoetig();
+  if (neuerTag) after(() => sortiere('tag'));
+  const tag = heuteBerlin();
+  const [items, erledigt, zuletzt, kontext, zieleText, sortAm, fehler, laeuft, wartet] = await Promise.all([
+    offene(),
+    sql<Item[]>`select * from items where status = 'erledigt' and erledigt_at >= date_trunc('week', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin' order by erledigt_at desc`,
+    sql<Item[]>`select * from items where status <> 'archiv' order by created_at desc limit 3`,
+    getSetting('kontext'), getSetting('ziele'), getSetting('sort_am'), getSetting('sort_fehler'), laeuftGerade(),
+    sql<{ n: number }[]>`select count(*)::int as n from items where status = 'neu' and fehler is null and created_at > now() - interval '5 minutes'`,
+  ]);
+  const ziele = liste(zieleText);
+  const zielStand = ziele.map((z) => ({
+    ziel: z,
+    offen: items.filter((i) => i.ziel === z && i.stapel !== 'streichen').length,
+    erledigt: erledigt.filter((i) => i.ziel === z).length,
+  }));
+  return NextResponse.json({
+    tag,
+    items: items.map((i) => (i.zeit_tag === tag ? i : { ...i, zeit: null })),
+    erledigtHeute: erledigt.filter((i) => heuteBerlin(new Date(i.erledigt_at!)) === tag),
+    erledigtWoche: erledigt.length,
+    zuletzt,
+    engpass: engpassAus(kontext),
+    ziele: zielStand,
+    sortiertAm: sortAm || null,
+    fehler: fehler || null,
+    laeuft: neuerTag || laeuft || wartet[0].n > 0,
+    aktiv: AKTIV,
+  });
+}
+
+/** Neu sortieren auf Knopfdruck. */
+export async function POST() {
+  await ensureSchema();
+  after(() => sortiere('tag'));
+  return NextResponse.json({ ok: true });
+}

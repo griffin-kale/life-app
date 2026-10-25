@@ -5,11 +5,11 @@ import { createItem, enrich, TYPEN } from '@/lib/enrich';
 export async function GET(req: NextRequest) {
   await ensureSchema();
   const p = req.nextUrl.searchParams;
-  const typ = p.get('typ'); const q = (p.get('q') || '').trim(); const archiv = p.get('archiv') === '1';
+  const typ = p.get('typ'); const q = (p.get('q') || '').trim(); const archiv = p.get('archiv') === '1'; const erledigt = p.get('erledigt') === '1';
   const limit = Math.min(Number(p.get('limit')) || 50, 200);
   const items = await sql<Item[]>`
     select * from items
-    where ${archiv ? sql`status = 'archiv'` : sql`status <> 'archiv'`}
+    where ${archiv ? sql`status = 'archiv'` : erledigt ? sql`status = 'erledigt'` : sql`status <> 'archiv'`}
       ${typ && (TYPEN as readonly string[]).includes(typ) ? sql`and typ = ${typ}` : sql``}
       ${q ? sql`and (text ilike ${'%' + q + '%'} or titel ilike ${'%' + q + '%'} or kern ilike ${'%' + q + '%'})` : sql``}
     order by created_at desc limit ${limit}`;

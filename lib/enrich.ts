@@ -2,6 +2,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { askJson } from './claude';
 import { ensureSchema, getSetting, sql, type Item } from './db';
+import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -41,7 +42,10 @@ async function youtube(raw: string): Promise<{ title: string; author: string } |
 
 const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
-type Antwort = { typ: string; kategorie: string; art: string; titel: string; bereinigt: string; schritt: string; begruendung: string; kern: string; frage: string };
+type Antwort = {
+  typ: string; kategorie: string; art: string; titel: string; bereinigt: string; schritt: string; begruendung: string; kern: string; frage: string;
+  ziel?: string; hebel?: number; aufwand_min?: number; frist?: string; wer?: string; delegieren_an?: string;
+};
 
 /** Ordnet einen Eintrag ein. Fehler landen im Feld "fehler", der Eintrag bleibt erhalten. */
 export async function enrich(id: string): Promise<void> {
@@ -61,28 +65,43 @@ export async function enrich(id: string): Promise<void> {
       const p = await fetchPage(url).catch(() => null);
       if (p) { titel = p.title; quelle = `${p.site}\nSeitentext (Auszug): ${p.text}`; }
     }
-    const kontext = await getSetting('kontext');
+    const [kontext, zieleText, team] = await Promise.all([getSetting('kontext'), getSetting('ziele'), getSetting('team')]);
+    const ziele = liste(zieleText);
+    const heute = heuteBerlin();
+    const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' }).format(new Date());
     const prompt = [
       'Du hilfst Peter, Gedanken und Fundstücke festzuhalten und daraus zu lernen. Ordne den Eintrag ein. Deutsch, knapp, keine Floskeln.',
       'Typen: "gedanke" (eigener Gedanke), "zitat" (Satz von jemand anderem), "video", "buch", "link" (Artikel, Seite).',
       'Kategorien: "engpass" (verkleinert direkt den aktuellen Engpass), "entscheidung" (größere Frage zum Abwägen), "aufgabe" (konkret, in einer Sitzung erledigt), "projekt" (mehrere Schritte), "privat" (Familie, Gesundheit, Freizeit), "notiz" (nur festhalten), "idee" (spannend, aber nicht jetzt), "wissen" (Zitat, Video, Buch oder Artikel zum Lernen). Sei streng mit "engpass".',
       'Art von Wohlstand nach Sahil Bloom: "zeit", "sozial", "mental", "koerper" oder "geld".',
       'Was gerade zählt (von Peter):\n' + (kontext || 'nicht angegeben'),
+      'Peters Ziele: ' + (ziele.length ? ziele.join(', ') : 'nicht angegeben'),
+      team ? 'Wem Peter etwas geben kann:\n' + team : '',
+      `Heute ist ${wtag}, ${heute}.`,
       'Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n' + item.text,
       url ? `Link: ${url}${titel ? `\nTitel: ${titel}` : ''}${quelle ? `\nQuelle: ${quelle}` : ''}${typHint ? `\nHinweis: ${typHint}` : ''}` : '',
-      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer)}',
+      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer), "ziel": string (genau eines von Peters Zielen, auf das der Eintrag einzahlt, sonst leer), "hebel": Zahl 0 bis 3 (Wirkung auf den Engpass, 3 = direkt; streng), "aufwand_min": 15, 60 oder 240 (bei notiz, idee und wissen 0), "frist": "JJJJ-MM-TT" (nur wenn der Eintrag eine Frist nennt oder klar macht, sonst leer), "wer": "ich" oder "delegieren", "delegieren_an": string (Name aus dem Team, sonst leer)}',
     ].filter(Boolean).join('\n\n');
     const a = await askJson<Antwort>(prompt);
     const typ = (TYPEN as readonly string[]).includes(a.typ) ? a.typ : (typHint || 'gedanke');
     const kategorie = (KATEGORIEN as readonly string[]).includes(a.kategorie) ? a.kategorie : 'notiz';
     const art = (ARTEN as readonly string[]).includes(a.art) ? a.art : null;
     const parken = kategorie === 'idee' ? new Date(Date.now() + 72 * 3600_000) : null;
+    const ziel = ziele.find((z) => z.toLowerCase() === String(a.ziel || '').toLowerCase()) ?? (ziele.length ? null : (String(a.ziel || '').slice(0, 60) || null));
+    const hebel = Number.isFinite(Number(a.hebel)) ? Math.max(0, Math.min(3, Math.round(Number(a.hebel)))) : null;
+    const aufwand = [15, 60, 240].includes(Number(a.aufwand_min)) ? Number(a.aufwand_min) : null;
+    const frist = /^\d{4}-\d{2}-\d{2}$/.test(String(a.frist || '')) ? String(a.frist) : null;
+    const wer = a.wer === 'delegieren' ? 'delegieren' : 'ich';
+    const an = wer === 'delegieren' ? (String(a.delegieren_an || '').slice(0, 60) || null) : null;
     await sql`update items set status = 'sortiert', typ = ${typ}, kategorie = ${kategorie}, art = ${art},
       titel = ${(a.titel || titel || '').slice(0, 200) || null}, quelle = ${quelle ? quelle.split('\n')[0] : null},
       roh = coalesce(roh, text), text = ${(a.bereinigt || item.text).slice(0, 8000)}, url = ${url},
       schritt = ${(a.schritt || '').slice(0, 300) || null}, begruendung = ${(a.begruendung || '').slice(0, 200) || null},
       kern = ${(a.kern || '').slice(0, 1200) || null}, frage = ${(a.frage || '').slice(0, 400) || null},
-      parken_bis = ${parken}, fehler = null, updated_at = now() where id = ${id}`;
+      parken_bis = ${parken}, ziel = ${ziel}, hebel = ${hebel}, aufwand_min = ${aufwand}, frist = ${frist},
+      wer = ${wer}, delegieren_an = ${an}, fehler = null, updated_at = now() where id = ${id}`;
+    // Etwas zu tun? Dann gleich in die Stapel einsortieren.
+    if ((AKTIV as readonly string[]).includes(kategorie)) await sortiere('nachtrag').catch(() => {});
   } catch (e) {
     await sql`update items set fehler = ${String((e as Error).message || e).slice(0, 300)}, updated_at = now() where id = ${id}`;
   }

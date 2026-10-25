@@ -1,11 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSetting, setSetting } from '@/lib/db';
 
-export async function GET() { return NextResponse.json({ kontext: await getSetting('kontext') }); }
+const KEYS = ['kontext', 'ziele', 'team'] as const;
+
+export async function GET() {
+  const [kontext, ziele, team] = await Promise.all(KEYS.map((k) => getSetting(k)));
+  return NextResponse.json({ kontext, ziele, team });
+}
 
 export async function PUT(req: NextRequest) {
-  const { kontext } = await req.json().catch(() => ({}));
-  if (typeof kontext !== 'string') return NextResponse.json({ error: 'ungültig' }, { status: 400 });
-  await setSetting('kontext', kontext.slice(0, 4000));
+  const b = await req.json().catch(() => ({}));
+  if (!KEYS.some((k) => typeof b[k] === 'string')) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
+  for (const k of KEYS) if (typeof b[k] === 'string') await setSetting(k, b[k].slice(0, 4000));
   return NextResponse.json({ ok: true });
 }

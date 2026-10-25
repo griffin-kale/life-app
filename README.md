@@ -4,9 +4,13 @@ Peters Logbuch: Gedanken, Zitate, Videos, Bücher und Artikel festhalten. Claude
 
 Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren.
 
-## Was drin ist (Version 0.2)
+## Was drin ist (Version 0.3)
 
 - **Erfassen:** Textfeld mit Mikrofon (wo der Browser es kann) oder Tastatur-Diktat. Auf dem iPhone zusätzlich per Kurzbefehl über Aktionstaste und Teilen-Menü (`POST /api/capture`).
+- **Heute:** oben der Engpass, darunter „Jetzt dran“ mit höchstens drei Aufgaben. Jede lässt sich abhaken, auf eine Uhrzeit legen oder mit „Nicht heute“ in die Woche schieben. Beides lässt sich rückgängig machen.
+- **Priorisieren:** Claude gibt jeder Aufgabe Ziel, Hebel auf den Engpass (0 bis 3), Aufwand, Frist und Zuständigkeit. Beim ersten Öffnen am Tag sortiert Claude alle offenen Aufgaben gemeinsam in Jetzt, Diese Woche, Delegieren, Geparkt und Streichen vorgeschlagen, mit einer Zeile Begründung. Doppelte Einträge führt Claude zusammen. Neue Aufgaben ordnet Claude gleich ein, ohne die Jetzt-Liste umzuwerfen.
+- **Lernen:** Jede Verschiebung von dir landet als Korrektur in der Datenbank. Die letzten 20 gehen beim nächsten Sortieren mit. Was du binnen zwei Minuten rückgängig machst, zählt nicht.
+- **Woche:** Ziele mit offenen und erledigten Aufgaben, alle Stapel, Verschieben per Auswahlrad, Streichvorschläge annehmen oder behalten.
 - **Einordnen:** Typ (Gedanke, Zitat, Video, Buch, Artikel), Kategorie (Engpass, Entscheidung, Aufgabe, Projekt, Privat, Notiz, Idee, Wissen), Art von Wohlstand nach Sahil Bloom, nächster Schritt. Ideen werden 72 Stunden geparkt.
 - **Links:** YouTube-Titel über oEmbed, bei anderen Seiten Titel und Textauszug. Nur öffentliche Adressen werden abgerufen.
 - **Archiv:** Filter nach Typ, Suche, archivierte Einträge.

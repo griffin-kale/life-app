@@ -16,6 +16,7 @@
   --sky: #A9C1E8;
   --sand: #D0C8A6;
   --ok: #6FD3A0;
+  --warn: #F0B45A;
   --bad: #FF8A80;
   --serif: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -252,3 +253,66 @@ code { font-family: var(--mono); font-size: .8125rem; background: rgba(0, 0, 0, 
   .filters button, .search { box-shadow: inset 0 0 0 1px var(--hair); }
 }
 .group.pad > .btn { justify-self: start; }
+
+/* ---------- 0.3: Heute, Woche, Priorität ---------- */
+.engpass { margin: .35rem 0 0; display: inline-flex; align-items: baseline; gap: 8px; font-size: .9375rem; line-height: 1.35; color: var(--ink); text-decoration: none; letter-spacing: -.01em; max-width: 100%; }
+.engpass b { flex: 0 0 auto; font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--night); background: var(--sand); padding: 2px 7px; border-radius: 6px; position: relative; top: -1px; }
+.engpass span { min-width: 0; overflow-wrap: anywhere; }
+.engpass.leer { color: var(--sky); align-items: center; }
+.engpass.leer .chev { color: var(--sky); }
+
+.capture.compact textarea { min-height: 2.9rem; transition: min-height 240ms var(--ease-out); }
+.capture.compact:focus-within textarea, .capture.compact textarea:not(:placeholder-shown) { min-height: 6rem; }
+
+/* Aufgabenliste wie Erinnerungen */
+.tasks { list-style: none; margin: 0; padding: 0; }
+.task { position: relative; display: grid; grid-template-columns: 50px minmax(0, 1fr); align-items: start; padding: 10px 14px 12px 0; transition: opacity 300ms ease-out, transform 300ms var(--ease-out); }
+.task + .task::before { content: ''; position: absolute; top: 0; left: 50px; right: 0; border-top: 1px solid var(--line); }
+.tick { width: 50px; height: 44px; margin-top: -8px; display: grid; place-items: center; background: none; border: 0; padding: 0; cursor: pointer; color: transparent; }
+.tick svg { width: 24px; height: 24px; border-radius: 50%; padding: 4px; box-shadow: inset 0 0 0 1.6px var(--faint); transition: background-color 200ms ease-out, box-shadow 200ms ease-out, color 200ms; }
+.tick:active svg { box-shadow: inset 0 0 0 1.6px var(--sand); background: rgba(208, 200, 166, .15); transition-duration: 0s; }
+.task.done .tick svg, .task.leaving .tick svg, .tick[aria-pressed="true"] svg { background: var(--sand); color: var(--night); box-shadow: none; }
+.tick-space { width: 50px; }
+.tbody { min-width: 0; display: grid; gap: 3px; }
+.ttitle { text-decoration: none; color: var(--ink); font-size: 1rem; line-height: 1.32; letter-spacing: -.012em; overflow-wrap: anywhere; padding: 1px 0; }
+.ttitle:active { opacity: .55; }
+.task.lead .ttitle { font-family: var(--serif); font-size: 1.45rem; line-height: 1.12; letter-spacing: -.01em; text-wrap: pretty; padding-top: 0; }
+.task.lead { padding-top: 14px; padding-bottom: 14px; }
+.task.lead .tick { margin-top: -6px; }
+.tgrund { margin: 0; font-size: .875rem; line-height: 1.35; color: var(--muted); letter-spacing: -.005em; }
+.tmeta { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: .75rem; line-height: 1.4; color: var(--faint); letter-spacing: .005em; }
+.tmeta:empty { display: none; }
+.tmeta .k { display: inline-flex; align-items: center; gap: 5px; color: var(--sand); font-weight: 600; }
+.tmeta .k::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tmeta .spaet, .val.spaet { color: var(--warn); }
+.tact { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
+.task.done .ttitle { color: var(--faint); text-decoration: line-through; text-decoration-color: rgba(118, 131, 154, .6); }
+.task.leaving { opacity: .35; }
+
+/* Kleine Knöpfe in Zeilen. Sichtbar 32 px, Trefferfläche durch Abstand größer. */
+.chipbtn { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(169, 193, 232, .1); color: var(--ink); font-size: .8125rem; font-weight: 600; letter-spacing: -.005em; cursor: pointer; -webkit-user-select: none; user-select: none; transition: background-color 200ms ease-out, opacity 220ms; }
+.chipbtn::after { content: ''; position: absolute; inset: -6px -2px; }
+.chipbtn svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--muted); }
+.chipbtn .chev { width: 12px; height: 12px; }
+.chipbtn:active { opacity: .55; transition-duration: 0s; }
+.chipbtn.set { background: rgba(208, 200, 166, .18); color: var(--sand); }
+.chipbtn.set svg { color: var(--sand); }
+.chipbtn.danger { color: var(--bad); background: rgba(255, 138, 128, .12); }
+.chipbtn input, .chipbtn select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; z-index: 1; -webkit-appearance: none; appearance: none; }
+.chipbtn:has(input:focus-visible), .chipbtn:has(select:focus-visible) { outline: 2px solid var(--sky); outline-offset: 2px; }
+
+.linkbtn { background: none; border: 0; padding: 0; color: var(--sky); font: inherit; text-decoration: none; cursor: pointer; }
+.linkbtn:disabled { color: var(--faint); cursor: default; }
+.linkbtn:active { opacity: .5; }
+.gnote.bad { color: var(--bad); }
+.gnote.flush { padding: 0; }
+.gnote .working { color: var(--sky); }
+.cell.static { cursor: default; }
+.cell.static:active { background: none; }
+.emeta .ok { color: var(--ok); }
+
+.toast.has-action { pointer-events: auto; padding-right: 6px; }
+.toast button { margin-left: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--imperial); color: var(--ink); font-weight: 600; font-size: .875rem; cursor: pointer; }
+.toast button:active { opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .task { transition: opacity 200ms; } .capture.compact textarea { transition: none; } }
+@media (prefers-contrast: more) { .tick svg { box-shadow: inset 0 0 0 2px var(--muted); } .chipbtn { box-shadow: inset 0 0 0 1px var(--hair); } }

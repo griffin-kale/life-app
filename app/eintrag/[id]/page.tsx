@@ -1,19 +1,22 @@
 'use client';
 import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ART, Icon, KAT, TYP, TabBar, TopBar, api, bodyText, fWhen, isParked, isPending, sourceLabel, useToast, type Item } from '../../ui';
+import { ART, Icon, KAT, STAPEL, TYP, TabBar, TopBar, api, aufwandLabel, bodyText, fWhen, fristLabel, isParked, isPending, sourceLabel, useToast, type Item } from '../../ui';
 
-const BACK: Record<string, { label: string; href: string }> = { archiv: { label: 'Archiv', href: '/archiv' } };
+const BACK: Record<string, { label: string; href: string }> = { archiv: { label: 'Logbuch', href: '/archiv' }, woche: { label: 'Woche', href: '/woche' } };
+const AKTIV = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat'];
 
 export default function Eintrag({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ von?: string }> }) {
   const { id } = use(params);
   const { von } = use(searchParams);
-  const back = BACK[von ?? ''] ?? { label: 'Logbuch', href: '/' };
+  const back = BACK[von ?? ''] ?? { label: 'Heute', href: '/' };
   const router = useRouter();
   const [it, setIt] = useState<Item | null>(null);
   const [err, setErr] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
   const [toast, setToast] = useToast();
+  const [ziele, setZiele] = useState<string[]>([]);
+  useEffect(() => { api<{ ziele: string }>('/api/settings').then((s) => setZiele(s.ziele.split('\n').map((z) => z.replace(/^[-•*\s]+/, '').trim()).filter(Boolean))).catch(() => {}); }, []);
 
   const load = useCallback(() => api<Item>(`/api/items/${id}`).then(setIt), [id]);
   useEffect(() => { load().catch((e) => setErr(e.message)); }, [load]);
@@ -28,7 +31,8 @@ export default function Eintrag({ params, searchParams }: { params: Promise<{ id
     try {
       const r = await api<Item | { ok: true }>(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       if ('id' in r) setIt(r); else await load();
-      setToast(msg);
+      const v = (r as { verdraengt?: string | null }).verdraengt;
+      setToast(v ? `„${v.slice(0, 40)}“ rückt in die Woche` : msg);
     } catch (e) { setToast((e as Error).message, 'err'); }
   }
   async function remove() {
@@ -52,7 +56,7 @@ export default function Eintrag({ params, searchParams }: { params: Promise<{ id
     <main className="wrap">
       <TopBar title={heading} back={back} />
       <header className="head">
-        <span className="eyebrow">{TYP[it.typ] ?? it.typ} · {fWhen(it.created_at)}</span>
+        <span className="eyebrow">{AKTIV.includes(it.kategorie ?? '') ? KAT[it.kategorie!] : TYP[it.typ] ?? it.typ} · {fWhen(it.created_at)}</span>
         <h1 className="big">{heading}</h1>
       </header>
 
@@ -92,6 +96,34 @@ export default function Eintrag({ params, searchParams }: { params: Promise<{ id
           <div className="group">
             <a className="cell tint" href={it.url} target="_blank" rel="noopener noreferrer"><span className="lbl">{src}</span>{Icon.external}</a>
           </div>
+        </section>
+      ) : null}
+
+      {AKTIV.includes(it.kategorie ?? '') && it.status !== 'archiv' ? (
+        <section className="gsec">
+          <h2 className="glabel">Priorität</h2>
+          <div className="group">
+            {it.status === 'erledigt'
+              ? <button type="button" className="cell tint" onClick={() => patch({ erledigt: false }, 'Wieder offen')}><span>Erledigt {it.erledigt_at ? fWhen(it.erledigt_at) : ''}</span><span className="val"><span>Wieder öffnen</span></span></button>
+              : <>
+                <label className="cell"><span>Stapel</span><span className="val"><span>{it.stapel ? STAPEL[it.stapel] : 'wird einsortiert'}</span>{Icon.updown}</span>
+                  <select aria-label="Stapel" value={it.stapel ?? ''} onChange={(e) => patch({ stapel: e.target.value }, STAPEL[e.target.value])}>
+                    <option value="" disabled>wird einsortiert</option>{Object.entries(STAPEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                  </select></label>
+                {ziele.length ? (
+                  <label className="cell"><span>Ziel</span><span className="val"><span>{it.ziel ?? 'keins'}</span>{Icon.updown}</span>
+                    <select aria-label="Ziel" value={it.ziel ?? ''} onChange={(e) => patch({ ziel: e.target.value }, 'Gespeichert')}>
+                      <option value="">keins</option>{ziele.map((z) => <option key={z} value={z}>{z}</option>)}
+                    </select></label>
+                ) : null}
+                <div className="cell static"><span>Hebel auf den Engpass</span><span className="val"><span>{it.hebel == null ? 'offen' : ['keiner', 'gering', 'mittel', 'direkt'][it.hebel]}</span></span></div>
+                {aufwandLabel(it.aufwand_min) ? <div className="cell static"><span>Aufwand</span><span className="val"><span>{aufwandLabel(it.aufwand_min)}</span></span></div> : null}
+                {it.frist ? <div className="cell static"><span>Frist</span><span className={'val' + (fristLabel(it.frist)?.spaet ? ' spaet' : '')}><span>{fristLabel(it.frist)?.text}</span></span></div> : null}
+                {it.wer === 'delegieren' ? <div className="cell static"><span>Delegieren</span><span className="val"><span>{it.delegieren_an ?? 'jemand im Team'}</span></span></div> : null}
+                <button type="button" className="cell tint strong" onClick={() => patch({ erledigt: true }, 'Erledigt')}>Erledigt</button>
+              </>}
+          </div>
+          {it.grund && it.status !== 'erledigt' ? <p className="gnote">{it.grund}</p> : null}
         </section>
       ) : null}
 

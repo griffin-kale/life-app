@@ -11,7 +11,7 @@ export async function GET() {
   for (const i of items) {
     const m = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', month: 'long', year: 'numeric' }).format(new Date(i.created_at));
     if (m !== month) { out.push(`## ${m}`, ''); month = m; }
-    out.push(`### ${i.titel || i.text.slice(0, 60)}`, `- ${fmt.format(new Date(i.created_at))} · ${i.typ}${i.kategorie ? ' · ' + i.kategorie : ''}${i.art ? ' · ' + i.art : ''}${i.status === 'archiv' ? ' · archiviert' : ''}`);
+    out.push(`### ${i.titel || i.text.slice(0, 60)}`, `- ${fmt.format(new Date(i.created_at))} · ${i.typ}${i.kategorie ? ' · ' + i.kategorie : ''}${i.art ? ' · ' + i.art : ''}${i.status === 'archiv' ? ' · archiviert' : ''}${i.status === 'erledigt' ? ' · erledigt' : ''}${i.ziel ? ' · Ziel: ' + i.ziel : ''}`);
     if (i.url) out.push(`- ${i.url}`);
     out.push('', i.text, '');
     if (i.kern) out.push(`**Kernidee:** ${i.kern}`, '');

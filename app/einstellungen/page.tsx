@@ -2,18 +2,23 @@
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 
+type S = { kontext: string; ziele: string; team: string };
+const LEER: S = { kontext: '', ziele: '', team: '' };
+
 export default function Einstellungen() {
-  const [kontext, setKontext] = useState('');
-  const [saved, setSaved] = useState('');
+  const [v, setV] = useState<S>(LEER);
+  const [saved, setSaved] = useState<S>(LEER);
   const [origin, setOrigin] = useState('');
   const [toast, setToast] = useToast();
   useEffect(() => {
     setOrigin(window.location.origin);
-    api<{ kontext: string }>('/api/settings').then((s) => { setKontext(s.kontext); setSaved(s.kontext); }).catch(() => {});
+    // Hat Peter schon getippt, bevor die Werte da sind, bleibt sein Text stehen.
+    api<S>('/api/settings').then((s) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); }).catch(() => {});
   }, []);
-  const dirty = kontext !== saved;
+  const dirty = v.kontext !== saved.kontext || v.ziele !== saved.ziele || v.team !== saved.team;
+  const set = (k: keyof S) => (e: React.ChangeEvent<HTMLTextAreaElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function save() {
-    try { await api('/api/settings', { method: 'PUT', body: JSON.stringify({ kontext }) }); setSaved(kontext); }
+    try { await api('/api/settings', { method: 'PUT', body: JSON.stringify(v) }); setSaved(v); }
     catch (e) { setToast((e as Error).message, 'err'); }
   }
   return (
@@ -22,13 +27,17 @@ export default function Einstellungen() {
       <header className="head"><span className="eyebrow">Wie Lage für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
 
       <section className="gsec">
-        <h2 className="glabel">Was gerade zählt</h2>
+        <h2 className="glabel">Was Claude beim Sortieren weiß</h2>
         <div className="group pad">
           <div className="field"><label htmlFor="ktx">Engpass, Prioritäten, Leitsatz</label>
-            <textarea id="ktx" rows={6} value={kontext} onChange={(e) => setKontext(e.target.value)} placeholder={'Engpass: …\nPrioritäten diese Woche: …\nLeitsatz: …'} /></div>
+            <textarea id="ktx" rows={5} value={v.kontext} onChange={set('kontext')} placeholder={'Engpass: …\nPrioritäten diese Woche: …\nLeitsatz: …'} /></div>
+          <div className="field"><label htmlFor="ziele">Ziele, eins pro Zeile</label>
+            <textarea id="ziele" rows={4} value={v.ziele} onChange={set('ziele')} placeholder={'Projekte\nPlattform\nBoutique\nPrivat'} /></div>
+          <div className="field"><label htmlFor="team">Wem du etwas geben kannst, eine Person pro Zeile</label>
+            <textarea id="team" rows={3} value={v.team} onChange={set('team')} placeholder={'Name: wofür sie oder er gut ist'} /></div>
           <button type="button" className="btn primary" onClick={save} disabled={!dirty}>{dirty ? 'Speichern' : <>{Icon.check}Gespeichert</>}</button>
         </div>
-        <p className="gnote">Claude liest das bei jedem Eintrag mit und ordnet danach ein.</p>
+        <p className="gnote">Die Zeile mit „Engpass:“ steht oben auf Heute. Claude ordnet jeden Eintrag einem Ziel zu und sortiert jeden Morgen danach.</p>
       </section>
 
       <section className="gsec">
@@ -54,7 +63,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Lage 0.2 · Server in Deutschland</p>
+      <p className="foot">Lage 0.3 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>
