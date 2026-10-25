@@ -51,3 +51,17 @@ export async function askJson<T>(prompt: string, model = MODEL_FAST(), maxTokens
   if (start < 0 || end < start) throw new Error('Antwort ohne JSON');
   return zurueck(JSON.parse(text.slice(start, end + 1)) as T, zuordnung);
 }
+
+/** Wie askJson, dazu ein Foto (JPEG, im Browser verkleinert und ohne Ortsdaten). Der Text wird genauso pseudonymisiert. */
+export async function askJsonBild<T>(prompt: string, jpegBase64: string, model = MODEL(), maxTokens = 600): Promise<T> {
+  if (!claudeBereit()) throw new Error('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
+  const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
+  const msg = await getClient().messages.create({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: [
+    { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },
+    { type: 'text', text: maskiert },
+  ] }] });
+  const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
+  if (start < 0 || end < start) throw new Error('Antwort ohne JSON');
+  return zurueck(JSON.parse(text.slice(start, end + 1)) as T, zuordnung);
+}

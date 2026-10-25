@@ -22,11 +22,11 @@ export async function validSession(token: string | undefined): Promise<boolean> 
 }
 
 /** Challenge für Passkey-Anmeldung, 5 Minuten gültig, signiert im Cookie. */
-export async function signChallenge(challenge: string, purpose: 'register' | 'login'): Promise<string> {
+export async function signChallenge(challenge: string, purpose: 'register' | 'login' | 'whoop'): Promise<string> {
   return new SignJWT({ c: challenge, p: purpose }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('5m').sign(key());
 }
 
-export async function readChallenge(token: string | undefined, purpose: 'register' | 'login'): Promise<string | null> {
+export async function readChallenge(token: string | undefined, purpose: 'register' | 'login' | 'whoop'): Promise<string | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ['HS256'] });

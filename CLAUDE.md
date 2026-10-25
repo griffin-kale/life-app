@@ -37,7 +37,8 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 - **Neue offene Endpunkte** (ohne Sitzung) bekommen `begrenzt()` aus `lib/ratelimit.ts` und kommen in `OPEN` in `middleware.ts` nur nach Rückfrage.
 - **Claude-Antworten sind unsichere Eingaben.** Immer gegen feste Listen prüfen (siehe `lib/enrich.ts`, `lib/priorisieren.ts`), nie als HTML ausgeben, kein `dangerouslySetInnerHTML`.
 - **Abhängigkeiten:** neue nur nach Prüfung (Herkunft, Pflege, Alter, Installationsskripte). `.npmrc` verbietet Installationsskripte.
-- **CSP** in `next.config.mjs` nur verschärfen, nie lockern.
+- **CSP** in `next.config.mjs` nur verschärfen, nie lockern. Freigegebene Ausnahmen (Peter, 25.10.2026): Kamera für Barcode und Essensfoto (`camera=(self)`), `worker-src 'self'` für den Service Worker der Mitteilungen, `blob:` für Bilder und Video. `/sw.js` ist offen, weil iOS die Datei auch nach Ablauf der Sitzung lädt.
+- **Feste Fremddienste** (kein Eintragstext, kein Name): WHOOP (`lib/whoop.ts`, OAuth), Open Food Facts (nur Barcode-Nummer), Push-Dienste von Apple und Co. (Inhalt verschlüsselt).
 - **Fragen an Peter sind klickbar.** In der App gibt es keine Freitext-Pflichtfelder: Antworten zum Antippen (`lib/fragen.ts`, `app/fragebogen.tsx`), dazu immer „Etwas dazu sagen“ für eigene Worte.
 - **Mehrere Menschen:** Tabellen haben `user_id` (Standard `peter`), Haushalte stehen in `haushalte` und `nutzer`. Neue Tabellen bekommen `user_id` von Anfang an. Bevor ein zweiter Mensch Life nutzt, filtert jede Abfrage nach `user_id`.
 - **Anmeldung:** Passkey ist der bevorzugte Weg. Passwort und Code (`lib/zweifaktor.ts`) sind die Ausweichlösung und fliegen raus, sobald Passkeys auf Peters Geräten gehen. Der Code-Schlüssel ist mit `SESSION_SECRET` verschlüsselt: wer `SESSION_SECRET` wechselt, muss Passwort und Code neu einrichten.
@@ -58,7 +59,7 @@ npm run build && npm run test:e2e   # braucht Postgres, siehe playwright.config.
 
 ## Offene Punkte
 
-- Ausbau in Stufen, jede einzeln live: 1 Fundament (0.6), 2 Körper mit WHOOP, Training wie RP für zu Hause, Barcode-Ernährung, 3 Meditation mit NSDR, Wim Hof und Stille, 4 Geld für die Familie, 5 Menschen und Zeit. Konzept: Artefakte „Life 1.0 Konzept“ und „Life Bauplan-Fragen“.
+- Ausbau in Stufen, jede einzeln live: 1 Fundament (0.6), 2 Körper (0.7) mit WHOOP, Training wie RP für zu Hause, Barcode-Ernährung, 3 Meditation mit NSDR, Wim Hof und Stille, 4 Geld für die Familie, 5 Menschen und Zeit. Konzept: Artefakte „Life 1.0 Konzept“ und „Life Bauplan-Fragen“.
 - YouTube-Transkripte für Wissenseinträge.
 - Kalender: Blöcke für „Jetzt dran“ eintragen. Welcher Kalender, ist noch offen.
 - Familienversion, danach Produkt: mehrere Nutzer mit sauber getrennten Daten pro Nutzer (jede Abfrage nach Nutzer filtern), Export und Löschen pro Nutzer.
