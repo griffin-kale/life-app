@@ -1,8 +1,7 @@
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
 import { askJson } from './claude';
 import { ensureSchema, getSetting, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
+import { safeFetch } from './safefetch';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -10,27 +9,15 @@ export const ARTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
 
 const URL_RE = /https?:\/\/[^\s<>"]+/i;
 
-function isPrivate(ip: string): boolean {
-  if (ip.includes(':')) return ip === '::1' || /^f[cd]/i.test(ip) || /^fe80/i.test(ip) || ip.startsWith('::ffff:127.');
-  const [a, b] = ip.split('.').map(Number);
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
-}
-
-/** Holt Titel und Text einer Seite. Nur öffentliche Adressen, höchstens 1,5 MB, 8 Sekunden. */
+/** Holt Titel und Text einer Seite über safeFetch: nur öffentliche Adressen, höchstens 1,5 MB, 8 Sekunden. */
 async function fetchPage(raw: string): Promise<{ title: string; text: string; site: string } | null> {
-  const u = new URL(raw);
-  if (!['http:', 'https:'].includes(u.protocol)) return null;
-  const host = u.hostname;
-  const ips = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address);
-  if (ips.some(isPrivate)) return null;
-  const res = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'Mozilla/5.0 (Life)', 'accept-language': 'de,en' } });
-  if (!res.ok || !(res.headers.get('content-type') || '').includes('html')) return null;
-  const buf = await res.arrayBuffer();
-  const html = new TextDecoder().decode(buf.slice(0, 1_500_000));
+  const res = await safeFetch(raw, { headers: { 'user-agent': 'Mozilla/5.0 (Life)', 'accept-language': 'de,en' } });
+  if (!res || res.status < 200 || res.status >= 300 || !res.contentType.includes('html')) return null;
+  const html = res.body.toString('utf8');
   const meta = (name: string) => html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${name}["'][^>]*content=["']([^"']*)`, 'i'))?.[1] ?? '';
   const title = meta('og:title') || html.match(/<title[^>]*>([^<]*)/i)?.[1] || '';
   const body = html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-  return { title: decode(title).trim(), text: (meta('og:description') + ' ' + body).slice(0, 6000), site: u.hostname.replace(/^www\./, '') };
+  return { title: decode(title).trim(), text: (meta('og:description') + ' ' + body).slice(0, 6000), site: new URL(res.url).hostname.replace(/^www\./, '') };
 }
 
 async function youtube(raw: string): Promise<{ title: string; author: string } | null> {
