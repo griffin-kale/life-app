@@ -19,6 +19,7 @@ Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https:
 - GitHub Actions prüft jede Änderung. Ein Versions-Tag baut das fertige Paket für den Server.
 - `deploy.sh` spielt eine bestimmte Version auf und wartet, bis sie antwortet. Zurückrollen heißt, eine ältere Version anzugeben.
 - `CLAUDE.md` mit den festen Regeln für die Arbeit am Projekt.
+- Life gehört der Griffin & Kale GmbH: Lizenzhinweis, Regeln für private Einträge.
 
 ## [0.3.1] – 2026-10-25
 

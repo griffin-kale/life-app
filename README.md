@@ -2,7 +2,7 @@
 
 Peters App für Gedanken, Aufgaben und Wissen. Festhalten per Text, Diktat oder Kurzbefehl. Claude ordnet jeden Eintrag ein, priorisiert die Aufgaben gegen den Engpass und hält bei Wissen die Kernidee und eine Frage fest.
 
-Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren. Regeln für die Arbeit am Projekt stehen in [CLAUDE.md](CLAUDE.md), alle Versionen in [CHANGELOG.md](CHANGELOG.md).
+Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren. Life gehört der Griffin & Kale GmbH. Regeln für die Arbeit am Projekt stehen in [CLAUDE.md](CLAUDE.md), alle Versionen in [CHANGELOG.md](CHANGELOG.md).
 
 ## Was drin ist
 

@@ -1,14 +1,15 @@
 # Life – Regeln für die Arbeit am Projekt
 
-Life ist Peters private App: Gedanken, Aufgaben, Zitate, Videos und Bücher festhalten, von Claude einordnen und priorisieren lassen, daraus lernen. Ein Nutzer, Bedienung vor allem auf dem iPhone. Später eine Familienversion.
+Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich: Gedanken, Aufgaben, Zitate, Videos und Bücher festhalten, von Claude einordnen und priorisieren lassen, daraus lernen. Ein Nutzer, Bedienung vor allem auf dem iPhone. Später eine Familienversion und vielleicht ein Produkt.
 
 ## Feste Grenzen (nie verhandeln)
 
 1. **Daten bleiben in Deutschland.** Server bei Hetzner (Nürnberg/Falkenstein). Claude nur über Amazon Bedrock mit EU-Profil aus `eu-central-1`. Keine weiteren Dienste, die Einträge sehen.
 2. **Keine externen Ressourcen.** Keine Fonts, Skripte, Bilder, Analytics oder CDNs von außen, keine Links nach außen in der Oberfläche (außer der Quelle eines Eintrags, die Peter selbst festgehalten hat). Schriften liegen im Projekt.
-3. **Peter und EHRENBEHÖRDE sind getrennt.** Keine EB-Infrastruktur, keine EB-Konten. Farbe für Peter ist Imperial Blue (Pantone 2768 C, `#001D51`). Das EB-Royalblau `#3338CC` kommt hier nie vor.
-4. **Geheimnisse nie ins Repo und nie in den Chat.** Schlüssel trägt Peter selbst auf dem Server in `/opt/life/deploy/.env` ein. `.env` ist in `.gitignore`.
-5. **Dark Mode ist Standard.**
+3. **Life gehört der Griffin & Kale GmbH.** Repo (`griffin-kale/life-app`), Server und Verträge mit Hetzner und AWS laufen über die Firma, damit Life später auch als Produkt vertrieben werden kann. Life ist trotzdem keine EHRENBEHÖRDE-Marke: Farbe ist Imperial Blue (Pantone 2768 C, `#001D51`), das EB-Royalblau `#3338CC` kommt nicht vor.
+4. **Peters Einträge sind privat.** Sie liegen nur in der Datenbank auf dem Server, nie im Repo, in Tests, Logs, Screenshots im Pull Request oder Fehlermeldungen. Testdaten sind erfunden.
+5. **Geheimnisse nie ins Repo und nie in den Chat.** Schlüssel trägt Peter selbst auf dem Server in `/opt/life/deploy/.env` ein. `.env` ist in `.gitignore`.
+6. **Dark Mode ist Standard.**
 
 ## Skills, die bei der Arbeit gelten
 
@@ -57,4 +58,5 @@ npm run build && npm run test:e2e   # braucht Postgres, siehe playwright.config.
 - Funktionen der alten Tageslage übernehmen (Engpass-Woche, Beirat, 5 Types of Wealth, Kompass), sobald Life zwei Wochen im Alltag läuft.
 - YouTube-Transkripte für Wissenseinträge.
 - Kalender: Blöcke für „Jetzt dran“ eintragen. Welcher Kalender, ist noch offen.
-- Familienversion.
+- Familienversion, danach Produkt: mehrere Nutzer mit sauber getrennten Daten pro Nutzer (jede Abfrage nach Nutzer filtern), Export und Löschen pro Nutzer.
+- Auftragsverarbeitungsverträge mit Hetzner und AWS über Griffin & Kale abschließen.
