@@ -1,5 +1,7 @@
 # Life – Regeln für die Arbeit am Projekt
 
+Stand, Entscheidungen und Fahrplan stehen in `docs/UEBERGABE.md`. Die Datei bei jeder Stufe aktuell halten.
+
 Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich: Gedanken, Aufgaben, Zitate, Videos und Bücher festhalten, von Claude einordnen und priorisieren lassen, daraus lernen. Ein Nutzer, Bedienung vor allem auf dem iPhone. Später eine Familienversion und vielleicht ein Produkt.
 
 ## Feste Grenzen (nie verhandeln)
