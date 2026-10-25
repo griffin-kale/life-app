@@ -1,4 +1,4 @@
-/** Bildmarke von Lage: Peilring mit Standortpunkt, wie das App-Symbol. */
+/** Bildmarke von Life: Peilring mit Standortpunkt, wie das App-Symbol. */
 export function Mark() {
   return (
     <svg className="mark" viewBox="0 0 76 76" aria-hidden="true">

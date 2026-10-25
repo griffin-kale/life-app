@@ -6,7 +6,7 @@ export async function GET() {
   await ensureSchema();
   const items = await sql<Item[]>`select * from items order by created_at asc`;
   const fmt = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });
-  const out: string[] = ['# Lage – Export', '', `Stand: ${fmt.format(new Date())} · ${items.length} Einträge`, ''];
+  const out: string[] = ['# Life – Export', '', `Stand: ${fmt.format(new Date())} · ${items.length} Einträge`, ''];
   let month = '';
   for (const i of items) {
     const m = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', month: 'long', year: 'numeric' }).format(new Date(i.created_at));
@@ -19,5 +19,5 @@ export async function GET() {
     if (i.schritt) out.push(`**Nächster Schritt:** ${i.schritt}`, '');
   }
   const day = new Date().toISOString().slice(0, 10);
-  return new NextResponse(out.join('\n'), { headers: { 'content-type': 'text/markdown; charset=utf-8', 'content-disposition': `attachment; filename="lage-export-${day}.md"` } });
+  return new NextResponse(out.join('\n'), { headers: { 'content-type': 'text/markdown; charset=utf-8', 'content-disposition': `attachment; filename="life-export-${day}.md"` } });
 }

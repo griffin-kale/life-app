@@ -4,18 +4,20 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: lage
-      POSTGRES_DB: lage
+      POSTGRES_USER: life
+      POSTGRES_DB: life
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck: { test: ["CMD-SHELL", "pg_isready -U lage"], interval: 10s, retries: 5 }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U life"], interval: 10s, retries: 5 }
 
   app:
+    # Fertiges Paket von GitHub (Version aus .env), Notweg: deploy.sh --build baut lokal
+    image: ${GHCR_IMAGE:-life-app}:${LIFE_VERSION:-local}
     build: ..
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://lage:${POSTGRES_PASSWORD}@db:5432/lage
+      DATABASE_URL: postgres://life:${POSTGRES_PASSWORD}@db:5432/life
     depends_on: { db: { condition: service_healthy } }
 
   caddy:

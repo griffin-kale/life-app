@@ -3,8 +3,10 @@ import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { CHALLENGE_COOKIE, SESSION_COOKIE, cookieOptions, createSession, readChallenge, sameSecret } from '@/lib/session';
 import { rp } from '@/lib/webauthn';
+import { begrenzt } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
+  const zuViel = begrenzt(req, 'einrichten'); if (zuViel) return zuViel;
   const { token, response } = await req.json().catch(() => ({}));
   if (!sameSecret(token, process.env.SETUP_TOKEN)) return NextResponse.json({ error: 'Einrichtungscode stimmt nicht.' }, { status: 403 });
   const challenge = await readChallenge(req.cookies.get(CHALLENGE_COOKIE)?.value, 'register');

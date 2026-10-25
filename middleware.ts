@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, validSession } from '@/lib/session';
 
-const OPEN = ['/login', '/setup', '/api/auth/', '/api/capture', '/manifest.webmanifest', '/icon', '/apple-icon', '/favicon'];
+const OPEN = ['/login', '/setup', '/api/auth/', '/api/capture', '/api/health', '/manifest.webmanifest', '/icon', '/apple-icon', '/favicon'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

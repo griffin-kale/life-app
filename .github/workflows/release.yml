@@ -1,0 +1,26 @@
+# Baut bei jedem Versions-Tag (v1.2.3) das fertige Paket für den Server und legt es privat bei GitHub ab.
+# Der Server holt es mit deploy.sh ab und muss nichts selbst bauen.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bei GitHub-Paketen anmelden
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Bauen und hochladen
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker build --platform linux/amd64 -t "$IMAGE:${GITHUB_REF_NAME}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${GITHUB_REF_NAME}"
+          docker push "$IMAGE:latest"

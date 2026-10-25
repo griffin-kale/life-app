@@ -3,6 +3,7 @@ import { ensureSchema, sql, type Item } from '@/lib/db';
 import { ARTEN, KATEGORIEN, TYPEN, enrich } from '@/lib/enrich';
 import { AKTIV, JETZT_MAX, STAPEL, heuteBerlin, liste, sortiere } from '@/lib/priorisieren';
 import { getSetting } from '@/lib/db';
+import { begrenzt } from '@/lib/ratelimit';
 
 type Ctx = { params: Promise<{ id: string }> };
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -15,6 +16,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const { id } = await params; if (!UUID.test(id)) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   const b = await req.json().catch(() => ({}));
   await ensureSchema();

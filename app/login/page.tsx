@@ -21,7 +21,7 @@ export default function Login() {
   return (
     <main className="center"><div className="login">
       <Mark />
-      <h1 className="title">Lage<i>.</i></h1>
+      <h1 className="title">Life<i>.</i></h1>
       <p className="muted">Dein Logbuch. Nur für dich.</p>
       <button type="button" className="btn primary wide" onClick={go} disabled={busy}>{busy ? 'Prüft …' : 'Mit Face ID anmelden'}</button>
       {err ? <p className="err" role="alert">{err}</p> : null}

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Einmalig auf einem frischen Hetzner-Server (Ubuntu 24.04) als root ausführen:
-#   bash setup-server.sh lage.deinedomain.de
+#   bash setup-server.sh life.deinedomain.de
 set -euo pipefail
-DOMAIN="${1:?Domain fehlt, z. B. lage.deinedomain.de}"
+DOMAIN="${1:?Domain fehlt, z. B. life.deinedomain.de}"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update && apt-get -y upgrade
@@ -27,12 +27,16 @@ sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/ssh
 sed -i 's/^#\?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
 systemctl reload ssh || systemctl reload sshd
 
-mkdir -p /opt/lage/deploy/backups
-ENV=/opt/lage/deploy/.env
+mkdir -p /opt/life/deploy/backups
+ENV=/opt/life/deploy/.env
 if [ ! -f "$ENV" ]; then
   umask 077
   cat > "$ENV" <<EOT
 DOMAIN=$DOMAIN
+PUBLIC_ORIGIN=https://$DOMAIN
+# Fertige Pakete von GitHub, z. B. ghcr.io/deinname/life-app. Leer lassen, solange mit --build gebaut wird.
+GHCR_IMAGE=
+LIFE_VERSION=local
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 SETUP_TOKEN=$(openssl rand -hex 16)
@@ -46,7 +50,8 @@ EOT
 fi
 
 # Tägliche Datenbanksicherung um 3:15 Uhr, 30 Tage aufbewahren
-cat > /etc/cron.d/lage-backup <<'EOT'
-15 3 * * * root cd /opt/lage/deploy && docker compose exec -T db pg_dump -U lage lage | gzip > backups/lage-$(date +\%F).sql.gz && find backups -name 'lage-*.sql.gz' -mtime +30 -delete
+cat > /etc/cron.d/life-backup <<'EOT'
+15 3 * * * root cd /opt/life/deploy && docker compose exec -T db pg_dump -U life life | gzip > backups/life-$(date +\%F).sql.gz && find backups -name 'life-*.sql.gz' -mtime +30 -delete
 EOT
 echo "Fertig. Jetzt die AWS-Schlüssel in $ENV eintragen und deploy.sh vom Mac aus starten."
+echo "Für fertige Pakete von GitHub einmalig: docker login ghcr.io -u <github-name> (Token nur mit read:packages)."
