@@ -11,6 +11,8 @@ services:
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U life"], interval: 10s, retries: 5 }
 
   app:
+    # Fertiges Paket von GitHub (Version aus .env), Notweg: deploy.sh --build baut lokal
+    image: ${GHCR_IMAGE:-life-app}:${LIFE_VERSION:-local}
     build: ..
     restart: unless-stopped
     env_file: .env

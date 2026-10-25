@@ -34,6 +34,9 @@ if [ ! -f "$ENV" ]; then
   cat > "$ENV" <<EOT
 DOMAIN=$DOMAIN
 PUBLIC_ORIGIN=https://$DOMAIN
+# Fertige Pakete von GitHub, z. B. ghcr.io/deinname/life-app. Leer lassen, solange mit --build gebaut wird.
+GHCR_IMAGE=
+LIFE_VERSION=local
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 SETUP_TOKEN=$(openssl rand -hex 16)
@@ -51,3 +54,4 @@ cat > /etc/cron.d/life-backup <<'EOT'
 15 3 * * * root cd /opt/life/deploy && docker compose exec -T db pg_dump -U life life | gzip > backups/life-$(date +\%F).sql.gz && find backups -name 'life-*.sql.gz' -mtime +30 -delete
 EOT
 echo "Fertig. Jetzt die AWS-Schlüssel in $ENV eintragen und deploy.sh vom Mac aus starten."
+echo "Für fertige Pakete von GitHub einmalig: docker login ghcr.io -u <github-name> (Token nur mit read:packages)."
