@@ -22,7 +22,7 @@ fi
 
 # Erst fertig, wenn die App antwortet
 for i in $(seq 1 30); do
-  if $SSH 'cd /opt/life/deploy && docker compose exec -T app wget -qO- http://localhost:3000/api/health' 2>/dev/null | grep -q '"ok":true'; then
+  if $SSH 'cd /opt/life/deploy && docker compose exec -T app wget -qO- http://127.0.0.1:3000/api/health' 2>/dev/null | grep -q '"ok":true'; then
     echo "Läuft: $MODE"; exit 0
   fi
   sleep 3
