@@ -22,10 +22,18 @@ ufw default deny incoming && ufw default allow outgoing
 ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443
 ufw --force enable
 
-# SSH nur mit Schlüssel
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i 's/^#\?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
-systemctl reload ssh || systemctl reload sshd
+# SSH nur mit Schlüssel. Eigene Datei mit 00-, damit sie vor Vorgaben von cloud-init gilt
+# (bei sshd gewinnt der erste Treffer).
+cat > /etc/ssh/sshd_config.d/00-life.conf <<'EOT'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+X11Forwarding no
+AllowAgentForwarding no
+EOT
+mkdir -p /run/sshd && sshd -t
+# Ubuntu 24.04 startet sshd über ssh.socket je Verbindung neu, ein Reload ist dann nicht nötig.
+systemctl reload ssh 2>/dev/null || true
 
 mkdir -p /opt/life/deploy/backups
 ENV=/opt/life/deploy/.env
