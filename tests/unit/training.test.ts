@@ -166,3 +166,10 @@ test('Tagesring: je ein Drittel für Morgen, Abend und drei Aufgaben; künftige 
   assert.equal(t[3].wert, null);
   assert.equal(t[6].tag, '2026-10-25');
 });
+
+test('Heute-Bausteine: unbekannte raus, doppelte raus, feste immer dabei, leer heißt Standard', async () => {
+  const { bausteineAus, STANDARD } = await import('../../lib/heute-bausteine.ts');
+  assert.deepEqual(bausteineAus(null), STANDARD);
+  assert.deepEqual(bausteineAus(['coach', 'coach', 'hack', '<b>']), ['fragebogen', 'coach', 'jetzt']);
+  assert.deepEqual(bausteineAus(['woche', 'jetzt', 'fragebogen', 'koerper']), ['woche', 'jetzt', 'fragebogen', 'koerper']);
+});

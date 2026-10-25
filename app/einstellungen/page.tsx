@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { Mitteilungen } from '../mitteilungen';
@@ -38,6 +39,9 @@ export default function Einstellungen() {
       <header className="head"><span className="eyebrow">Wie Life für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
 
       <Darstellung />
+      <section className="gsec" aria-label="Heute">
+        <Link className="group cell" href="/einstellungen/heute"><span>Heute anpassen</span><span className="val">Bausteine und Reihenfolge{Icon.chevronRight}</span></Link>
+      </section>
 
       <section className="gsec">
         <h2 className="glabel">Was Claude beim Sortieren weiß</h2>

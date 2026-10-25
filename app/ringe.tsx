@@ -30,16 +30,23 @@ export function Weg({ anteil, level, naechstes }: { anteil: number; level: numbe
 
 const WT = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
 const WT_LANG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-/** Die Woche als sieben kleine Ringe. Ein Tag füllt sich mit Morgenfragen, Abendfragen und drei erledigten Aufgaben. */
-export function Tagesreihe({ tage, heute }: { tage: { tag: string; wert: number | null }[]; heute: string }) {
+/** Die Woche als sieben Punkte: voll ab 80 %, halb ab 30 %, sonst leer. Keine Serie, die reißen kann. */
+export function Tagespunkte({ tage, heute }: { tage: { tag: string; wert: number | null }[]; heute: string }) {
+  const gut = tage.filter((t) => (t.wert ?? 0) >= 0.8).length;
   return (
-    <ol className="tagesreihe" aria-label="Diese Woche Tag für Tag">
-      {tage.map((t, i) => (
-        <li key={t.tag} className={t.tag === heute ? 'heute' : ''}>
-          <Ring wert={t.wert} farbe="var(--k-zeit)" groesse={28} dicke={4} label={`${WT_LANG[i]}: ${t.wert === null ? 'kommt noch' : Math.round(t.wert * 100) + ' Prozent'}`} />
-          <span aria-hidden="true">{WT[i]}</span>
-        </li>
-      ))}
-    </ol>
+    <div className="tagespunkte">
+      <ol aria-label="Diese Woche Tag für Tag">
+        {tage.map((t, i) => {
+          const stufe = t.wert === null ? 'spaeter' : t.wert >= 0.8 ? 'voll' : t.wert >= 0.3 ? 'halb' : 'leer';
+          return (
+            <li key={t.tag} className={t.tag === heute ? 'heute' : ''}>
+              <span className={'tp ' + stufe} role="img" aria-label={`${WT_LANG[i]}: ${t.wert === null ? 'kommt noch' : Math.round(t.wert * 100) + ' Prozent'}`} />
+              <span aria-hidden="true">{WT[i]}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <span className="tp-zahl">{gut === 1 ? '1 guter Tag' : `${gut} gute Tage`}</span>
+    </div>
   );
 }

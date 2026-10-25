@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
 import { Coach, useCheckins } from './coach';
-import { FARBE, KONTEN, NAME, Ring, Tagesreihe, Weg } from './ringe';
+import { FARBE, KONTEN, NAME, Ring, Tagespunkte, Weg } from './ringe';
+import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
+import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
 import { EnergieChips, WennChip } from './wenn';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
@@ -27,6 +29,10 @@ export default function Heute() {
   const [kompass, setKompass] = useState<KompassKurz | null>(null);
   useEffect(() => { api<KompassKurz>('/api/kompass').then(setKompass).catch(() => {}); }, []);
   const ringe = kompass?.jetzt.ringe ?? null;
+  const [bausteine, setBausteine] = useState<Baustein[]>(() => bausteineAus(null));
+  const [feldOffen, setFeldOffen] = useState(false);
+  useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
+  const kurz = useKurz(bausteine);
   const rec = useRef<Rec | null>(null);
   const base = useRef('');
 
@@ -86,7 +92,7 @@ export default function Heute() {
     setBusy(true);
     try {
       const r = await api<{ id: string }>('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) });
-      setText(''); setFreshId(r.id); setDone(true);
+      setText(''); setFreshId(r.id); setDone(true); setFeldOffen(false);
       await load();
     } catch (e) { setToast('Nicht gespeichert. ' + (e as Error).message, 'err'); }
     finally { setBusy(false); }
@@ -115,19 +121,9 @@ export default function Heute() {
   const naechste = items.filter((i) => i.stapel === 'woche').sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99)).slice(0, 3);
   const neu = items.filter((i) => !i.stapel).length;
 
-  return (
-    <main className="wrap">
-      <TopBar title="Heute" />
-      <header className="head">
-        <span className="eyebrow">{today}</span>
-        <h1 className="title">Heute<i>.</i></h1>
-        {st ? (st.engpass
-          ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p>
-          : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
-        {kompass?.tage ? <Tagesreihe tage={kompass.tage} heute={heuteTag} /> : null}
-      </header>
-
-      {ringe ? (() => {
+  const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
+    kompass: (
+ringe ? (() => {
         const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
         const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : null;
         return (
@@ -139,16 +135,18 @@ export default function Heute() {
             {kompass ? <Weg anteil={kompass.gesamt.anteil} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} /> : null}
           </Link>
         );
-      })() : null}
-      {ci.zeige ? (
+      })() : null
+    ),
+    fragebogen: (
+ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
           <Fragebogen key={ci.zeige} art={ci.zeige} aufgaben={ci.aufgaben} onFertig={() => { ci.fertig(); setToast('Danke. Der Coach meldet sich gleich.'); }} onFehler={(m) => setToast(m, 'err')} />
         </section>
-      ) : null}
-      <Coach stand={ci} />
-
-      <section className="capture compact" aria-label="Festhalten">
-        <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link"
+      ) : null
+    ),
+    festhalten: (
+<><section className="capture compact" aria-label="Festhalten">
+        <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link" autoFocus={feldOffen}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }} />
         <div className="row">
           <span className={'hint' + (listening ? ' live' : '')} aria-live="polite">{listening ? <><span className="rec" />Ich höre zu</> : null}</span>
@@ -163,9 +161,10 @@ export default function Heute() {
             </button>
           </span>
         </div>
-      </section>
-
-      <section className="gsec" aria-label="Jetzt dran">
+      </section></>
+    ),
+    jetzt: (
+<><section className="gsec" aria-label="Jetzt dran">
         <h2 className="glabel">Jetzt dran</h2>
         {st === null ? <div className="loading">Lädt …</div>
           : jetzt.length ? (
@@ -190,9 +189,10 @@ export default function Heute() {
             {' · '}<button type="button" className="linkbtn" onClick={neuSortieren} disabled={st.laeuft}>Neu sortieren</button>
           </p>
         ) : null}
-      </section>
-
-      {naechste.length ? (
+      </section></>
+    ),
+    naechste: (
+naechste.length ? (
         <section className="gsec" aria-label="Als Nächstes">
           <h2 className="glabel">Als Nächstes</h2>
           <ul className="tasks group">
@@ -204,14 +204,39 @@ export default function Heute() {
           </ul>
           <p className="gnote"><Link href="/woche" className="linkbtn">Ganze Woche ansehen</Link></p>
         </section>
-      ) : null}
-
-      {st?.erledigtHeute.length ? (
+      ) : null
+    ),
+    erledigt: (
+st?.erledigtHeute.length ? (
         <section className="gsec" aria-label="Heute erledigt">
           <h2 className="glabel">Heute erledigt · {st.erledigtHeute.length}</h2>
           <ul className="tasks group">{st.erledigtHeute.map((it) => <TaskRow key={it.id} it={it} onToggle={() => toggle(it)}><EnergieChips wert={it.energie} onSetzen={(n) => act(() => patch(it.id, { energie: n }))} /></TaskRow>)}</ul>
         </section>
-      ) : null}
+      ) : null
+    ),
+    coach: <Coach stand={ci} />,
+    koerper: kurz.koerper ? <KoerperKurz k={kurz.koerper} /> : null,
+    geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
+    menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
+  };
+  const mitFeld = bausteine.includes('festhalten') || feldOffen;
+  const reihe = bausteine.filter((b) => b !== 'woche' && (b !== 'festhalten' || mitFeld));
+  if (feldOffen && !bausteine.includes('festhalten')) reihe.unshift('festhalten');
+
+  return (
+    <main className="wrap">
+      <TopBar title="Heute" />
+      {!bausteine.includes('festhalten') ? <button type="button" className="plus-btn" aria-label="Festhalten" aria-expanded={feldOffen} onClick={() => setFeldOffen((x) => !x)}>{feldOffen ? Icon.close : Icon.plus}</button> : null}
+      <header className="head">
+        <span className="eyebrow">{today}</span>
+        <h1 className="title">Heute<i>.</i></h1>
+        {st ? (st.engpass
+          ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p>
+          : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
+        {bausteine.includes('woche') && kompass?.tage ? <Tagespunkte tage={kompass.tage} heute={heuteTag} /> : null}
+      </header>
+
+      {reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
 
       {st?.zuletzt.length ? (
         <section className="section" aria-label="Zuletzt festgehalten">
@@ -220,6 +245,7 @@ export default function Heute() {
           <p className="gnote flush"><Link href="/archiv" className="linkbtn">Alles im Logbuch</Link></p>
         </section>
       ) : null}
+
       {toast}
       <TabBar />
     </main>
