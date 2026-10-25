@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
+import { Mitteilungen } from '../mitteilungen';
 
 type S = { kontext: string; ziele: string; team: string; namen: string; namen_auto: string };
 const LEER: S = { kontext: '', ziele: '', team: '', namen: '', namen_auto: '' };
@@ -48,6 +49,8 @@ export default function Einstellungen() {
         <p className="gnote">Die Zeile mit „Engpass:“ steht oben auf Heute. Claude ordnet jeden Eintrag einem Ziel zu und sortiert jeden Morgen danach.</p>
       </section>
 
+      <Mitteilungen onToast={(t, k) => setToast(t, k)} />
+
       <section className="gsec">
         <h2 className="glabel">Was Claude nie sieht</h2>
         <div className="group pad">
@@ -94,7 +97,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Life 0.6 · Server in Deutschland</p>
+      <p className="foot">Life 0.8 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

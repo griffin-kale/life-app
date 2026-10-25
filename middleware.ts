@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, validSession } from '@/lib/session';
 
-const OPEN = ['/login', '/setup', '/api/auth/', '/api/capture', '/api/health', '/manifest.webmanifest', '/icon', '/apple-icon', '/favicon'];
+// /sw.js ist eine feste Datei ohne Daten. iOS lädt sie beim Aktualisieren auch nach Ablauf der Sitzung.
+const OPEN = ['/login', '/setup', '/api/auth/', '/api/capture', '/api/health', '/manifest.webmanifest', '/icon', '/apple-icon', '/favicon', '/sw.js'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

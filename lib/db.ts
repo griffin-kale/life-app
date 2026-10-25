@@ -136,6 +136,69 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now(),
           primary key (user_id, tag, art)
         )`;
+      // Version 0.7: Körper (WHOOP, Training, Essen) und Mitteilungen
+      await sql`alter table nutzer add column if not exists gewicht_kg numeric`;
+      await sql`
+        create table if not exists koerper_tage (
+          user_id text not null references nutzer(id),
+          tag date not null,
+          schlaf_min integer, schlaf_leistung integer, erholung integer, hrv numeric, ruhepuls integer, belastung numeric,
+          updated_at timestamptz not null default now(),
+          primary key (user_id, tag)
+        )`;
+      await sql`
+        create table if not exists trainings (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          quelle text not null check (quelle in ('life', 'whoop')),
+          extern_id text not null,
+          tag date not null,
+          start timestamptz,
+          dauer_min integer,
+          art text not null check (art in ('kraft', 'zone2', 'intervall', 'mobil', 'sonstiges')),
+          sport text,
+          belastung numeric, zone2_min integer, zone45_min integer,
+          saetze jsonb, feedback jsonb,
+          created_at timestamptz not null default now(),
+          unique (user_id, quelle, extern_id)
+        )`;
+      await sql`create index if not exists trainings_tag on trainings (user_id, tag desc)`;
+      await sql`create table if not exists training_stand (user_id text primary key references nutzer(id), stand jsonb not null, updated_at timestamptz not null default now())`;
+      await sql`
+        create table if not exists lebensmittel (
+          ean text primary key, name text not null, marke text,
+          kcal numeric, protein numeric, kh numeric, fett numeric, portion_g numeric,
+          updated_at timestamptz not null default now()
+        )`;
+      await sql`
+        create table if not exists mahlzeiten (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          tag date not null,
+          created_at timestamptz not null default now(),
+          mahlzeit text not null check (mahlzeit in ('fruehstueck', 'mittag', 'abend', 'snack')),
+          quelle text not null check (quelle in ('barcode', 'text', 'foto')),
+          name text not null, gramm numeric,
+          kcal numeric, kcal_bis numeric, protein numeric, protein_bis numeric, kh numeric, fett numeric,
+          gemuese boolean
+        )`;
+      await sql`create index if not exists mahlzeiten_tag on mahlzeiten (user_id, tag)`;
+      await sql`
+        create table if not exists ruhe (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          tag date not null,
+          art text not null check (art in ('stille', 'atem', 'nsdr', 'wimhof', 'runter')),
+          dauer_sek integer not null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`
+        create table if not exists push_abos (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          endpoint text not null unique, p256dh text not null, auth text not null,
+          created_at timestamptz not null default now()
+        )`;
     })().catch((e) => { g.__schema = undefined; throw e; });
   }
   return g.__schema;

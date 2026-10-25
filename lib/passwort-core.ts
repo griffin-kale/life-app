@@ -21,20 +21,20 @@ export function pruefePasswort(pw: string, gespeichert: string | null): boolean 
   return timingSafeEqual(ist, soll) && ok;
 }
 
-/** Verschlüsselt kleine Geheimnisse (den TOTP-Schlüssel) für die Datenbank mit AES-256-GCM. */
-function schluessel(geheim: string): Buffer {
-  return createHash('sha256').update('life-totp-v1:' + geheim).digest();
+/** Verschlüsselt kleine Geheimnisse (TOTP-Schlüssel, WHOOP-Tokens, Push-Schlüssel) für die Datenbank mit AES-256-GCM. Jeder Zweck hat einen eigenen Schlüssel. */
+function schluessel(geheim: string, zweck: string): Buffer {
+  return createHash('sha256').update(`life-${zweck}-v1:` + geheim).digest();
 }
-export function verschluesseln(text: string, geheim: string): string {
+export function verschluesseln(text: string, geheim: string, zweck = 'totp'): string {
   const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', schluessel(geheim), iv);
+  const c = createCipheriv('aes-256-gcm', schluessel(geheim, zweck), iv);
   const enc = Buffer.concat([c.update(text, 'utf8'), c.final()]);
   return ['v1', iv.toString('base64'), c.getAuthTag().toString('base64'), enc.toString('base64')].join('.');
 }
-export function entschluesseln(box: string, geheim: string): string {
+export function entschluesseln(box: string, geheim: string, zweck = 'totp'): string {
   const [v, iv, tag, enc] = box.split('.');
   if (v !== 'v1') throw new Error('Unbekanntes Format');
-  const d = createDecipheriv('aes-256-gcm', schluessel(geheim), Buffer.from(iv, 'base64'));
+  const d = createDecipheriv('aes-256-gcm', schluessel(geheim, zweck), Buffer.from(iv, 'base64'));
   d.setAuthTag(Buffer.from(tag, 'base64'));
   return Buffer.concat([d.update(Buffer.from(enc, 'base64')), d.final()]).toString('utf8');
 }

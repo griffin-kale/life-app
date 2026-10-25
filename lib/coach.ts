@@ -2,7 +2,8 @@ import { askJson, geschuetzteNamen, MODEL } from './claude';
 import { ensureSchema, getSetting, sql } from './db';
 import { BOEGEN, who5, type Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
-import { warnsignale } from './coach-regeln';
+import { koerperZusammenfassung, warnsignale } from './coach-regeln';
+import { koerperStand } from './koerper';
 
 export { warnsignale };
 
@@ -23,19 +24,25 @@ const zeile = (c: Checkin) => {
     return rest ? `${f.frage}: ${rest}` : '';
   }).filter(Boolean);
   const w = c.art === 'woche' ? who5(c.antworten) : null;
-  return `${c.tag} ${b.titel}${w !== null ? ` (WHO-5: ${w} von 100)` : ''}: ${teile.join(' | ')}`;
+  // Kein Datum an Claude: nur „heute“, „gestern“, „vor 3 Tagen“
+  const tage = Math.round((Date.parse(heuteBerlin()) - Date.parse(c.tag)) / 864e5);
+  const wann = tage <= 0 ? 'heute' : tage === 1 ? 'gestern' : `vor ${tage} Tagen`;
+  return `${wann} ${b.titel}${w !== null ? ` (WHO-5: ${w} von 100)` : ''}: ${teile.join(' | ')}`;
 };
 
 export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'): Promise<CoachAntwort> {
   await ensureSchema();
   const tag = heuteBerlin();
-  const [items, kontext, checkins, namen] = await Promise.all([
+  const [items, kontext, checkins, namen, k] = await Promise.all([
     offene(),
     getSetting('kontext'),
     sql<Checkin[]>`select art, tag::text as tag, antworten from checkins where user_id = ${userId} and tag >= (current_date - 8) order by tag, art`,
     geschuetzteNamen(),
+    koerperStand(userId),
   ]);
-  const warnungen = warnsignale(items);
+  const warnungen = [...k.warnungen, ...warnsignale(items)];
+  const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
+    kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel, ruheMin: k.ruheMin, ruheTage: k.ruheTage });
   const jetzt = items.filter((i) => i.stapel === 'jetzt').slice(0, 3);
   const menschen = namen.filter((n) => n.art === 'Person' && !/^(Peter|Gneuß|Peter Gneuß)$/.test(n.name)).map((n) => n.name);
   const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
@@ -49,10 +56,11 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
     'Engpass: ' + (engpassAus(kontext) || 'nicht festgelegt'),
     jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${i.frist})` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
     warnungen.length ? 'Warnsignale (von Life berechnet, sprich sie an):\n' + warnungen.map((w) => '- ' + w).join('\n') : 'Keine Warnsignale.',
+    'Körper (zusammengefasst):\n' + koerper + (k.trainingstagHeute ? `\nHeute ist ein Trainingstag (Ganzkörper, Blockwoche ${k.blockWoche} von 5).` : ''),
     checkins.length ? 'Antworten der letzten Tage:\n' + checkins.map(zeile).filter(Boolean).join('\n') : 'Noch keine Antworten aus den Fragebögen.',
     menschen.length ? 'Menschen in Peters Leben: ' + menschen.slice(0, 30).join(', ') : '',
     art === 'morgen'
-      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Erholung, Engpass und einen Plan von gestern Abend, falls vorhanden), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
+      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Schlaf und Erholung, Training, Engpass und einen Plan von gestern Abend, falls vorhanden), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
       : 'Antworte nur mit JSON: {"text": string (Rückblick auf heute in 2 bis 3 Sätzen, höchstens 320 Zeichen: was du in den Antworten siehst, ein Muster der letzten Tage, falls eines da ist, und ein Satz zum Plan für morgen)}',
   ].filter(Boolean).join('\n\n');
 

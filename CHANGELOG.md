@@ -2,6 +2,33 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.8.0] – 2026-10-25
+
+### Hinzugefügt
+- **Ruhe** unter Körper: Stille (5, 10, 20 Minuten), geführte Atem-Meditation, NSDR (10 und 20 Minuten), Wim-Hof-Atmung in drei Runden mit Stoppuhr fürs Halten, Runterfahren am Abend mit zyklischem Seufzen und direktem Weg zu den Abendfragen.
+- Gongs entstehen im Browser, gesprochen wird mit der Stimme des iPhones. Keine Audiodateien von außen.
+- Minuten und Tage pro Woche auf „Körper“, im Coach und in der Ruhe-Übersicht.
+
+### Sicherheit
+- Wim-Hof-Atmung startet erst nach drei bestätigten Regeln: sitzen oder liegen, nicht im oder am Wasser, nicht beim Fahren.
+
+## [0.7.0] – 2026-10-25
+
+### Hinzugefügt
+- **Körper** als eigener Bereich: letzte Nacht mit Schlaf, Erholung, HRV und Ruhepuls aus WHOOP, Trainingswoche, Essen.
+- **WHOOP** über die offizielle Schnittstelle. Life gleicht morgens stündlich, sonst alle zwei Stunden ab. Die Zugangsschlüssel liegen verschlüsselt in der Datenbank.
+- **Training wie RP, für zu Hause:** Ganzkörper mit Kettlebell, TRX, Bändern und Körpergewicht in Blöcken von 5 Wochen. Pump, Muskelkater und Gelenke nach jeder Einheit passen die Sätze an, bei Schmerz tauscht Life die Übung. Pausentimer, Bildschirm bleibt an. Einheiten pro Woche wählst du jede Woche neu.
+- Zone 2 und Intervalle 4 × 4 zählt Life aus WHOOP oder per Tipp.
+- **Essen:** Barcode scannen (Nährwerte von Open Food Facts), Foto vom Teller oder ein Satz. Claude schätzt Spannen, Fotos speichert Life nicht. Protein-Ziel 1,6 g pro kg.
+- **Mitteilungen** aufs iPhone: Morgen-Check-in und Coach, Abendfragen, Warnsignale (höchstens eins am Tag), Training an Trainingstagen. Uhrzeiten einstellbar.
+- Neue Warnsignale: drei Nächte unter 6,5 Stunden, zwei geplante Krafteinheiten in Folge ausgefallen.
+
+### Sicherheit
+- Körperwerte gehen an Claude nur als Durchschnitt und Zählung, ohne Datum und Uhrzeit. Auch Antworten aus den Fragebögen tragen nur „gestern“ oder „vor 3 Tagen“.
+- Fotos werden im Browser verkleinert und neu gespeichert, damit Ortsdaten wegfallen.
+- Mitteilungen gehen Ende-zu-Ende verschlüsselt raus. Life nimmt nur Push-Adressen von Apple, Google, Mozilla und Microsoft an.
+- Kamera ist nur für Life selbst freigegeben (Permissions-Policy).
+
 ## [0.6.0] – 2026-10-25
 
 ### Hinzugefügt

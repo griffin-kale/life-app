@@ -53,6 +53,9 @@ CAPTURE_TOKEN=$(openssl rand -hex 24)
 ANTHROPIC_API_KEY=
 CLAUDE_MODEL_FAST=claude-haiku-5-5
 CLAUDE_MODEL=claude-sonnet-5-5
+# WHOOP: eigene App auf developer.whoop.com, Weiterleitung https://$DOMAIN/api/whoop/callback
+WHOOP_CLIENT_ID=
+WHOOP_CLIENT_SECRET=
 EOT
 fi
 

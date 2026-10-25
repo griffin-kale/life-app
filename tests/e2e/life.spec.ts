@@ -126,7 +126,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -155,6 +155,80 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(JSON.stringify(c)).not.toContain('[Person');
     expect(c.abend.text).toContain('Plan für morgen');
   });
+  await test.step('Körper: WHOOP verbinden und abgleichen, Warnsignal bei kurzen Nächten', async () => {
+    await page.goto('/koerper');
+    await page.getByRole('link', { name: 'WHOOP verbinden' }).click();
+    await page.waitForURL('/koerper');
+    await expect(page.locator('.toast')).toContainText('WHOOP ist verbunden');
+    await page.getByRole('button', { name: 'Jetzt abgleichen' }).click();
+    await expect(page.locator('.werte')).toContainText('6:00');
+    await expect(page.locator('.werte')).toContainText('40 %');
+    await expect(page.locator('main')).toContainText('Drei Nächte unter 6,5 Stunden');
+    await expect(page.locator('main')).toContainText('40 / 180 Min.');
+    await expect(page.locator('.gnote', { hasText: 'Ziel: 1,6 g' })).toContainText('82 kg');
+  });
+
+  await test.step('Training: Satz abhaken, Pause, Feedback, Satzzahl steigt', async () => {
+    await page.getByRole('link', { name: 'Krafteinheit starten' }).click();
+    await page.waitForURL('/koerper/training');
+    const beine = page.locator('section[aria-label="Goblet-Kniebeuge"]');
+    await beine.getByRole('button', { name: 'Satz 1' }).click();
+    await expect(page.locator('.pausebar')).toContainText('1:30');
+    await page.locator('.pausebar').getByRole('button', { name: 'Weiter' }).click();
+    await beine.getByRole('button', { name: 'Satz 2' }).click();
+    await page.getByRole('button', { name: 'Einheit beenden' }).click();
+    await page.getByRole('radiogroup', { name: 'Pump Beine' }).getByRole('radio', { name: 'wenig' }).click();
+    await page.getByRole('radiogroup', { name: 'Muskelkater Beine' }).getByRole('radio', { name: 'kein Muskelkater' }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.locator('main')).toContainText('2 Sätze sind festgehalten');
+    const plan = await (await page.request.get('/api/training')).json();
+    expect(plan.stand.volumen.beine).toBe(3);
+    await page.getByRole('link', { name: 'Zurück zu Körper' }).click();
+    await expect(page.locator('main')).toContainText('1 / 3');
+  });
+
+  await test.step('Essen: Barcode per Nummer und Mahlzeit per Satz', async () => {
+    await page.getByRole('button', { name: 'Barcode scannen' }).click();
+    await page.getByLabel('Barcode-Nummer').fill('4000000000001');
+    await page.getByRole('button', { name: 'Suchen' }).click();
+    await expect(page.locator('.produkt')).toContainText('Skyr natur');
+    await expect(page.getByRole('radio', { name: '1 Portion (150 g)' })).toHaveAttribute('aria-checked', 'true');
+    await page.locator('.produkt').getByRole('button', { name: 'Festhalten' }).click();
+    await expect(page.locator('.essen-liste')).toContainText('Skyr natur');
+    await expect(page.locator('.essen-liste')).toContainText('150 g');
+    await page.fill('#essen-text', 'Bowl mit Hähnchen, Reis und Gemüse, große Portion');
+    await page.getByRole('button', { name: 'Schätzen und festhalten' }).click();
+    await expect(page.locator('.essen-liste')).toContainText('Bowl mit Hähnchen');
+    await expect(page.locator('.essen-liste')).toContainText('40–55 g Protein');
+    expect((await page.request.get('/api/essen/barcode?ean=12ab')).status()).toBe(400);
+  });
+
+  await test.step('Ruhe: Wim Hof erst nach Sicherheitsfragen, Stille läuft durch und zählt', async () => {
+    await page.goto('/koerper/ruhe');
+    const wh = page.locator('section[aria-label="Wim-Hof-Atmung"]');
+    await expect(wh.getByRole('button', { name: 'Verstanden' })).toBeDisabled();
+    for (const b of await wh.getByRole('group', { name: 'Sicherheit' }).getByRole('button').all()) await b.click();
+    await wh.getByRole('button', { name: 'Verstanden' }).click();
+    await expect(wh.getByRole('button', { name: 'Starten' })).toBeVisible();
+    await page.clock.install();
+    await page.reload();
+    await page.locator('section[aria-label="Stille"]').getByRole('button', { name: 'Starten' }).click();
+    await expect(page.locator('.ruhe-lauf')).toContainText('Stille');
+    await page.clock.fastForward('05:02');
+    await expect(page.locator('main')).toContainText('Die Minuten sind festgehalten');
+    await expect(page.locator('header')).toContainText('5 Min. an 1 Tag');
+  });
+
+  await test.step('Coach kennt das Warnsignal, Push nimmt nur echte Dienste', async () => {
+    const c = await (await page.request.get('/api/coach')).json();
+    expect(c.warnungen.join(' ')).toContain('Drei Nächte');
+    const p = await (await page.request.get('/api/push')).json();
+    expect(p.publicKey.length).toBeGreaterThan(60);
+    expect((await page.request.post('/api/push', { data: { abo: { endpoint: 'https://evil.example/x', keys: { p256dh: 'a', auth: 'b' } } } })).status()).toBe(400);
+    await page.goto('/einstellungen');
+    await expect(page.locator('main')).toContainText('Mitteilungen');
+  });
+
   await test.step('Abmelden sperrt die Daten, Face ID öffnet sie wieder', async () => {
     await page.goto('/einstellungen');
     await page.getByRole('button', { name: 'Abmelden' }).click();

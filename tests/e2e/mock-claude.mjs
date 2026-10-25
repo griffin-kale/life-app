@@ -52,17 +52,43 @@ function coach(p) {
     : { text: 'Der Tag war zäh, der Plan für morgen steht. Leg das Handy um 22 Uhr weg.' };
 }
 const prompts = [];
+const json = (res, o, status = 200) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
+// WHOOP-Attrappe: drei kurze Nächte, eine lockere Laufeinheit, 82 kg
+function whoop(pfad) {
+  const tag = (i) => { const d = new Date(Date.now() - i * 864e5); d.setUTCHours(5, 30, 0, 0); return d; };
+  if (pfad === '/developer/v2/activity/sleep') return { records: [0, 1, 2].map((i) => ({ id: 's' + i, end: tag(i).toISOString(), nap: false, score_state: 'SCORED', score: { sleep_performance_percentage: 70, stage_summary: { total_in_bed_time_milli: 380 * 60000, total_awake_time_milli: 20 * 60000 } } })), next_token: null };
+  if (pfad === '/developer/v2/recovery') return { records: [0, 1, 2].map((i) => ({ sleep_id: 's' + i, created_at: tag(i).toISOString(), score_state: 'SCORED', score: { recovery_score: 40 + i * 10, hrv_rmssd_milli: 48.5, resting_heart_rate: 55 + i } })) };
+  if (pfad === '/developer/v2/activity/workout') return { records: [{ id: 'w1', start: new Date(Date.now() - 3600_000).toISOString(), end: new Date(Date.now() - 900_000).toISOString(), sport_name: 'running', score_state: 'SCORED', score: { strain: 9.1, zone_durations: { zone_two_milli: 40 * 60000, zone_three_milli: 5 * 60000 } } }] };
+  if (pfad === '/developer/v2/cycle') return { records: [{ start: tag(0).toISOString(), score: { strain: 11.2 } }] };
+  if (pfad === '/developer/v2/user/measurement/body') return { weight_kilogram: 82 };
+  return null;
+}
 http.createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/prompts') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(prompts)); }
+  const u = new URL(req.url, 'http://x');
+  if (req.method === 'GET' && u.pathname === '/prompts') return json(res, prompts);
+  if (req.method === 'GET' && u.pathname === '/oauth/oauth2/auth') {
+    res.writeHead(302, { location: `${u.searchParams.get('redirect_uri')}?code=testcode&state=${encodeURIComponent(u.searchParams.get('state'))}` }); return res.end();
+  }
+  if (req.method === 'POST' && u.pathname === '/oauth/oauth2/token') { req.resume(); return json(res, { access_token: 'acc', refresh_token: 'ref', expires_in: 3600 }); }
+  if (req.method === 'GET' && u.pathname.startsWith('/developer/')) {
+    if (req.headers.authorization !== 'Bearer acc') return json(res, { error: 'unauthorized' }, 401);
+    const w = whoop(u.pathname); return w ? json(res, w) : json(res, {}, 404);
+  }
+  if (req.method === 'GET' && u.pathname.startsWith('/api/v2/product/')) {
+    if (u.pathname.includes('4000000000001')) return json(res, { status: 1, product: { product_name_de: 'Skyr natur', brands: 'Testmolkerei', serving_quantity: 150, nutriments: { 'energy-kcal_100g': 63, proteins_100g: 11, carbohydrates_100g: 4, fat_100g: 0.2 } } });
+    return json(res, { status: 0 });
+  }
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}');
     const p = body.messages?.[0]?.content || '';
-    prompts.push(p);
-    const a = p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+    prompts.push(Array.isArray(p) ? p.map((x) => x.type === 'text' ? x.text : '[Bild]').join('\n') : p);
+    const essen = typeof p === 'string' && p.startsWith('ESSEN') || Array.isArray(p);
+    const a = essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
+      : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [{ type: 'text', text: JSON.stringify(a) }], stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
-    }, p.startsWith('SORTIERLAUF') ? 400 : 150);
-    console.log('mock', p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);
+    }, !essen && p.startsWith('SORTIERLAUF') ? 400 : 150);
+    console.log('mock', essen ? 'essen' : p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);
   });
 }).listen(4010);
