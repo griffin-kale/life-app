@@ -2,6 +2,21 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.9.0] – 2026-10-25
+
+### Hinzugefügt
+- **Geld** als eigener Bereich für den Haushalt: wenige Wochentöpfe, Ausgaben per Satz („12,50 Bäcker“) oder Foto vom Kassenbon, Claude ordnet dem passenden Topf zu.
+- Ab Freitag zeigt Life den Rest als Spanne, übrig Gebliebenes wandert eine Woche weiter. Grund: Genaue Restbeträge gegen Ende verleiten laut Studie zum Ausgeben.
+- Stufenplan in sieben Stufen nach Dave Ramsey und Verbraucherzentrale, mit Peters Ziel von einem Jahr Puffer. Einnahmen, feste Kosten, Konsumschulden, Rücklage und Sparrate monatlich.
+- Sparziele und Taschengeld für die Kinder, jeden Montag kommt der Wochenbetrag dazu.
+- Warnsignal und Mitteilung, wenn ein Topf über dem Rahmen ist. Der Coach bekommt nur Zählungen, keine Beträge.
+- **Fehler oder Verbesserung melden** in den Einstellungen, für alle, die Life nutzen. Jede Meldung landet im Backlog, mit GitHub-Schlüssel automatisch als Aufgabe im Repo.
+- Neue Leiste unten: Heute, Woche, Körper, Geld, Mehr (Logbuch und Einstellungen).
+
+### Sicherheit
+- Bon-Fotos werden im Browser neu gespeichert (ohne Ortsdaten) und nicht aufbewahrt. Claude liest nur Laden und Summe.
+- Namen der Kinder bleiben auf dem Server. GitHub-Aufgaben bekommen Platzhalter statt Namen.
+
 ## [0.8.0] – 2026-10-25
 
 ### Hinzugefügt

@@ -5,6 +5,7 @@ import { heuteBerlin, offene } from './priorisieren';
 import { senden } from './push';
 import { warnsignale } from './coach-regeln';
 import { abgleichen, verbunden, whoopBereit } from './whoop';
+import { geldStand } from './geld';
 
 /**
  * Läuft jede Minute im Server: WHOOP abgleichen und Mitteilungen zur richtigen Zeit schicken.
@@ -49,7 +50,8 @@ export async function tick(userId = 'peter') {
     (await senden({ title: 'Der Tag', body: 'Drei Fragen, eine Minute. Dann ist der Plan für morgen fertig.', url: '/', tag: 'abend' }, userId)) > 0);
   if (p.warnung && minuten(uhr) >= minuten(p.morgenZeit) + 5 && minuten(uhr) <= 21 * 60) await einmal('warnung', tag, async () => {
     const k = await koerperStand(userId);
-    const w = [...k.warnungen, ...warnsignale(await offene())];
+    const g = await geldStand(userId).catch(() => null);
+    const w = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(await offene())];
     if (!w.length) return false;
     return (await senden({ title: 'Achtung', body: w[0], url: '/', tag: 'warnung' }, userId)) > 0;
   });

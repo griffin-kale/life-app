@@ -56,6 +56,8 @@ CLAUDE_MODEL=claude-sonnet-5-5
 # WHOOP: eigene App auf developer.whoop.com, Weiterleitung https://$DOMAIN/api/whoop/callback
 WHOOP_CLIENT_ID=
 WHOOP_CLIENT_SECRET=
+# Rückmeldungen als GitHub-Aufgaben: Fine-grained Token, nur Issues auf griffin-kale/life-app
+GITHUB_ISSUES_TOKEN=
 EOT
 fi
 

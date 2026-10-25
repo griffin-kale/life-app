@@ -95,3 +95,32 @@ test('Atemtakt beim zyklischen Seufzen', () => {
   assert.equal(atemPhase(takt, 5).phase, 'aus');
   assert.equal(atemPhase(takt, 9.5).phase, 'ein');
 });
+
+import { aktuelleStufe, betragAus, monatsAusgaben, stufen, taschengeldGuthaben, topfStand } from '../../lib/geld-regeln.ts';
+
+test('Geld: Beträge aus gesprochenen Sätzen', () => {
+  assert.deepEqual(betragAus('12,50 Bäcker'), { cent: 1250, was: 'Bäcker' });
+  assert.deepEqual(betragAus('Tanken 60'), { cent: 6000, was: 'Tanken' });
+  assert.deepEqual(betragAus('2 Brötchen für 1,80'), { cent: 180, was: '2 Brötchen' });
+  assert.deepEqual(betragAus('Drogerie 23 Euro'), { cent: 2300, was: 'Drogerie' });
+  assert.equal(betragAus('Bäcker'), null);
+});
+
+test('Geld: Spanne am Wochenende, Übertrag höchstens eine Woche', () => {
+  assert.equal(topfStand(15000, 5000, 0, 1).anzeige, 'noch 100 €');
+  assert.equal(topfStand(15000, 5000, 0, 5).anzeige, 'noch etwa 80–130 €');
+  assert.equal(topfStand(15000, 20000, 0, 2).ueber, true);
+  assert.equal(topfStand(15000, 0, 99999, 0).rahmen, 30000);
+});
+
+test('Geld: Stufenplan und Taschengeld', () => {
+  const p = { einnahmen: 600000, fest: 250000, woche: 40000, schulden: [{ name: 'Dispo', cent: 80000 }, { name: 'Auto', cent: 500000 }], ruecklage: 450000, sparrate: 60000, pufferMonate: 12 };
+  assert.equal(monatsAusgaben(p), 250000 + Math.round((40000 * 52) / 12));
+  const s = stufen(p);
+  assert.equal(aktuelleStufe(s).nr, 4);
+  assert.match(s[3].erklaerung, /Dispo/);
+  // Start Donnerstag 22.10., Montag 26.10. ist der erste Gutschrifttag
+  assert.equal(taschengeldGuthaben(300, '2026-10-22', '2026-10-25', 0), 0);
+  assert.equal(taschengeldGuthaben(300, '2026-10-22', '2026-10-26', 0), 300);
+  assert.equal(taschengeldGuthaben(300, '2026-10-26', '2026-11-09', 100), 800);
+});

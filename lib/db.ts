@@ -192,6 +192,64 @@ export function ensureSchema(): Promise<void> {
           dauer_sek integer not null,
           created_at timestamptz not null default now()
         )`;
+      // Version 0.9: Geld für den Haushalt
+      await sql`
+        create table if not exists geld_toepfe (
+          id bigserial primary key,
+          haushalt_id text not null references haushalte(id),
+          name text not null,
+          art text not null check (art in ('woche', 'spar', 'kind')),
+          betrag_cent integer not null default 0,
+          stand_cent integer not null default 0,
+          start date not null default current_date,
+          sortierung integer not null default 0,
+          aktiv boolean not null default true,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`
+        create table if not exists geld_buchungen (
+          id bigserial primary key,
+          haushalt_id text not null references haushalte(id),
+          user_id text not null references nutzer(id),
+          tag date not null,
+          cent integer not null,
+          topf_id bigint references geld_toepfe(id) on delete set null,
+          was text not null,
+          quelle text not null check (quelle in ('sprache', 'bon', 'hand')),
+          created_at timestamptz not null default now()
+        )`;
+      await sql`create index if not exists geld_buchungen_tag on geld_buchungen (haushalt_id, tag desc)`;
+      await sql`
+        create table if not exists geld_posten (
+          id bigserial primary key,
+          haushalt_id text not null references haushalte(id),
+          art text not null check (art in ('einnahme', 'fest', 'schuld')),
+          name text not null,
+          cent integer not null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`
+        create table if not exists geld_profil (
+          haushalt_id text primary key references haushalte(id),
+          ruecklage_cent integer not null default 0,
+          sparrate_cent integer not null default 0,
+          puffer_monate integer not null default 12,
+          updated_at timestamptz not null default now()
+        )`;
+      // Rückmeldungen aller Nutzenden: Fehler, Verbesserungen, Ideen
+      await sql`
+        create table if not exists rueckmeldungen (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          art text not null check (art in ('fehler', 'verbesserung', 'idee')),
+          bereich text not null,
+          gewicht text not null check (gewicht in ('kaum', 'nervt', 'blockiert')),
+          text text,
+          seite text, version text, geraet text,
+          status text not null default 'neu' check (status in ('neu', 'geplant', 'erledigt', 'abgelehnt')),
+          github_nr integer,
+          created_at timestamptz not null default now()
+        )`;
       await sql`
         create table if not exists push_abos (
           id bigserial primary key,
