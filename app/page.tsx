@@ -1,16 +1,19 @@
 'use client';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useToast, type Item, type Stand } from './ui';
+import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useBreit, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
 import { Coach, useCheckins } from './coach';
 import { FARBE, KONTEN, NAME, Ring, Tagespunkte, Weg } from './ringe';
 import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
+import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
 import { EnergieChips, WennChip } from './wenn';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
+/** Auf iPad und Mac stehen diese Bausteine rechts, alles zum Tun links. */
+const RECHTS: Baustein[] = ['coach', 'kompass', 'koerper', 'geld', 'menschen'];
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
 const nachZeit = (a: Item, b: Item) => (a.zeit && b.zeit ? a.zeit.localeCompare(b.zeit) : a.zeit ? -1 : b.zeit ? 1 : (a.rang ?? 99) - (b.rang ?? 99));
@@ -31,8 +34,15 @@ export default function Heute() {
   const ringe = kompass?.jetzt.ringe ?? null;
   const [bausteine, setBausteine] = useState<Baustein[]>(() => bausteineAus(null));
   const [feldOffen, setFeldOffen] = useState(false);
+  const breit = useBreit(768);
   useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
   const kurz = useKurz(bausteine);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('festhalten') !== '1') return;
+    window.history.replaceState(null, '', '/');
+    const t = setTimeout(() => { const f = document.querySelector<HTMLTextAreaElement>('section[aria-label="Festhalten"] textarea'); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } else setFeldOffen(true); }, 300);
+    return () => clearTimeout(t);
+  }, []);
   const rec = useRef<Rec | null>(null);
   const base = useRef('');
 
@@ -121,6 +131,11 @@ export default function Heute() {
   const naechste = items.filter((i) => i.stapel === 'woche').sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99)).slice(0, 3);
   const neu = items.filter((i) => !i.stapel).length;
 
+  // Gedanke aus dem Plus, ⌘N oder ?festhalten=1: Feld öffnen und hineinspringen
+  function gedanke() {
+    if (bausteine.includes('festhalten')) { const t = document.querySelector<HTMLTextAreaElement>('section[aria-label="Festhalten"] textarea'); t?.focus(); t?.scrollIntoView({ block: 'center' }); }
+    else setFeldOffen(true);
+  }
   const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
     kompass: (
 ringe ? (() => {
@@ -215,16 +230,24 @@ st?.erledigtHeute.length ? (
       ) : null
     ),
     coach: <Coach stand={ci} />,
+    schnell: <Schnellzugriff onGedanke={gedanke} />,
     koerper: kurz.koerper ? <KoerperKurz k={kurz.koerper} /> : null,
     geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
     menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
   };
+  const zuletzt = st?.zuletzt.length ? (
+        <section className="section" aria-label="Zuletzt festgehalten">
+          <h2>Zuletzt festgehalten</h2>
+          <Log items={st.zuletzt} freshId={freshId} />
+          <p className="gnote flush"><Link href="/archiv" className="linkbtn">Alles im Logbuch</Link></p>
+        </section>
+      ) : null;
   const mitFeld = bausteine.includes('festhalten') || feldOffen;
   const reihe = bausteine.filter((b) => b !== 'woche' && (b !== 'festhalten' || mitFeld));
   if (feldOffen && !bausteine.includes('festhalten')) reihe.unshift('festhalten');
 
   return (
-    <main className="wrap">
+    <main className="wrap breit">
       <TopBar title="Heute" />
       {!bausteine.includes('festhalten') ? <button type="button" className="plus-btn" aria-label="Festhalten" aria-expanded={feldOffen} onClick={() => setFeldOffen((x) => !x)}>{feldOffen ? Icon.close : Icon.plus}</button> : null}
       <header className="head">
@@ -236,15 +259,13 @@ st?.erledigtHeute.length ? (
         {bausteine.includes('woche') && kompass?.tage ? <Tagespunkte tage={kompass.tage} heute={heuteTag} /> : null}
       </header>
 
-      {reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
+      {breit ? (
+        <div className="heute-spalten">
+          <div className="spalte">{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}{zuletzt}</div>
+          <div className="spalte">{reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
+        </div>
+      ) : <>{reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}{zuletzt}</>}
 
-      {st?.zuletzt.length ? (
-        <section className="section" aria-label="Zuletzt festgehalten">
-          <h2>Zuletzt festgehalten</h2>
-          <Log items={st.zuletzt} freshId={freshId} />
-          <p className="gnote flush"><Link href="/archiv" className="linkbtn">Alles im Logbuch</Link></p>
-        </section>
-      ) : null}
 
       {toast}
       <TabBar />

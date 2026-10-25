@@ -2,6 +2,20 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.13.0] – 2026-10-25
+
+### Hinzugefügt
+- **Schnellzugriffe** als Baustein auf Heute: zuerst ein Plus mit allen sechs Wegen (Gedanke, Essen, Ausgabe, Ruhe starten, Training, Kontakt), dahinter Essen, Ausgabe, Ruhe und Training direkt. Ausgabe springt gleich ins Betragsfeld.
+- **iPad und Mac:** ab 1100 px eine feste Seitenleiste mit allen Bereichen und farbigen Symbolen, oben rechts Suchen und Festhalten. Hochkant auf dem iPad eine schwebende Leiste oben, ☰ klappt die Seitenleiste auf.
+- Heute in zwei Spalten: links alles zum Tun, rechts Coach, Kompass und die kurzen Bausteine.
+- Logbuch und Woche mit Inspektor ab 1100 px: ein Klick öffnet den Eintrag rechts, ohne die Seite zu wechseln.
+- Tastatur: N hält fest, ⌘K oder / öffnet die Suche im Logbuch, Esc schließt.
+
+### Geändert
+- **Körper als Übersicht:** oben die Erholung, darunter vier Karten mit je einer Zahl und einer Handlung (Training, Essen, Ruhe, Ausdauer). Details liegen eine Ebene tiefer: Letzte Nacht, Training, Essen.
+- **Geld** im gleichen Muster: Ausgabe festhalten und Töpfe der Woche oben, Stufenplan, Monatlich, Sparziele und Taschengeld als Karten mit eigener Seite, „Alle Buchungen“ unter Zuletzt.
+- **Woche** im gleichen Muster: Karten für Ziele, Energie, Zeit kaufen und Parkplatz, darunter die Stapel.
+
 ## [0.12.0] – 2026-10-25
 
 ### Hinzugefügt

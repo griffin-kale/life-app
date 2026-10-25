@@ -28,6 +28,7 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 | Menschen, Wenn-dann-Pläne, Energie-Bilanz, Parkplatz, Zeit kaufen | 0.11 | `lib/menschen.ts`, `app/menschen`, `app/wenn.tsx`, `app/zeit-kaufen.tsx` |
 | Kompass: fünf Ringe, Verlauf, Level, Meilensteine | 0.10 | `lib/kompass.ts`, `lib/kompass-regeln.ts`, `app/kompass` |
 | Rückmeldungen ins Backlog, optional als GitHub-Issue | 0.9 | `lib/rueckmeldung.ts`, `app/rueckmeldung.tsx` |
+| Übersicht mit Unterseiten (Körper, Geld, Woche), Schnellzugriffe, iPad und Mac mit Seitenleiste und Inspektor | 0.13 | `app/ueberkarte.tsx`, `app/koerper/{nacht,bewegung,essen}`, `app/geld/seite.tsx`, `app/woche/seite.tsx`, `app/schnell.tsx`, `app/navigation.tsx`, `app/inspektor.tsx` |
 | Design: Dunkel, Hell, wie das iPhone; Verlaufskarten, Kontenfarbe pro Bereich, Wochenringe, Level-Weg | 0.12 | `app/globals.css` (Tokens oben, Abschnitt 0.12), `lib/thema.ts`, `app/darstellung.tsx`, `app/ringe.tsx`, `lib/heute-bausteine.ts`, `app/einstellungen/heute`, `app/kurz.tsx` |
 
 Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU, 1 GB RAM, 2 GB Swap, Ubuntu 24.04), Docker Compose mit App, Postgres und Caddy.
@@ -43,6 +44,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 7. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Struktur 0.13 (Peter, 25.10.2026):** Übersicht mit Unterseiten wie Apple Health und Oura (höchstens zwei Ebenen, jede Karte mit Zahl und Handlung), gleich für Körper, Geld und Woche. Schnellzugriffe als Baustein auf Heute, das erste Element ist ein Plus mit allen Wegen. Mac: Seitenleiste und Spalten, Logbuch und Woche mit Inspektor. iPad: quer Seitenleiste, hochkant schwebende Leiste oben. Web-Apps auf iOS können keine Schnellaktionen am App-Symbol und keine Widgets, deshalb Kurzbefehle und Aktionstaste. Festhalten liegt auf N statt ⌘N, weil Browser ⌘N für neue Fenster reservieren.
 
 - **Design 0.12 (Peter, 25.10.2026):** Grundlage Richtung A „Nachtblau mit Licht“ aus drei Mockups, dazu Erholung als Farbverlauf, Wochentag-Ringe mit Level-Weg und farbige Ruhe-Karten. Segment-Balken und volle Farbkarten (Richtung B) bewusst nicht. Wochenstand als Tagespunkte statt Ringreihe (zwei Ringreihen übereinander gefielen Peter nicht). Schrift Fraunces nach Recherche (Serifen wirken in Studien luxuriöser, Luxusmarken mischen Serife für Titel mit klarer Schrift für Text). Heute ist pro Mensch anpassbar (Setting `heute:<user_id>`, `lib/heute-bausteine.ts`), „Jetzt dran“ und Fragebogen bleiben fest, weil der Coach die Antworten braucht. Dunkel bleibt Standard. Der Modus steht im Cookie `life-thema`, damit der Server ohne Skript und ohne Aufblitzen richtig rendert. Die iOS-Statusleiste stellt sich erst beim nächsten Öffnen der App um.
 

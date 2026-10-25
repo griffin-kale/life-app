@@ -172,4 +172,7 @@ test('Heute-Bausteine: unbekannte raus, doppelte raus, feste immer dabei, leer h
   assert.deepEqual(bausteineAus(null), STANDARD);
   assert.deepEqual(bausteineAus(['coach', 'coach', 'hack', '<b>']), ['fragebogen', 'coach', 'jetzt']);
   assert.deepEqual(bausteineAus(['woche', 'jetzt', 'fragebogen', 'koerper']), ['woche', 'jetzt', 'fragebogen', 'koerper']);
+  const { nachruesten } = await import('../../lib/heute-bausteine.ts');
+  assert.deepEqual(nachruesten(['woche', 'coach', 'jetzt', 'fragebogen'], 1)?.liste, ['woche', 'schnell', 'coach', 'jetzt', 'fragebogen']);
+  assert.equal(nachruesten(['coach', 'jetzt', 'fragebogen'], 2), null);
 });
