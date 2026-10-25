@@ -8,10 +8,8 @@ export const TEST_ENV = {
   SESSION_SECRET: 'test-session-secret-nur-fuer-tests-0123456789abcdef',
   SETUP_TOKEN: 'setup-test-token-1234567890abc',
   CAPTURE_TOKEN: 'capture-test-token-1234567890abc',
-  AWS_REGION: 'eu-central-1',
-  AWS_ACCESS_KEY_ID: 'AKIATEST',
-  AWS_SECRET_ACCESS_KEY: 'test',
-  ANTHROPIC_BEDROCK_BASE_URL: 'http://127.0.0.1:4010',
+  ANTHROPIC_API_KEY: 'sk-test-nur-fuer-die-attrappe',
+  ANTHROPIC_BASE_URL: 'http://127.0.0.1:4010',
 };
 
 export default defineConfig({
@@ -29,7 +27,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: [
-    { command: 'node tests/e2e/mock-bedrock.mjs', port: 4010, reuseExistingServer: !process.env.CI },
+    { command: 'node tests/e2e/mock-claude.mjs', port: 4010, reuseExistingServer: !process.env.CI },
     { command: `npx next start -p ${PORT}`, url: `http://localhost:${PORT}/api/health`, reuseExistingServer: !process.env.CI, env: TEST_ENV, timeout: 60_000 },
   ],
 });

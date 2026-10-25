@@ -1,4 +1,4 @@
-import { askJson } from './claude';
+import { askJson, namenLernen } from './claude';
 import { ensureSchema, getSetting, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 import { safeFetch } from './safefetch';
@@ -32,6 +32,7 @@ const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').r
 type Antwort = {
   typ: string; kategorie: string; art: string; titel: string; bereinigt: string; schritt: string; begruendung: string; kern: string; frage: string;
   ziel?: string; hebel?: number; aufwand_min?: number; frist?: string; wer?: string; delegieren_an?: string;
+  namen?: { name: string; art: string }[];
 };
 
 /** Ordnet einen Eintrag ein. Fehler landen im Feld "fehler", der Eintrag bleibt erhalten. */
@@ -67,9 +68,10 @@ export async function enrich(id: string): Promise<void> {
       `Heute ist ${wtag}, ${heute}.`,
       'Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n' + item.text,
       url ? `Link: ${url}${titel ? `\nTitel: ${titel}` : ''}${quelle ? `\nQuelle: ${quelle}` : ''}${typHint ? `\nHinweis: ${typHint}` : ''}` : '',
-      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer), "ziel": string (genau eines von Peters Zielen, auf das der Eintrag einzahlt, sonst leer), "hebel": Zahl 0 bis 3 (Wirkung auf den Engpass, 3 = direkt; streng), "aufwand_min": 15, 60 oder 240 (bei notiz, idee und wissen 0), "frist": "JJJJ-MM-TT" (nur wenn der Eintrag eine Frist nennt oder klar macht, sonst leer), "wer": "ich" oder "delegieren", "delegieren_an": string (Name aus dem Team, sonst leer)}',
+      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer), "ziel": string (genau eines von Peters Zielen, auf das der Eintrag einzahlt, sonst leer), "hebel": Zahl 0 bis 3 (Wirkung auf den Engpass, 3 = direkt; streng), "aufwand_min": 15, 60 oder 240 (bei notiz, idee und wissen 0), "frist": "JJJJ-MM-TT" (nur wenn der Eintrag eine Frist nennt oder klar macht, sonst leer), "wer": "ich" oder "delegieren", "delegieren_an": string (Name aus dem Team, sonst leer), "namen": [{"name": string, "art": "person"|"firma"|"ort"}] (Eigennamen von Menschen, Firmen und Orten, die im Eintrag im Klartext stehen; Platzhalter in eckigen Klammern nicht aufnehmen; sonst leer)}',
     ].filter(Boolean).join('\n\n');
     const a = await askJson<Antwort>(prompt);
+    await namenLernen(a.namen).catch(() => {});
     const typ = (TYPEN as readonly string[]).includes(a.typ) ? a.typ : (typHint || 'gedanke');
     const kategorie = (KATEGORIEN as readonly string[]).includes(a.kategorie) ? a.kategorie : 'notiz';
     const art = (ARTEN as readonly string[]).includes(a.art) ? a.art : null;

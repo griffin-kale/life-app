@@ -38,6 +38,9 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   const korr = await sql<{ von: string | null; zu: string; text: string; titel: string | null; schritt: string | null }[]>`
     select k.von, k.zu, i.text, i.titel, i.schritt from korrekturen k join items i on i.id = k.item_id
     order by k.created_at desc limit 20`;
+  const [abend] = modus === 'tag' ? await sql<{ p: { aufgabe?: string; zeit?: string; notiz?: string } | null }[]>`
+    select antworten->'plan' as p from checkins where art = 'abend' and tag = (${tag}::date - 1)` : [];
+  const gestern = abend?.p ? [abend.p.aufgabe, abend.p.notiz].filter(Boolean).join(' / ') : '';
   const alter = (d: string) => Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 864e5));
   const zeilen = items.map((it, n) => {
     const manuell = it.manuell_tag === tag ? ` | HEUTE VON PETER GESETZT: ${it.manuell_stapel} (nicht ändern)` : '';
@@ -62,6 +65,7 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
       '6. Gleiche Sache doppelt festgehalten: in "doppelt" zusammenführen, den klareren Eintrag behalten.',
       '7. "grund": höchstens 10 Wörter, konkret mit Hebel, Frist oder Aufwand. Kein Lob, keine Floskel.',
     ].join('\n'),
+    gestern ? `Gestern Abend hat Peter als Wichtigstes für heute festgelegt: „${gestern}“${abend?.p?.zeit ? `, ${abend.p.zeit}` : ''}. Setz den passenden offenen Eintrag auf "jetzt", Rang 1.` : '',
     korr.length ? 'So hat Peter zuletzt korrigiert. Lerne daraus, was ihm wichtiger ist als dir:\n' + korr.map((k) => `- „${(k.schritt || k.titel || k.text).slice(0, 90)}“ ${VERB[k.zu] ?? k.zu}${k.von ? ` (war: ${k.von})` : ''}`).join('\n') : '',
     'Offene Einträge:\n' + zeilen.join('\n'),
     'Antworte nur mit JSON: {"liste": [{"n": Nummer, "stapel": "jetzt"|"woche"|"delegieren"|"geparkt"|"streichen", "rang": 1 bis N innerhalb des Stapels, "grund": string}], "doppelt": [{"behalten": Nummer, "weg": [Nummern]}]}. Jeder Eintrag kommt genau einmal in "liste" vor.',

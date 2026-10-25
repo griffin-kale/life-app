@@ -4,9 +4,9 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 
 ## Feste Grenzen (nie verhandeln)
 
-1. **Daten bleiben in Deutschland.** Server bei Hetzner (Nürnberg/Falkenstein). Claude nur über Amazon Bedrock mit EU-Profil aus `eu-central-1`. Keine weiteren Dienste, die Einträge sehen.
+1. **Daten bleiben in Deutschland, Claude bekommt nur Pseudonyme.** Server bei Hetzner (Nürnberg/Falkenstein). Claude läuft über die Anthropic-API (Entscheidung Peter, 25.10.2026, statt Bedrock). Jeder Aufruf geht durch `askJson` in `lib/claude.ts` und damit durch `lib/pseudonym.ts`: Namen von Personen, Firmen und Orten, E-Mails, Telefonnummern und IBANs gehen nur als Platzhalter raus. Gesundheitswerte (Schlaf, Puls, Training) gehen nur zusammengefasst raus, ohne Datum und Uhrzeit. Nie direkt am Pseudonymisieren vorbei aufrufen. Keine weiteren Dienste, die Einträge sehen. Open Food Facts bekommt nur Barcode-Nummern.
 2. **Keine externen Ressourcen.** Keine Fonts, Skripte, Bilder, Analytics oder CDNs von außen, keine Links nach außen in der Oberfläche (außer der Quelle eines Eintrags, die Peter selbst festgehalten hat). Schriften liegen im Projekt.
-3. **Life gehört der Griffin & Kale GmbH.** Repo (`griffin-kale/life-app`), Server und Verträge mit Hetzner und AWS laufen über die Firma, damit Life später auch als Produkt vertrieben werden kann. Life ist trotzdem keine EHRENBEHÖRDE-Marke: Farbe ist Imperial Blue (Pantone 2768 C, `#001D51`), das EB-Royalblau `#3338CC` kommt nicht vor.
+3. **Life gehört der Griffin & Kale GmbH.** Repo (`griffin-kale/life-app`), Server und Verträge mit Hetzner und Anthropic laufen über die Firma, damit Life später auch als Produkt vertrieben werden kann. Life ist trotzdem keine EHRENBEHÖRDE-Marke: Farbe ist Imperial Blue (Pantone 2768 C, `#001D51`), das EB-Royalblau `#3338CC` kommt nicht vor.
 4. **Peters Einträge sind privat.** Sie liegen nur in der Datenbank auf dem Server, nie im Repo, in Tests, Logs, Screenshots im Pull Request oder Fehlermeldungen. Testdaten sind erfunden.
 5. **Geheimnisse nie ins Repo und nie in den Chat.** Schlüssel trägt Peter selbst auf dem Server in `/opt/life/deploy/.env` ein. `.env` ist in `.gitignore`.
 6. **Dark Mode ist Standard.**
@@ -38,6 +38,8 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 - **Claude-Antworten sind unsichere Eingaben.** Immer gegen feste Listen prüfen (siehe `lib/enrich.ts`, `lib/priorisieren.ts`), nie als HTML ausgeben, kein `dangerouslySetInnerHTML`.
 - **Abhängigkeiten:** neue nur nach Prüfung (Herkunft, Pflege, Alter, Installationsskripte). `.npmrc` verbietet Installationsskripte.
 - **CSP** in `next.config.mjs` nur verschärfen, nie lockern.
+- **Fragen an Peter sind klickbar.** In der App gibt es keine Freitext-Pflichtfelder: Antworten zum Antippen (`lib/fragen.ts`, `app/fragebogen.tsx`), dazu immer „Etwas dazu sagen“ für eigene Worte.
+- **Mehrere Menschen:** Tabellen haben `user_id` (Standard `peter`), Haushalte stehen in `haushalte` und `nutzer`. Neue Tabellen bekommen `user_id` von Anfang an. Bevor ein zweiter Mensch Life nutzt, filtert jede Abfrage nach `user_id`.
 - **Anmeldung:** Passkey ist der bevorzugte Weg. Passwort und Code (`lib/zweifaktor.ts`) sind die Ausweichlösung und fliegen raus, sobald Passkeys auf Peters Geräten gehen. Der Code-Schlüssel ist mit `SESSION_SECRET` verschlüsselt: wer `SESSION_SECRET` wechselt, muss Passwort und Code neu einrichten.
 
 ## Texte in der App
@@ -56,8 +58,8 @@ npm run build && npm run test:e2e   # braucht Postgres, siehe playwright.config.
 
 ## Offene Punkte
 
-- Funktionen der alten Tageslage übernehmen (Engpass-Woche, Beirat, 5 Types of Wealth, Kompass), sobald Life zwei Wochen im Alltag läuft.
+- Ausbau in Stufen, jede einzeln live: 1 Fundament (0.6), 2 Körper mit WHOOP, Training wie RP für zu Hause, Barcode-Ernährung, 3 Meditation mit NSDR, Wim Hof und Stille, 4 Geld für die Familie, 5 Menschen und Zeit. Konzept: Artefakte „Life 1.0 Konzept“ und „Life Bauplan-Fragen“.
 - YouTube-Transkripte für Wissenseinträge.
 - Kalender: Blöcke für „Jetzt dran“ eintragen. Welcher Kalender, ist noch offen.
 - Familienversion, danach Produkt: mehrere Nutzer mit sauber getrennten Daten pro Nutzer (jede Abfrage nach Nutzer filtern), Export und Löschen pro Nutzer.
-- Auftragsverarbeitungsverträge mit Hetzner und AWS über Griffin & Kale abschließen.
+- Auftragsverarbeitungsverträge mit Hetzner und Anthropic (in der Console annehmen) über Griffin & Kale abschließen.

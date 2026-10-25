@@ -49,11 +49,10 @@ POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 SETUP_TOKEN=$(openssl rand -hex 16)
 CAPTURE_TOKEN=$(openssl rand -hex 24)
-AWS_REGION=eu-central-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-CLAUDE_MODEL_FAST=eu.anthropic.claude-haiku-5-5
-CLAUDE_MODEL=eu.anthropic.claude-sonnet-5-5
+# Claude über die Anthropic-API. Den Schlüssel trägt Peter selbst ein.
+ANTHROPIC_API_KEY=
+CLAUDE_MODEL_FAST=claude-haiku-5-5
+CLAUDE_MODEL=claude-sonnet-5-5
 EOT
 fi
 
@@ -61,5 +60,5 @@ fi
 cat > /etc/cron.d/life-backup <<'EOT'
 15 3 * * * root cd /opt/life/deploy && docker compose exec -T db pg_dump -U life life | gzip > backups/life-$(date +\%F).sql.gz && find backups -name 'life-*.sql.gz' -mtime +30 -delete
 EOT
-echo "Fertig. Jetzt die AWS-Schlüssel in $ENV eintragen und deploy.sh vom Mac aus starten."
+echo "Fertig. Jetzt ANTHROPIC_API_KEY in $ENV eintragen und deploy.sh vom Mac aus starten."
 echo "Für fertige Pakete von GitHub einmalig: docker login ghcr.io -u <github-name> (Token nur mit read:packages)."

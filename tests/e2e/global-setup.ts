@@ -7,7 +7,7 @@ import { TEST_ENV } from '../../playwright.config';
  */
 export default async function globalSetup() {
   const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
-  for (const t of ['korrekturen', 'items', 'credentials', 'settings']) {
+  for (const t of ['checkins', 'coach', 'korrekturen', 'items', 'credentials', 'settings']) {
     const [{ da }] = await sql`select to_regclass(${t}) is not null as da`;
     if (da) await sql.unsafe(`truncate ${t} cascade`);
   }

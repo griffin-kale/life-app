@@ -2,22 +2,23 @@
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 
-type S = { kontext: string; ziele: string; team: string };
-const LEER: S = { kontext: '', ziele: '', team: '' };
+type S = { kontext: string; ziele: string; team: string; namen: string; namen_auto: string };
+const LEER: S = { kontext: '', ziele: '', team: '', namen: '', namen_auto: '' };
 
 export default function Einstellungen() {
   const [v, setV] = useState<S>(LEER);
   const [saved, setSaved] = useState<S>(LEER);
   const [origin, setOrigin] = useState('');
+  const [claude, setClaude] = useState<boolean | null>(null);
   const [toast, setToast] = useToast();
   const [code, setCode] = useState<boolean | null>(null);
   useEffect(() => {
     setOrigin(window.location.origin);
     api<{ aktiv: boolean }>('/api/auth/code').then((r) => setCode(r.aktiv)).catch(() => {});
     // Hat Peter schon getippt, bevor die Werte da sind, bleibt sein Text stehen.
-    api<S>('/api/settings').then((s) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); }).catch(() => {});
+    api<S & { claude: boolean }>('/api/settings').then(({ claude: c, ...s }) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); setClaude(c); }).catch(() => {});
   }, []);
-  const dirty = v.kontext !== saved.kontext || v.ziele !== saved.ziele || v.team !== saved.team;
+  const dirty = (Object.keys(LEER) as (keyof S)[]).some((k) => v[k] !== saved[k]);
   const set = (k: keyof S) => (e: React.ChangeEvent<HTMLTextAreaElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function save() {
     try { await api('/api/settings', { method: 'PUT', body: JSON.stringify(v) }); setSaved(v); }
@@ -45,6 +46,19 @@ export default function Einstellungen() {
           <button type="button" className="btn primary" onClick={save} disabled={!dirty}>{dirty ? 'Speichern' : <>{Icon.check}Gespeichert</>}</button>
         </div>
         <p className="gnote">Die Zeile mit „Engpass:“ steht oben auf Heute. Claude ordnet jeden Eintrag einem Ziel zu und sortiert jeden Morgen danach.</p>
+      </section>
+
+      <section className="gsec">
+        <h2 className="glabel">Was Claude nie sieht</h2>
+        <div className="group pad">
+          <p className="muted small">{claude === null ? '…' : claude ? 'Claude ist verbunden.' : 'Claude ist noch nicht verbunden. Der Schlüssel fehlt auf dem Server.'}</p>
+          <div className="field"><label htmlFor="namen">Namen, die Life vor dem Senden ersetzt, einer pro Zeile</label>
+            <textarea id="namen" rows={5} value={v.namen} onChange={set('namen')} placeholder={'Name einer Person\nFirma: Name einer Firma\nOrt: Name eines Orts'} /></div>
+          <div className="field"><label htmlFor="namen_auto">Von Claude erkannt und ab jetzt ersetzt</label>
+            <textarea id="namen_auto" rows={4} value={v.namen_auto} onChange={set('namen_auto')} placeholder="Noch keine" /></div>
+          <button type="button" className="btn primary" onClick={save} disabled={!dirty}>{dirty ? 'Speichern' : <>{Icon.check}Gespeichert</>}</button>
+        </div>
+        <p className="gnote">Claude bekommt [Person 1] statt des Namens, ebenso bei E-Mail-Adressen, Telefonnummern und IBANs. Dein Name und dein Team sind immer dabei. Taucht ein neuer Name zum ersten Mal auf, sieht Claude ihn einmal und meldet ihn zurück. Danach steht er hier.</p>
       </section>
 
       <section className="gsec">
@@ -80,7 +94,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Life 0.5 · Server in Deutschland</p>
+      <p className="foot">Life 0.6 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

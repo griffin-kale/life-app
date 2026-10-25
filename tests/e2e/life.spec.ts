@@ -26,6 +26,8 @@ async function warteBisRuhig(page: Page, sekunden = 40) {
 
 test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sicherheits-Header', async ({ request }) => {
   expect((await request.get('/api/items')).status()).toBe(401);
+  expect((await request.get('/api/checkin')).status()).toBe(401);
+  expect((await request.get('/api/coach')).status()).toBe(401);
   expect((await request.post('/api/capture', { headers: { authorization: 'Bearer falsch' }, data: { text: 'x' } })).status()).toBe(401);
   const health = await request.get('/api/health');
   expect(health.status()).toBe(200);
@@ -60,21 +62,21 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
 
   await test.step('Einstellungen: Engpass, Ziele, Team', async () => {
     await page.goto('/einstellungen');
-    await expect(page.getByRole('button', { name: /Gespeichert/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Gespeichert/ }).first()).toBeVisible();
     await page.fill('#ktx', 'Engpass: Zu wenige Leute auf der Plattform, Content hochfahren\nPrioritäten: Projekte, Plattform, Boutique');
     await page.fill('#ziele', 'Projekte\nPlattform\nBoutique\nPrivat');
     await page.fill('#team', 'Carlotta: Fachbereiche, Vertrieb');
-    await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByRole('button', { name: /Gespeichert/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern' }).first().click();
+    await expect(page.getByRole('button', { name: /Gespeichert/ }).first()).toBeVisible();
   });
 
   await test.step('Festhalten und von Claude sortieren lassen', async () => {
     await page.goto('/');
     await expect(page.locator('.engpass')).toContainText('Content hochfahren');
     for (const t of EINTRAEGE) {
-      await page.fill('textarea', t);
-      await page.locator('button.btn.primary').click();
-      await expect(page.locator('button.btn.primary')).toContainText('Festgehalten');
+      await page.fill('.capture textarea', t);
+      await page.locator('.capture button.btn.primary').click();
+      await expect(page.locator('.capture button.btn.primary')).toContainText('Festgehalten');
     }
     await warteBisRuhig(page);
     await page.reload();
@@ -130,6 +132,29 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     }
   });
 
+  await test.step('Wochenbogen auf „Woche“: nur klickbar, Pflichtfragen zuerst', async () => {
+    await page.goto('/woche');
+    const bogen = page.locator('section[aria-label="Wochenbogen"]');
+    await expect(bogen).toContainText('WHO-5');
+    await expect(bogen.getByRole('button', { name: 'Fertig' })).toBeDisabled();
+    for (const g of await bogen.getByRole('radiogroup').all()) await g.getByRole('radio').nth(3).click();
+    await bogen.getByRole('button', { name: 'kleiner geworden' }).click();
+    await bogen.getByRole('button', { name: 'Etwas dazu sagen' }).first().click();
+    await bogen.locator('textarea').first().fill('Erfundene Testnotiz');
+    await bogen.getByRole('button', { name: 'Fertig' }).click();
+    await expect(page.locator('main')).toContainText('WHO-5) diese Woche: 60 von 100');
+  });
+
+  await test.step('Morgen und Abend per Schnittstelle, Coach antwortet mit echten Namen', async () => {
+    expect((await page.request.post('/api/checkin', { data: { art: 'morgen', antworten: {} } })).status()).toBe(400);
+    expect((await page.request.post('/api/checkin', { data: { art: 'morgen', antworten: { erholung: { wert: 4 } } } })).status()).toBe(200);
+    expect((await page.request.post('/api/checkin', { data: { art: 'abend', antworten: { tag: { wert: 2 }, kraft: { auswahl: ['Termine', 'erfunden'] }, plan: { aufgabe: 'Newsletter schreiben', zeit: 'am Vormittag' } } } })).status()).toBe(200);
+    await expect.poll(async () => (await (await page.request.get('/api/coach')).json()).morgen?.text ?? '', { timeout: 20_000 }).toContain('Newsletter');
+    const c = await (await page.request.get('/api/coach')).json();
+    expect(c.morgen.geste).toContain('Carlotta');
+    expect(JSON.stringify(c)).not.toContain('[Person');
+    expect(c.abend.text).toContain('Plan für morgen');
+  });
   await test.step('Abmelden sperrt die Daten, Face ID öffnet sie wieder', async () => {
     await page.goto('/einstellungen');
     await page.getByRole('button', { name: 'Abmelden' }).click();
@@ -140,6 +165,21 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   expect(fehler, fehler.join('\n')).toEqual([]);
+});
+
+test('Namen erreichen Claude nur als Platzhalter', async ({ request }) => {
+  const prompts: string[] = await (await request.get('http://127.0.0.1:4010/prompts')).json();
+  expect(prompts.length).toBeGreaterThan(5);
+  for (const p of prompts) {
+    expect(p).not.toContain('Carlotta');
+    expect(p).not.toMatch(/\bPeter\b/);
+  }
+  // Jonas stand nicht im Team: Claude sieht ihn beim ersten Eintrag, danach nur noch als Platzhalter
+  const ersterJonas = prompts.findIndex((p) => p.includes('Jonas'));
+  expect(ersterJonas).toBeGreaterThanOrEqual(0);
+  const spaeter = prompts.slice(ersterJonas + 1).filter((p) => p.startsWith('SORTIERLAUF'));
+  expect(spaeter.length).toBeGreaterThan(0);
+  for (const p of spaeter.slice(-1)) expect(p).not.toContain('Jonas');
 });
 
 test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', async ({ page, request }) => {

@@ -25,7 +25,7 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
 | App | Next.js 15, TypeScript, keine externen Skripte oder Schriften (Instrument Serif liegt im Projekt) |
 | Datenbank | PostgreSQL 16 im selben Server |
 | HTTPS | Caddy, Zertifikat automatisch |
-| Claude | `@anthropic-ai/bedrock-sdk`, Modelle `eu.anthropic.claude-haiku-5-5` und `eu.anthropic.claude-sonnet-5-5` |
+| Claude | `@anthropic-ai/sdk`, Modelle `claude-haiku-5-5` und `claude-sonnet-5-5`, vorher pseudonymisiert (`lib/pseudonym.ts`) |
 | Prüfung | GitHub Actions: Typen, Einheitstests, `npm audit`, Build, Playwright-Tests auf iPhone-Breite |
 | Auslieferung | Versions-Tag baut ein Paket bei GitHub (ghcr.io, privat), der Server holt es ab |
 
@@ -39,7 +39,7 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
    ssh root@SERVER-IP 'bash /root/setup-server.sh life.gneuss.xyz'
    ```
    Das richtet Firewall, Anmeldung nur per Schlüssel, automatische Sicherheitsupdates, Swap und das tägliche Datenbank-Backup ein und erzeugt alle Geheimnisse in `/opt/life/deploy/.env`.
-4. AWS: IAM-Benutzer nur mit `bedrock:InvokeModel` für die EU-Profile anlegen. Peter trägt die Schlüssel selbst ein: `ssh root@SERVER-IP`, dann `nano /opt/life/deploy/.env`.
+4. Anthropic: In der Console der Griffin & Kale GmbH einen API-Schlüssel nur für Life anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen. Peter trägt den Schlüssel selbst ein: `ssh life-server`, dann `nano /opt/life/deploy/.env`, Zeile `ANTHROPIC_API_KEY=`.
 5. Für fertige Pakete von GitHub einmalig auf dem Server: `docker login ghcr.io -u GITHUB-NAME` mit einem Token, das nur `read:packages` darf. In der `.env` `GHCR_IMAGE=ghcr.io/GITHUB-NAME/life-app` setzen.
 6. Vom Mac: `bash deploy/deploy.sh SERVER-IP v0.4.0` (oder `--build`, solange es noch kein Paket gibt).
 7. Auf dem iPhone `https://life.gneuss.xyz/setup` öffnen, `SETUP_TOKEN` aus der `.env` eingeben, Passkey anlegen. In Safari: Teilen → „Zum Home-Bildschirm“.
