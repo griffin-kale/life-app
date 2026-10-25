@@ -33,6 +33,7 @@ if [ ! -f "$ENV" ]; then
   umask 077
   cat > "$ENV" <<EOT
 DOMAIN=$DOMAIN
+PUBLIC_ORIGIN=https://$DOMAIN
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 SETUP_TOKEN=$(openssl rand -hex 16)
