@@ -15,7 +15,7 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
 - **Links:** YouTube-Titel über oEmbed, bei anderen Seiten Titel und Textauszug. Nur öffentliche Adressen werden abgerufen.
 - **Logbuch:** Filter nach Typ, Erledigt und Archiviert, Suche.
 - **Export:** alles als eine Markdown-Datei (`/api/export`).
-- **Anmeldung:** nur per Passkey (Face ID). Einrichten mit einmaligem Code unter `/setup`.
+- **Anmeldung:** per Passkey (Face ID), ersatzweise mit Passwort und sechsstelligem Code aus 1Password. Einrichten mit einmaligem Code unter `/setup`.
 - **Gestaltung:** nach Apples Gestaltungsregeln fürs Web: Schrift folgt der iPhone-Textgröße, Feedback beim Drücken, durchscheinende Leisten mit Scroll-Kante, Zurück-Navigation, Meldungen kommen und gehen auf demselben Weg, Rücksicht auf „Bewegung reduzieren“, „Transparenz reduzieren“ und „Kontrast erhöhen“.
 
 ## Aufbau
@@ -59,11 +59,11 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
 - **Datensicherung:** täglich 3:15 Uhr nach `/opt/life/deploy/backups`, 30 Tage, dazu die Hetzner-Backups des ganzen Servers.
 - **Lebenszeichen:** `https://life.gneuss.xyz/api/health`
 - **Neues Gerät:** `/setup` mit dem `SETUP_TOKEN` öffnen und einen weiteren Passkey anlegen.
-- **Handy verloren:** `SESSION_SECRET` in der `.env` ändern und neu starten. Damit sind alle Geräte abgemeldet. Danach den Passkey des verlorenen Geräts in den iCloud-Einstellungen löschen.
+- **Handy verloren:** `SESSION_SECRET` in der `.env` ändern und neu starten. Damit sind alle Geräte abgemeldet und Passwort und Code ungültig. Danach den Passkey des verlorenen Geräts in den iCloud-Einstellungen löschen und Passwort und Code bei Bedarf unter `/setup` neu einrichten.
 
 ## Sicherheit
 
-Geschützt ist: Anmeldung nur per Passkey, Sitzung im `httpOnly`-Cookie, alle Daten hinter der Anmeldung, Kurzbefehl mit eigenem Schlüssel, Begrenzung der Anfragen, strenge Sicherheits-Header (CSP ohne fremde Quellen), Abruf fremder Links ohne Zugriff auf interne Adressen, Claude-Antworten nur gegen feste Listen übernommen, keine Installationsskripte von Abhängigkeiten.
+Geschützt ist: Anmeldung per Passkey oder Passwort plus Einmal-Code (scrypt, Code nur einmal gültig), Sitzung im `httpOnly`-Cookie, alle Daten hinter der Anmeldung, Kurzbefehl mit eigenem Schlüssel, Begrenzung der Anfragen, strenge Sicherheits-Header (CSP ohne fremde Quellen), Abruf fremder Links ohne Zugriff auf interne Adressen, Claude-Antworten nur gegen feste Listen übernommen, keine Installationsskripte von Abhängigkeiten.
 
 Bekannte Grenzen, bewusst in Kauf genommen:
 - Die CSP erlaubt Inline-Skripte, weil Next.js sie ohne Nonces braucht. Fremde Quellen bleiben gesperrt.
