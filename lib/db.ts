@@ -184,6 +184,15 @@ export function ensureSchema(): Promise<void> {
         )`;
       await sql`create index if not exists mahlzeiten_tag on mahlzeiten (user_id, tag)`;
       await sql`
+        create table if not exists ruhe (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          tag date not null,
+          art text not null check (art in ('stille', 'atem', 'nsdr', 'wimhof', 'runter')),
+          dauer_sek integer not null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`
         create table if not exists push_abos (
           id bigserial primary key,
           user_id text not null references nutzer(id),

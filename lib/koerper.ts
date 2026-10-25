@@ -34,7 +34,7 @@ export async function koerperStand(userId = 'peter') {
   await ensureSchema();
   const heute = heuteBerlin();
   const montag = wochenTag(heute);
-  const [stand, tage, woche, kraftTage, essen, gestern, pz, erste] = await Promise.all([
+  const [stand, tage, woche, kraftTage, essen, gestern, pz, erste, ruhe] = await Promise.all([
     trainingStand(userId),
     sql<KoerperTag[]>`select tag::text as tag, schlaf_min, schlaf_leistung, erholung, hrv::float as hrv, ruhepuls, belastung::float as belastung
       from koerper_tage where user_id = ${userId} and tag > (${heute}::date - 15) order by tag desc`,
@@ -48,6 +48,7 @@ export async function koerperStand(userId = 'peter') {
     sql<{ protein: number | null }[]>`select sum((protein + coalesce(protein_bis, protein)) / 2)::float as protein from mahlzeiten where user_id = ${userId} and tag = (${heute}::date - 1)`,
     proteinZiel(userId),
     sql<{ tag: string | null }[]>`select min(tag)::text as tag from trainings where user_id = ${userId} and art = 'kraft'`,
+    sql<{ minuten: number; tage: number }[]>`select coalesce(round(sum(dauer_sek) / 60.0), 0)::int as minuten, count(distinct tag)::int as tage from ruhe where user_id = ${userId} and tag >= ${montag}`,
   ]);
   const kraft = new Set(woche.filter((t) => t.art === 'kraft').map((t) => t.tag)).size;
   const zone2 = woche.reduce((a, t) => a + (t.zone2_min ?? 0), 0);
@@ -61,6 +62,7 @@ export async function koerperStand(userId = 'peter') {
     letzteNacht: tage.find((t) => t.tag === heute) ?? null,
     tage, naechte, kraft, zone2, intervall, ausgefallen,
     trainingstagHeute: planTage.includes(wd) && !kraftTage.some((k) => k.tag === heute),
+    ruheMin: ruhe[0]?.minuten ?? 0, ruheTage: ruhe[0]?.tage ?? 0,
     essen: essen[0], proteinGestern: gestern[0]?.protein ?? null, proteinZiel: pz.ziel, gewicht: pz.gewicht,
     warnungen: [schlafWarnung(naechte), ausgefallen >= 2 ? `${ausgefallen} geplante Krafteinheiten in Folge ausgefallen. Passe den Plan an, statt nachzuholen.` : null].filter((x): x is string => !!x),
   };

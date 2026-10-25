@@ -77,3 +77,21 @@ test('Push nur an bekannte Dienste, Zeitfenster zwei Stunden', () => {
   assert.equal(faellig('09:01', '07:00'), false);
   assert.equal(faellig('06:59', '07:00'), false);
 });
+
+import { atemPhase, skript, VORLAGEN } from '../../lib/ruhe.ts';
+
+test('Ruhe: Hinweise liegen innerhalb der Sitzung, NSDR wandert durch den ganzen Körper', () => {
+  for (const v of VORLAGEN) for (const m of v.minuten) for (const h of skript(v.id, m)) assert.ok(h.t >= 0 && h.t < m * 60, `${v.id} ${m}: ${h.t}`);
+  const n = skript('nsdr', 10);
+  assert.ok(n.some((h) => h.text.includes('linken Fuß')) && n.some((h) => h.text.includes('ganzen Körper')));
+  const t = n.map((h) => h.t); assert.deepEqual(t, [...t].sort((a, b) => a - b));
+  assert.deepEqual(skript('stille', 10), []);
+});
+
+test('Atemtakt beim zyklischen Seufzen', () => {
+  const takt = { ein: 2, ein2: 1, aus: 6 };
+  assert.equal(atemPhase(takt, 0.5).phase, 'ein');
+  assert.equal(atemPhase(takt, 2.5).phase, 'nach');
+  assert.equal(atemPhase(takt, 5).phase, 'aus');
+  assert.equal(atemPhase(takt, 9.5).phase, 'ein');
+});

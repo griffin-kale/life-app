@@ -6,6 +6,7 @@ import { Essen } from './essen';
 
 type Tag = { tag: string; schlaf_min: number | null; erholung: number | null; hrv: number | null; ruhepuls: number | null; belastung: number | null };
 type K = {
+  ruheMin: number; ruheTage: number;
   heute: string; blockWoche: number; letzteNacht: Tag | null; tage: Tag[]; kraft: number; zone2: number; intervall: number; ausgefallen: number;
   trainingstagHeute: boolean; warnungen: string[]; stand: { einheitenSoll: number; uhrzeit: string };
   whoop: { bereit: boolean; verbunden: boolean; zuletzt: string | null };
@@ -110,7 +111,13 @@ export default function Koerper() {
         </div>
       </section>
 
-      <Essen onFehler={(m) => setToast(m, 'err')} onOk={(m) => setToast(m)} />
+      <section className="gsec" aria-label="Ruhe">
+        <h2 className="glabel">Ruhe</h2>
+        <Link className="group cell" href="/koerper/ruhe"><span>Stille, Atem, NSDR, Wim Hof, Runterfahren</span><span className="val">{k ? `${k.ruheMin} Min. diese Woche` : ''}{Icon.chevronRight}</span></Link>
+      </section>
+
+      {/* Nach jedem WHOOP-Abgleich neu laden, damit das Gewicht fürs Protein-Ziel stimmt */}
+      <Essen key={k?.whoop.zuletzt ?? '-'} onFehler={(m) => setToast(m, 'err')} onOk={(m) => setToast(m)} />
 
       {toast}
       <TabBar />

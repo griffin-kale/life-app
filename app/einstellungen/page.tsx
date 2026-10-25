@@ -97,7 +97,7 @@ export default function Einstellungen() {
         <p className="gnote">Der Export ist eine Textdatei mit allen Einträgen, lesbar in jedem Programm, auch ohne diese App.</p>
       </section>
 
-      <p className="foot">Life 0.7 · Server in Deutschland</p>
+      <p className="foot">Life 0.8 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

@@ -126,7 +126,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -201,6 +201,22 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.essen-liste')).toContainText('Bowl mit Hähnchen');
     await expect(page.locator('.essen-liste')).toContainText('40–55 g Protein');
     expect((await page.request.get('/api/essen/barcode?ean=12ab')).status()).toBe(400);
+  });
+
+  await test.step('Ruhe: Wim Hof erst nach Sicherheitsfragen, Stille läuft durch und zählt', async () => {
+    await page.goto('/koerper/ruhe');
+    const wh = page.locator('section[aria-label="Wim-Hof-Atmung"]');
+    await expect(wh.getByRole('button', { name: 'Verstanden' })).toBeDisabled();
+    for (const b of await wh.getByRole('group', { name: 'Sicherheit' }).getByRole('button').all()) await b.click();
+    await wh.getByRole('button', { name: 'Verstanden' }).click();
+    await expect(wh.getByRole('button', { name: 'Starten' })).toBeVisible();
+    await page.clock.install();
+    await page.reload();
+    await page.locator('section[aria-label="Stille"]').getByRole('button', { name: 'Starten' }).click();
+    await expect(page.locator('.ruhe-lauf')).toContainText('Stille');
+    await page.clock.fastForward('05:02');
+    await expect(page.locator('main')).toContainText('Die Minuten sind festgehalten');
+    await expect(page.locator('header')).toContainText('5 Min. an 1 Tag');
   });
 
   await test.step('Coach kennt das Warnsignal, Push nimmt nur echte Dienste', async () => {

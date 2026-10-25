@@ -381,3 +381,10 @@ code { font-family: var(--mono); font-size: .8125rem; background: rgba(0, 0, 0, 
 .pausebar b { font-family: var(--serif); font-weight: 400; font-size: 1.9rem; color: var(--ink); margin-right: auto; }
 .pausebar i { position: absolute; left: 0; top: 0; height: 2px; background: var(--sand); transition: width 250ms linear; }
 @media (max-width: 360px) { .werte { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Ruhe (0.8) */
+.ruhe-lauf { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 22px; padding: calc(40px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px)); background: #050A14; text-align: center; }
+.atemkreis { width: min(64vw, 260px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 45%, rgba(208, 200, 166, .55), rgba(0, 29, 81, .9) 70%); box-shadow: 0 0 60px rgba(208, 200, 166, .18); transition: transform 220ms linear; }
+.ruhe-zeit { font-family: var(--serif); font-weight: 400; font-size: 2.6rem; color: var(--ink); min-height: 1.2em; }
+.ruhe-text { margin: 0; max-width: 26rem; color: var(--muted); font-size: 1.05rem; line-height: 1.45; min-height: 3em; text-wrap: balance; }
+@media (prefers-reduced-motion: reduce) { .atemkreis { transition: none; } }

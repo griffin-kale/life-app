@@ -42,7 +42,7 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
   ]);
   const warnungen = [...k.warnungen, ...warnsignale(items)];
   const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
-    kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel });
+    kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel, ruheMin: k.ruheMin, ruheTage: k.ruheTage });
   const jetzt = items.filter((i) => i.stapel === 'jetzt').slice(0, 3);
   const menschen = namen.filter((n) => n.art === 'Person' && !/^(Peter|Gneuß|Peter Gneuß)$/.test(n.name)).map((n) => n.name);
   const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());

@@ -43,7 +43,7 @@ export function ausgefalleneTrainings(planTage: number[], erledigteTage: string[
 const stunden = (m: number) => (m / 60).toFixed(1).replace('.', ',');
 
 /** Zusammenfassung der Körperwerte für Claude: nur Durchschnitte und Zählungen, kein Datum, keine Uhrzeit. */
-export function koerperZusammenfassung(k: { naechte: Nacht[]; erholung: (number | null)[]; ruhepuls: (number | null)[]; kraft: number; kraftSoll: number; zone2: number; intervall: number; proteinGestern?: number | null; proteinZiel?: number | null }): string {
+export function koerperZusammenfassung(k: { naechte: Nacht[]; erholung: (number | null)[]; ruhepuls: (number | null)[]; kraft: number; kraftSoll: number; zone2: number; intervall: number; proteinGestern?: number | null; proteinZiel?: number | null; ruheMin?: number; ruheTage?: number }): string {
   const zeilen: string[] = [];
   const s = k.naechte.map((n) => n.schlaf_min).filter((x): x is number => x !== null);
   if (s.length) zeilen.push(`Schlaf letzte Nacht ${stunden(s[0])} h, Schnitt der letzten ${s.length} Nächte ${stunden(s.reduce((a, b) => a + b, 0) / s.length)} h`);
@@ -52,6 +52,7 @@ export function koerperZusammenfassung(k: { naechte: Nacht[]; erholung: (number 
   const r = k.ruhepuls.filter((x): x is number => x !== null);
   if (r.length > 3) { const schnitt = r.slice(1).reduce((a, b) => a + b, 0) / (r.length - 1); zeilen.push(`Ruhepuls heute ${r[0]}, ${r[0] - schnitt >= 0 ? '+' : ''}${Math.round(r[0] - schnitt)} gegenüber dem Schnitt`); }
   zeilen.push(`Training diese Woche: Kraft ${k.kraft} von ${k.kraftSoll}, Zone 2 ${k.zone2} von 180 Minuten, Intervalle ${k.intervall} von 1`);
+  if (k.ruheMin !== undefined) zeilen.push(`Ruhe diese Woche: ${k.ruheMin} Minuten an ${k.ruheTage ?? 0} Tagen`);
   if (k.proteinGestern != null && k.proteinZiel) zeilen.push(`Protein gestern etwa ${Math.round(k.proteinGestern)} von ${Math.round(k.proteinZiel)} g`);
   return zeilen.join('\n');
 }

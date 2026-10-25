@@ -2,6 +2,16 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.8.0] – 2026-10-25
+
+### Hinzugefügt
+- **Ruhe** unter Körper: Stille (5, 10, 20 Minuten), geführte Atem-Meditation, NSDR (10 und 20 Minuten), Wim-Hof-Atmung in drei Runden mit Stoppuhr fürs Halten, Runterfahren am Abend mit zyklischem Seufzen und direktem Weg zu den Abendfragen.
+- Gongs entstehen im Browser, gesprochen wird mit der Stimme des iPhones. Keine Audiodateien von außen.
+- Minuten und Tage pro Woche auf „Körper“, im Coach und in der Ruhe-Übersicht.
+
+### Sicherheit
+- Wim-Hof-Atmung startet erst nach drei bestätigten Regeln: sitzen oder liegen, nicht im oder am Wasser, nicht beim Fahren.
+
 ## [0.7.0] – 2026-10-25
 
 ### Hinzugefügt
