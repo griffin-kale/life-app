@@ -1,0 +1,97 @@
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
+import { askJson } from './claude';
+import { ensureSchema, getSetting, sql, type Item } from './db';
+
+export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
+export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
+export const ARTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
+
+const URL_RE = /https?:\/\/[^\s<>"]+/i;
+
+function isPrivate(ip: string): boolean {
+  if (ip.includes(':')) return ip === '::1' || /^f[cd]/i.test(ip) || /^fe80/i.test(ip) || ip.startsWith('::ffff:127.');
+  const [a, b] = ip.split('.').map(Number);
+  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+}
+
+/** Holt Titel und Text einer Seite. Nur öffentliche Adressen, höchstens 1,5 MB, 8 Sekunden. */
+async function fetchPage(raw: string): Promise<{ title: string; text: string; site: string } | null> {
+  const u = new URL(raw);
+  if (!['http:', 'https:'].includes(u.protocol)) return null;
+  const host = u.hostname;
+  const ips = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address);
+  if (ips.some(isPrivate)) return null;
+  const res = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'Mozilla/5.0 (Lage)', 'accept-language': 'de,en' } });
+  if (!res.ok || !(res.headers.get('content-type') || '').includes('html')) return null;
+  const buf = await res.arrayBuffer();
+  const html = new TextDecoder().decode(buf.slice(0, 1_500_000));
+  const meta = (name: string) => html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${name}["'][^>]*content=["']([^"']*)`, 'i'))?.[1] ?? '';
+  const title = meta('og:title') || html.match(/<title[^>]*>([^<]*)/i)?.[1] || '';
+  const body = html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+  return { title: decode(title).trim(), text: (meta('og:description') + ' ' + body).slice(0, 6000), site: u.hostname.replace(/^www\./, '') };
+}
+
+async function youtube(raw: string): Promise<{ title: string; author: string } | null> {
+  const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(raw)}`, { signal: AbortSignal.timeout(6000) });
+  if (!res.ok) return null;
+  const j = await res.json() as { title?: string; author_name?: string };
+  return { title: j.title ?? '', author: j.author_name ?? '' };
+}
+
+const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+
+type Antwort = { typ: string; kategorie: string; art: string; titel: string; bereinigt: string; schritt: string; begruendung: string; kern: string; frage: string };
+
+/** Ordnet einen Eintrag ein. Fehler landen im Feld "fehler", der Eintrag bleibt erhalten. */
+export async function enrich(id: string): Promise<void> {
+  await ensureSchema();
+  const [item] = await sql<Item[]>`select * from items where id = ${id}`;
+  if (!item) return;
+  try {
+    const url = item.url ?? item.text.match(URL_RE)?.[0] ?? null;
+    let quelle = '';
+    let titel = '';
+    let typHint = '';
+    if (url && /(?:youtube\.com|youtu\.be)\//i.test(url)) {
+      const y = await youtube(url).catch(() => null);
+      if (y) { titel = y.title; quelle = y.author ? `YouTube · ${y.author}` : 'YouTube'; }
+      typHint = 'video';
+    } else if (url) {
+      const p = await fetchPage(url).catch(() => null);
+      if (p) { titel = p.title; quelle = `${p.site}\nSeitentext (Auszug): ${p.text}`; }
+    }
+    const kontext = await getSetting('kontext');
+    const prompt = [
+      'Du hilfst Peter, Gedanken und Fundstücke festzuhalten und daraus zu lernen. Ordne den Eintrag ein. Deutsch, knapp, keine Floskeln.',
+      'Typen: "gedanke" (eigener Gedanke), "zitat" (Satz von jemand anderem), "video", "buch", "link" (Artikel, Seite).',
+      'Kategorien: "engpass" (verkleinert direkt den aktuellen Engpass), "entscheidung" (größere Frage zum Abwägen), "aufgabe" (konkret, in einer Sitzung erledigt), "projekt" (mehrere Schritte), "privat" (Familie, Gesundheit, Freizeit), "notiz" (nur festhalten), "idee" (spannend, aber nicht jetzt), "wissen" (Zitat, Video, Buch oder Artikel zum Lernen). Sei streng mit "engpass".',
+      'Art von Wohlstand nach Sahil Bloom: "zeit", "sozial", "mental", "koerper" oder "geld".',
+      'Was gerade zählt (von Peter):\n' + (kontext || 'nicht angegeben'),
+      'Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n' + item.text,
+      url ? `Link: ${url}${titel ? `\nTitel: ${titel}` : ''}${quelle ? `\nQuelle: ${quelle}` : ''}${typHint ? `\nHinweis: ${typHint}` : ''}` : '',
+      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer)}',
+    ].filter(Boolean).join('\n\n');
+    const a = await askJson<Antwort>(prompt);
+    const typ = (TYPEN as readonly string[]).includes(a.typ) ? a.typ : (typHint || 'gedanke');
+    const kategorie = (KATEGORIEN as readonly string[]).includes(a.kategorie) ? a.kategorie : 'notiz';
+    const art = (ARTEN as readonly string[]).includes(a.art) ? a.art : null;
+    const parken = kategorie === 'idee' ? new Date(Date.now() + 72 * 3600_000) : null;
+    await sql`update items set status = 'sortiert', typ = ${typ}, kategorie = ${kategorie}, art = ${art},
+      titel = ${(a.titel || titel || '').slice(0, 200) || null}, quelle = ${quelle ? quelle.split('\n')[0] : null},
+      roh = coalesce(roh, text), text = ${(a.bereinigt || item.text).slice(0, 8000)}, url = ${url},
+      schritt = ${(a.schritt || '').slice(0, 300) || null}, begruendung = ${(a.begruendung || '').slice(0, 200) || null},
+      kern = ${(a.kern || '').slice(0, 1200) || null}, frage = ${(a.frage || '').slice(0, 400) || null},
+      parken_bis = ${parken}, fehler = null, updated_at = now() where id = ${id}`;
+  } catch (e) {
+    await sql`update items set fehler = ${String((e as Error).message || e).slice(0, 300)}, updated_at = now() where id = ${id}`;
+  }
+}
+
+export async function createItem(text: string): Promise<string> {
+  await ensureSchema();
+  const clean = text.trim().slice(0, 8000);
+  const url = clean.match(URL_RE)?.[0] ?? null;
+  const [row] = await sql`insert into items (text, url, typ) values (${clean}, ${url}, ${url && /(?:youtube\.com|youtu\.be)\//i.test(url) ? 'video' : url ? 'link' : 'gedanke'}) returning id`;
+  return row.id as string;
+}

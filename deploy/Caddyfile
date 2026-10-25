@@ -1,0 +1,5 @@
+# Holt das HTTPS-Zertifikat automatisch und leitet an die App weiter.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

@@ -1,0 +1,51 @@
+# Lage
+
+Peters Logbuch: Gedanken, Zitate, Videos, Bücher und Artikel festhalten. Claude ordnet jeden Eintrag ein, räumt diktierten Text auf und hält bei Wissen die Kernidee und eine Frage an dich fest.
+
+Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren.
+
+## Was drin ist (Version 0.1)
+
+- **Erfassen:** Textfeld mit Mikrofon (wo der Browser es kann) oder Tastatur-Diktat. Auf dem iPhone zusätzlich per Kurzbefehl über Aktionstaste und Teilen-Menü (`POST /api/capture`).
+- **Einordnen:** Typ (Gedanke, Zitat, Video, Buch, Artikel), Kategorie (Engpass, Entscheidung, Aufgabe, Projekt, Privat, Notiz, Idee, Wissen), Art von Wohlstand nach Sahil Bloom, nächster Schritt. Ideen werden 72 Stunden geparkt.
+- **Links:** YouTube-Titel über oEmbed, bei anderen Seiten Titel und Textauszug. Nur öffentliche Adressen werden abgerufen.
+- **Archiv:** Filter nach Typ, Suche, archivierte Einträge.
+- **Export:** alles als eine Markdown-Datei (`/api/export`).
+- **Anmeldung:** nur per Passkey (Face ID). Einrichten mit einmaligem Code unter `/setup`.
+
+## Aufbau
+
+| Teil | Technik |
+|---|---|
+| App | Next.js 15, TypeScript, keine externen Skripte oder Schriften (Instrument Serif liegt im Projekt) |
+| Datenbank | PostgreSQL 16 im selben Server |
+| HTTPS | Caddy, Zertifikat automatisch |
+| Claude | `@anthropic-ai/bedrock-sdk`, Modelle `eu.anthropic.claude-haiku-5-5` und `eu.anthropic.claude-sonnet-5-5` |
+
+## Inbetriebnahme
+
+1. Hetzner Cloud: Server **CX22** (oder Nachfolger), Ubuntu 24.04, Standort Nürnberg oder Falkenstein, SSH-Schlüssel vom Mac hinterlegen, Sicherungen einschalten.
+2. Bei Hetzner DNS: A-Eintrag `lage.deinedomain.de` auf die Server-IP.
+3. Auf den Server kopieren und einrichten:
+   ```sh
+   scp deploy/setup-server.sh root@SERVER-IP:/root/
+   ssh root@SERVER-IP 'bash /root/setup-server.sh lage.deinedomain.de'
+   ```
+4. AWS: IAM-Benutzer nur mit `bedrock:InvokeModel` für die EU-Profile anlegen, Schlüssel in `/opt/lage/deploy/.env` auf dem Server eintragen (`ssh root@SERVER-IP`, dann `nano /opt/lage/deploy/.env`).
+5. Vom Mac aus: `bash deploy/deploy.sh SERVER-IP`
+6. Auf dem iPhone `https://lage.deinedomain.de/setup` öffnen, den `SETUP_TOKEN` aus der `.env` eingeben, Passkey anlegen. In Safari: Teilen → „Zum Home-Bildschirm“.
+7. Kurzbefehl einrichten (Anleitung in der App unter Einstellungen), dort den `CAPTURE_TOKEN` eintragen.
+
+## Betrieb
+
+- **Updates der App:** `bash deploy/deploy.sh SERVER-IP`
+- **Sicherheitsupdates des Systems:** laufen automatisch (unattended-upgrades).
+- **Datensicherung:** täglich 3:15 Uhr nach `/opt/lage/deploy/backups`, 30 Tage. Zusätzlich die Hetzner-Sicherungen des ganzen Servers.
+- **Neues Gerät:** `/setup` mit dem `SETUP_TOKEN` öffnen und einen weiteren Passkey anlegen.
+
+## Lokal entwickeln
+
+```sh
+cp .env.example .env.local   # Werte eintragen, DATABASE_URL auf eine lokale Postgres zeigen lassen
+npm install && npm run dev
+```
