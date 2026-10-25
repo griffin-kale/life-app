@@ -44,6 +44,8 @@ export type Item = {
   merged_into: string | null;
   manuell_tag: string | null;
   manuell_stapel: string | null;
+  wenn?: string | null;
+  energie?: number | null;
 };
 
 export function ensureSchema(): Promise<void> {
@@ -236,6 +238,43 @@ export function ensureSchema(): Promise<void> {
           puffer_monate integer not null default 12,
           updated_at timestamptz not null default now()
         )`;
+      // Version 0.11: Menschen und Zeit
+      await sql`
+        create table if not exists personen (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          name text not null,
+          kreis text not null check (kreis in ('familie', 'freunde', 'team', 'netzwerk')),
+          geburtstag date,
+          takt_tage integer not null default 21,
+          notiz text,
+          created_at timestamptz not null default now(),
+          unique (user_id, name)
+        )`;
+      await sql`
+        create table if not exists kontakte (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          person_id bigint not null references personen(id) on delete cascade,
+          tag date not null,
+          art text not null check (art in ('treffen', 'telefon', 'nachricht', 'eintrag')),
+          minuten integer,
+          item_id uuid references items(id) on delete set null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`create index if not exists kontakte_person on kontakte (person_id, tag desc)`;
+      await sql`create unique index if not exists kontakte_item on kontakte (person_id, item_id) where item_id is not null`;
+      await sql`
+        create table if not exists zeit_kaufen (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          was text not null,
+          stunden_monat numeric not null,
+          kosten_cent integer,
+          status text not null default 'idee' check (status in ('idee', 'gemacht')),
+          created_at timestamptz not null default now()
+        )`;
+      await sql`alter table items add column if not exists wenn text, add column if not exists energie smallint`;
       // Rückmeldungen aller Nutzenden: Fehler, Verbesserungen, Ideen
       await sql`
         create table if not exists rueckmeldungen (

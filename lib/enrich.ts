@@ -2,6 +2,7 @@ import { askJson, namenLernen } from './claude';
 import { ensureSchema, getSetting, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 import { safeFetch } from './safefetch';
+import { kontakteAusEintrag } from './menschen';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -72,6 +73,7 @@ export async function enrich(id: string): Promise<void> {
     ].filter(Boolean).join('\n\n');
     const a = await askJson<Antwort>(prompt);
     await namenLernen(a.namen).catch(() => {});
+    await kontakteAusEintrag(id, item.text).catch(() => {});
     const typ = (TYPEN as readonly string[]).includes(a.typ) ? a.typ : (typHint || 'gedanke');
     const kategorie = (KATEGORIEN as readonly string[]).includes(a.kategorie) ? a.kategorie : 'notiz';
     const art = (ARTEN as readonly string[]).includes(a.art) ? a.art : null;

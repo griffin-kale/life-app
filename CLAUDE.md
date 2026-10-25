@@ -61,7 +61,7 @@ npm run build && npm run test:e2e   # braucht Postgres, siehe playwright.config.
 
 ## Offene Punkte
 
-- Ausbau in Stufen, jede einzeln live: 1 Fundament (0.6), 2 Körper (0.7) mit WHOOP, Training wie RP für zu Hause, Barcode-Ernährung, 3 Ruhe (0.8) mit NSDR, Wim Hof und Stille, 4 Geld für die Familie (0.9), 5 Menschen und Zeit. Konzept: Artefakte „Life 1.0 Konzept“ und „Life Bauplan-Fragen“.
+- Ausbau in Stufen, jede einzeln live: 1 Fundament (0.6), 2 Körper (0.7) mit WHOOP, Training wie RP für zu Hause, Barcode-Ernährung, 3 Ruhe (0.8) mit NSDR, Wim Hof und Stille, 4 Geld für die Familie (0.9), 5 Menschen und Zeit (0.11), dazu Kompass (0.10). Konzept: Artefakte „Life 1.0 Konzept“ und „Life Bauplan-Fragen“.
 - YouTube-Transkripte für Wissenseinträge.
 - Kalender: Blöcke für „Jetzt dran“ eintragen. Welcher Kalender, ist noch offen.
 - Familienversion, danach Produkt: mehrere Nutzer mit sauber getrennten Daten pro Nutzer (jede Abfrage nach Nutzer filtern), Export und Löschen pro Nutzer.

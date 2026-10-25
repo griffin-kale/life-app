@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getSetting, setSetting } from './db';
+import { getSetting, setSetting, sql } from './db';
 import { maskieren, namenAus, zurueck, type Name } from './pseudonym';
 
 /**
@@ -18,10 +18,11 @@ export const claudeBereit = () => !!process.env.ANTHROPIC_API_KEY;
 
 /** Alle Namen, die Claude nie sieht: Peters Liste, das Team und was Claude früher selbst als Namen erkannt hat. */
 export async function geschuetzteNamen(): Promise<Name[]> {
-  const [namen, team, auto] = await Promise.all([getSetting('namen'), getSetting('team'), getSetting('namen_auto')]);
+  const [namen, team, auto, leute] = await Promise.all([getSetting('namen'), getSetting('team'), getSetting('namen_auto'),
+    sql<{ name: string }[]>`select name from personen`.catch(() => [] as { name: string }[])]);
   // Peter selbst gehört dazu: Claude soll nie erfahren, um wen es geht.
   const besitzer: Name[] = [{ name: 'Peter Gneuß', art: 'Person' }, { name: 'Gneuß', art: 'Person' }, { name: 'Peter', art: 'Person' }];
-  return [...besitzer, ...namenAus(namen), ...namenAus(team), ...namenAus(auto)];
+  return [...besitzer, ...namenAus(namen), ...namenAus(team), ...namenAus(auto), ...leute.map((l) => ({ name: l.name, art: 'Person' as const }))];
 }
 
 /** Merkt sich Namen, die Claude in einem Eintrag gefunden hat. Ab dem nächsten Aufruf sind sie Platzhalter. */

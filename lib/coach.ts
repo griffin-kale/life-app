@@ -5,6 +5,7 @@ import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { koerperZusammenfassung, warnsignale } from './coach-regeln';
 import { koerperStand } from './koerper';
 import { geldKurz, geldStand } from './geld';
+import { menschenKurz } from './menschen';
 
 export { warnsignale };
 
@@ -34,7 +35,7 @@ const zeile = (c: Checkin) => {
 export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'): Promise<CoachAntwort> {
   await ensureSchema();
   const tag = heuteBerlin();
-  const [items, kontext, checkins, namen, k, geld, g] = await Promise.all([
+  const [items, kontext, checkins, namen, k, geld, g, menschenText] = await Promise.all([
     offene(),
     getSetting('kontext'),
     sql<Checkin[]>`select art, tag::text as tag, antworten from checkins where user_id = ${userId} and tag >= (current_date - 8) order by tag, art`,
@@ -42,7 +43,9 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
     koerperStand(userId),
     geldKurz(userId).catch(() => ''),
     geldStand(userId).catch(() => null),
+    menschenKurz(userId).catch(() => ''),
   ]);
+  const zk = await sql<{ was: string }[]>`select was from zeit_kaufen where user_id = ${userId} and status = 'idee' limit 5`.catch(() => [] as { was: string }[]);
   const warnungen = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)];
   const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
     kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel, ruheMin: k.ruheMin, ruheTage: k.ruheTage });
@@ -57,14 +60,16 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
     'Schreibregeln: aktive Sätze mit konkretem Subjekt, keine Floskeln, keine rhetorischen Fragen, keine Konstruktion „nicht X, sondern Y“, kein Lob ohne Anlass, keine Diagnosen. Bei körperlichen Warnzeichen, die über Wochen anhalten, rätst du zu ärztlicher Abklärung.',
     `Heute ist ${wtag}.`,
     'Engpass: ' + (engpassAus(kontext) || 'nicht festgelegt'),
-    jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${i.frist})` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
+    jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${i.frist})` : ''}${i.wenn ? ` | Plan: ${i.wenn}` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
     warnungen.length ? 'Warnsignale (von Life berechnet, sprich sie an):\n' + warnungen.map((w) => '- ' + w).join('\n') : 'Keine Warnsignale.',
     'Körper (zusammengefasst):\n' + koerper + (k.trainingstagHeute ? `\nHeute ist ein Trainingstag (Ganzkörper, Blockwoche ${k.blockWoche} von 5).` : ''),
     geld,
+    menschenText,
+    zk.length && new Date().getDay() === 1 ? 'Liste „Zeit kaufen“ (heute ist Wochenrunde, sprich eine Idee an): ' + zk.map((z) => z.was).join(', ') : '',
     checkins.length ? 'Antworten der letzten Tage:\n' + checkins.map(zeile).filter(Boolean).join('\n') : 'Noch keine Antworten aus den Fragebögen.',
     menschen.length ? 'Menschen in Peters Leben: ' + menschen.slice(0, 30).join(', ') : '',
     art === 'morgen'
-      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Schlaf und Erholung, Training, Engpass und einen Plan von gestern Abend, falls vorhanden), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
+      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Schlaf und Erholung, Training, Engpass und einen Plan von gestern Abend, falls vorhanden), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, bevorzugt für jemanden mit länger keinem Kontakt oder einem nahen Geburtstag, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
       : 'Antworte nur mit JSON: {"text": string (Rückblick auf heute in 2 bis 3 Sätzen, höchstens 320 Zeichen: was du in den Antworten siehst, ein Muster der letzten Tage, falls eines da ist, und ein Satz zum Plan für morgen)}',
   ].filter(Boolean).join('\n\n');
 

@@ -5,6 +5,7 @@ import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, us
 import { Fragebogen } from './fragebogen';
 import { Coach, useCheckins } from './coach';
 import { FARBE, KONTEN, Ring } from './ringe';
+import { EnergieChips, WennChip } from './wenn';
 
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
@@ -161,6 +162,8 @@ export default function Heute() {
                 <TaskRow key={it.id} it={it} big={n === 0} onToggle={() => toggle(it)} leaving={leaving === it.id}>
                   <TimeChip value={it.zeit} onChange={(v) => zeit(it, v)} />
                   <button type="button" className="chipbtn" onClick={() => spaeter(it)}>Nicht heute</button>
+                  <WennChip aufgabe={it.schritt || it.titel || it.text.slice(0, 80)} wert={it.wenn} onSetzen={(w) => act(() => patch(it.id, { wenn: w }))} />
+                  {it.wenn ? <span className="wenn-satz">{it.wenn}</span> : null}
                 </TaskRow>
               ))}
             </ul>
@@ -194,7 +197,7 @@ export default function Heute() {
       {st?.erledigtHeute.length ? (
         <section className="gsec" aria-label="Heute erledigt">
           <h2 className="glabel">Heute erledigt · {st.erledigtHeute.length}</h2>
-          <ul className="tasks group">{st.erledigtHeute.map((it) => <TaskRow key={it.id} it={it} onToggle={() => toggle(it)} />)}</ul>
+          <ul className="tasks group">{st.erledigtHeute.map((it) => <TaskRow key={it.id} it={it} onToggle={() => toggle(it)}><EnergieChips wert={it.energie} onSetzen={(n) => act(() => patch(it.id, { energie: n }))} /></TaskRow>)}</ul>
         </section>
       ) : null}
 

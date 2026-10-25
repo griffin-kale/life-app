@@ -11,6 +11,7 @@ export default function Mehr() {
       <section className="gsec">
         <div className="group">
           <Link className="cell" href="/kompass"><span>Kompass</span>{Icon.chevronRight}</Link>
+          <Link className="cell" href="/menschen"><span>Menschen</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/archiv"><span>Logbuch</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/einstellungen"><span>Einstellungen</span>{Icon.chevronRight}</Link>
         </div>

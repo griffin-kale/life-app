@@ -2,6 +2,22 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.11.0] – 2026-10-25
+
+### Hinzugefügt
+- **Menschen** unter Mehr: Kreise Familie, Freunde, Team, Netzwerk und Kunden. Letzter Kontakt, Takt pro Person, Erinnerung, wenn es länger her ist, Geburtstage.
+- Kontakt mit einem Tipp: Treffen, Abend, Telefonat, Nachricht. Stunden mit Freunden zählen bis zur nächsten Freundschaftsstufe (50, 90, 200 Stunden nach Hall 2018).
+- Steht ein bekannter Name in einem Eintrag, zählt Life das als Kontakt, ohne Claude. Neue Namen aus Einträgen schlägt Life zum Zuordnen vor.
+- Der Coach kennt fällige Kontakte und nahe Geburtstage und schlägt die tägliche Geste bevorzugt dafür vor.
+- **Wenn-dann-Plan** zu jeder Aufgabe in „Jetzt dran“: Tageszeit und Ort antippen.
+- **Energie-Bilanz:** nach dem Abhaken „gab Kraft“, „neutral“ oder „kostete Kraft“. Die Woche zeigt die Bilanz.
+- **Parkplatz** für Ideen ohne Bezug zum Engpass (vorher „Geparkt“).
+- **Zeit kaufen:** Liste, was du abgeben könntest, mit Stunden im Monat und Preis pro gewonnener Stunde. Montags bringt der Coach eine Idee daraus in die Wochenrunde.
+- Kompass: Sozial zählt Zeit mit Menschen und Kontakte, Zeit zählt Aufgaben nach Wenn-dann-Plan.
+
+### Sicherheit
+- Alle Namen aus „Menschen“ gehören ab jetzt zu den geschützten Namen und gehen nur als Platzhalter an Claude.
+
 ## [0.10.0] – 2026-10-25
 
 ### Hinzugefügt

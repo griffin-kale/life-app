@@ -18,7 +18,7 @@ export async function kompassStand(userId = 'peter') {
   const wochen = Array.from({ length: WOCHEN }, (_, i) => new Date(Date.parse(montag + 'T12:00:00Z') - (WOCHEN - 1 - i) * 7 * 864e5).toISOString().slice(0, 10));
   const start = wochen[0];
   const h = await haushalt(userId);
-  const [erledigt, wissen, abende, boegen, ruhe, training, naechte, essen, geldWoche, toepfe, stand, pz, alle] = await Promise.all([
+  const [erledigt, wissen, abende, boegen, ruhe, training, naechte, essen, geldWoche, toepfe, stand, pz, alle, kontakte, personenN, wennN] = await Promise.all([
     sql<{ w: string; engpass: number; sozial: number }[]>`select date_trunc('week', erledigt_at at time zone 'Europe/Berlin')::date::text as w,
       count(*) filter (where hebel >= 2 or kategorie = 'engpass')::int as engpass, count(*) filter (where art = 'sozial' or kategorie = 'privat')::int as sozial
       from items where user_id = ${userId} and status = 'erledigt' and erledigt_at >= ${start} group by 1`,
@@ -43,7 +43,11 @@ export async function kompassStand(userId = 'peter') {
       (select count(*)::int from checkins where user_id = ${userId} and art = 'abend') as abende,
       (select count(*)::int from checkins where user_id = ${userId} and art = 'woche') as boegen,
       (select count(*)::int from items where user_id = ${userId} and status = 'erledigt' and (hebel >= 2 or kategorie = 'engpass')) as engpass`,
+    sql<{ w: string; min: number; leute: number }[]>`select date_trunc('week', tag)::date::text as w, coalesce(sum(minuten), 0)::int as min, count(distinct person_id)::int as leute from kontakte where user_id = ${userId} and tag >= ${start} group by 1`,
+    sql<{ n: number }[]>`select count(*)::int as n from personen where user_id = ${userId}`,
+    sql<{ w: string; n: number }[]>`select date_trunc('week', erledigt_at at time zone 'Europe/Berlin')::date::text as w, count(*)::int as n from items where user_id = ${userId} and status = 'erledigt' and wenn is not null and erledigt_at >= ${start} group by 1`,
   ]);
+  const mK = nachWoche(kontakte), mP = nachWoche(wennN);
   const mE = nachWoche(erledigt), mW = nachWoche(wissen), mA = nachWoche(abende), mR = nachWoche(ruhe), mT = nachWoche(training), mN = nachWoche(naechte);
   const bogen = new Map(boegen.map((b) => [b.w, b.antworten]));
   const proteinTage = (w: string) => essen.filter((e) => e.w === w && e.protein >= pz.ziel).length;
@@ -54,8 +58,9 @@ export async function kompassStand(userId = 'peter') {
     const imRahmen = geld.filter((t) => (geldWoche.find((g) => g.w === w && g.topf_id === t.id)?.summe ?? 0) <= t.betrag_cent).length;
     const geldTage = new Set(geldWoche.filter((g) => g.w === w).map((g) => g.topf_id)).size ? Math.max(...geldWoche.filter((g) => g.w === w).map((g) => g.tage)) : 0;
     const t: Record<Konto, Teil[]> = {
-      zeit: [{ name: 'Aufgaben mit hohem Hebel', ist: mE.get(w)?.engpass ?? 0, ziel: 5 }, { name: 'Abende mit Plan für morgen', ist: mA.get(w)?.plan ?? 0, ziel: 5 }],
-      sozial: [{ name: 'Erledigtes für Familie und Freunde', ist: mE.get(w)?.sozial ?? 0, ziel: 3 }],
+      zeit: [{ name: 'Aufgaben mit hohem Hebel', ist: mE.get(w)?.engpass ?? 0, ziel: 5 }, { name: 'Abende mit Plan für morgen', ist: mA.get(w)?.plan ?? 0, ziel: 5 }, { name: 'Erledigt nach Wenn-dann-Plan', ist: mP.get(w)?.n ?? 0, ziel: 3 }],
+      sozial: [{ name: 'Erledigtes für Familie und Freunde', ist: mE.get(w)?.sozial ?? 0, ziel: 3 },
+        ...(personenN[0].n ? [{ name: 'Zeit mit Menschen', ist: Math.round((mK.get(w)?.min ?? 0) / 6) / 10, ziel: 6, einheit: 'Std.' }, { name: 'Menschen kontaktiert', ist: mK.get(w)?.leute ?? 0, ziel: Math.min(5, personenN[0].n) }] : [])],
       mental: [{ name: 'Ruhe', ist: mR.get(w)?.min ?? 0, ziel: 60, einheit: 'Min.' }, { name: 'Abendfragen', ist: mA.get(w)?.tage ?? 0, ziel: 5 }, { name: 'Neues Wissen festgehalten', ist: mW.get(w)?.n ?? 0, ziel: 2 }],
       koerper: [
         { name: 'Kraft', ist: mT.get(w)?.kraft ?? 0, ziel: stand.einheitenSoll },

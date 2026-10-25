@@ -126,7 +126,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/kompass', '/mehr', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/geld', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -275,6 +275,43 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('main')).toContainText('Life-Level');
     await page.goto('/');
     await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
+  });
+
+  await test.step('Menschen: anlegen, Kontakt mit Stunden, Vorschlag aus Einträgen', async () => {
+    await page.goto('/menschen');
+    await page.getByLabel('Name').fill('Testfreundin');
+    await page.getByRole('radiogroup', { name: 'Kreis' }).getByRole('radio', { name: 'Freunde' }).click();
+    await page.getByRole('button', { name: 'Hinzufügen' }).click();
+    const freunde = page.locator('section[aria-label="Freunde"]');
+    await expect(freunde).toContainText('Testfreundin');
+    await freunde.getByRole('button', { name: 'Abend 3 Std.' }).click();
+    await expect(freunde).toContainText('noch 47 Stunden bis zur nächsten Stufe');
+    const vorschlag = page.locator('section[aria-label="Vorschläge"]');
+    await expect(vorschlag).toContainText('Jonas');
+    await vorschlag.getByRole('button', { name: 'Team' }).first().click();
+    await expect(page.locator('section[aria-label="Team"]')).toContainText('Jonas');
+  });
+
+  await test.step('Zeit: Wenn-dann-Plan, Energie nach dem Abhaken, Zeit kaufen', async () => {
+    await page.goto('/');
+    const jetzt = page.locator('section[aria-label="Jetzt dran"] .task').first();
+    await jetzt.getByRole('button', { name: 'Wenn …' }).click();
+    await jetzt.getByRole('radiogroup', { name: 'Wann' }).getByRole('radio', { name: 'am Vormittag' }).click();
+    await jetzt.getByRole('radiogroup', { name: 'Wo' }).getByRole('radio', { name: 'am Schreibtisch' }).click();
+    await jetzt.getByRole('button', { name: 'Plan setzen' }).click();
+    await expect(page.locator('.wenn-satz').first()).toContainText('Wenn es am Vormittag ist und ich am Schreibtisch bin, dann:');
+    const erledigt = page.locator('section[aria-label="Heute erledigt"]');
+    await erledigt.getByRole('radio', { name: 'gab Kraft' }).first().click();
+    await expect(erledigt.getByRole('radio', { name: 'gab Kraft' }).first()).toHaveAttribute('aria-checked', 'true');
+    await page.goto('/woche');
+    await expect(page.locator('section[aria-label="Energie-Bilanz"]')).toContainText('Gab dir Kraft');
+    await page.getByLabel('Was du abgeben könntest').fill('Fenster putzen');
+    await page.getByRole('radio', { name: '2 Std. im Monat' }).click();
+    await page.getByLabel('Kosten im Monat').fill('60');
+    await page.getByRole('button', { name: 'Auf die Liste' }).click();
+    await expect(page.locator('section[aria-label="Zeit kaufen"]')).toContainText('30 € pro gewonnene Stunde');
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    expect(prompts.join(' ')).not.toContain('Testfreundin');
   });
 
   await test.step('Coach kennt das Warnsignal, Push nimmt nur echte Dienste', async () => {

@@ -139,3 +139,17 @@ test('Kompass: Ring, Level, Meilensteine gehen nicht verloren', () => {
   const b = meilensteineAktualisieren(a.alle, { ...s, kraft: 0 }, '2026-10-26');
   assert.deepEqual(b.neu, []); assert.equal(b.alle.kraft10, '2026-10-25');
 });
+
+import { bisGeburtstag, faellig as kontaktFaellig, freundschaftsStufe, wennDann } from '../../lib/menschen-regeln.ts';
+
+test('Menschen: Takt, Geburtstage, Freundschaftsstunden, Wenn-dann', () => {
+  assert.deepEqual(kontaktFaellig('2026-10-01', '2026-09-01', 21, '2026-10-25'), { seit: 24, faellig: true });
+  assert.deepEqual(kontaktFaellig(null, '2026-10-20', 7, '2026-10-25'), { seit: 5, faellig: false });
+  assert.equal(bisGeburtstag('1990-10-27', '2026-10-25'), 2);
+  assert.equal(bisGeburtstag('1990-10-25', '2026-10-25'), 0);
+  assert.equal(bisGeburtstag('1990-01-02', '2026-10-25'), 69);
+  assert.equal(bisGeburtstag('1992-02-29', '2027-02-27'), 1);
+  assert.equal(freundschaftsStufe(60).stufe, 'lockerer Freund');
+  assert.equal(freundschaftsStufe(10).naechste, 50);
+  assert.equal(wennDann('am Vormittag', 'am Schreibtisch', 'Newsletter schreiben'), 'Wenn es am Vormittag ist und ich am Schreibtisch bin, dann: Newsletter schreiben.');
+});

@@ -432,3 +432,13 @@ code { font-family: var(--mono); font-size: .8125rem; background: rgba(0, 0, 0, 
 .ringleiste { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 10px 14px; text-decoration: none; color: var(--ink); }
 .ringleiste .mini { display: flex; gap: 6px; }
 .ringleiste span { font-size: .875rem; color: var(--muted); }
+
+/* Menschen und Zeit (0.11) */
+.wenn-picker { display: grid; gap: 8px; width: 100%; }
+.wenn-satz { flex-basis: 100%; font-size: .8125rem; color: var(--sand); }
+.person-zeile { padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.person-zeile:last-child { border-bottom: 0; }
+.person-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%; padding: 4px 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; min-height: 36px; }
+.person-kopf b { font-weight: 600; }
+.person-detail { display: grid; gap: 8px; padding-top: 4px; }
+.zeitfeld.breit { width: 100%; justify-self: stretch; }

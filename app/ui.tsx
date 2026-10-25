@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 export type Item = {
   id: string; created_at: string; status: string; typ: string; text: string; roh: string | null; url: string | null;
   titel: string | null; quelle: string | null; kategorie: string | null; art: string | null; schritt: string | null;
-  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null;
+  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null; wenn?: string | null; energie?: number | null;
   ziel: string | null; hebel: number | null; aufwand_min: number | null; frist: string | null; wer: string | null; delegieren_an: string | null;
   stapel: string | null; rang: number | null; grund: string | null; sortiert_am: string | null; zeit: string | null; zeit_tag: string | null;
   erledigt_at: string | null; merged_into: string | null; manuell_tag: string | null; manuell_stapel: string | null;
@@ -15,10 +15,11 @@ export type Item = {
 /** Antwort von /api/heute */
 export type Stand = {
   tag: string; items: Item[]; erledigtHeute: Item[]; erledigtWoche: number; zuletzt: Item[]; engpass: string;
+  kraft?: { gab: string[]; kostete: string[] };
   ziele: { ziel: string; offen: number; erledigt: number }[]; sortiertAm: string | null; fehler: string | null; laeuft: boolean;
 };
 
-export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Geparkt', streichen: 'Streichen vorgeschlagen' };
+export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Parkplatz', streichen: 'Streichen vorgeschlagen' };
 export const aufwandLabel = (m: number | null) => (m ? (m <= 20 ? '15 Min.' : m <= 90 ? '1 Std.' : 'halber Tag') : null);
 
 export const TYP: Record<string, string> = { gedanke: 'Gedanke', zitat: 'Zitat', video: 'Video', buch: 'Buch', link: 'Artikel' };

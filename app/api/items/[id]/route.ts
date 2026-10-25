@@ -53,6 +53,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (b.ziel === '' || ziele.includes(b.ziel)) set.ziel = b.ziel || null;
   }
   if (typeof b.text === 'string' && b.text.trim()) set.text = b.text.trim().slice(0, 8000);
+  if (typeof b.wenn === 'string') set.wenn = b.wenn.trim().slice(0, 300) || null;
+  if ([-1, 0, 1].includes(b.energie)) set.energie = b.energie;
   if ((KATEGORIEN as readonly string[]).includes(b.kategorie)) { set.kategorie = b.kategorie; set.status = 'sortiert'; set.parken_bis = b.kategorie === 'idee' ? new Date(Date.now() + 72 * 3600_000) : null; }
   if ((ARTEN as readonly string[]).includes(b.art)) set.art = b.art;
   if ((TYPEN as readonly string[]).includes(b.typ)) set.typ = b.typ;

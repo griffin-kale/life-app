@@ -33,6 +33,11 @@ export async function GET() {
     fehler: fehler || null,
     laeuft: neuerTag || laeuft || wartet[0].n > 0,
     aktiv: AKTIV,
+    // Energie-Bilanz der Woche: was Kraft gab und was sie kostete
+    kraft: {
+      gab: erledigt.filter((i) => i.energie === 1).map((i) => i.schritt || i.titel || i.text.slice(0, 60)).slice(0, 8),
+      kostete: erledigt.filter((i) => i.energie === -1).map((i) => i.schritt || i.titel || i.text.slice(0, 60)).slice(0, 8),
+    },
   });
 }
 
