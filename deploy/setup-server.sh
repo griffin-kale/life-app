@@ -8,6 +8,12 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get -y upgrade
 apt-get -y install docker.io docker-compose-v2 ufw unattended-upgrades openssl rsync
 
+# 2 GB Auslagerungsspeicher, damit der Build auch auf kleinen Servern durchläuft
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 # Automatische Sicherheitsupdates
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
