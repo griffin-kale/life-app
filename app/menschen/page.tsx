@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { TabBar, TopBar, api, useToast } from '../ui';
 
 type P = { id: string; name: string; kreis: string; geburtstag: string | null; takt_tage: number; notiz: string | null; letzter: string | null; seit: number; faellig: boolean; stunden: number; kontakte: number; bisGeburtstag: number | null; freundschaft: { stufe: string; naechste: number | null } | null };
+const KREISFARBE: Record<string, string> = { familie: 'var(--k-mental)', freunde: 'var(--k-sozial)', team: 'var(--k-zeit)', netzwerk: 'var(--k-geld)', kunden: 'var(--k-koerper)' };
 type M = { liste: P[]; faellig: P[]; geburtstage: P[]; vorschlaege: string[]; wocheMin: number; familieMin: number };
 
 const KREISE: [string, string][] = [['familie', 'Familie'], ['freunde', 'Freunde'], ['team', 'Team'], ['netzwerk', 'Netzwerk und Kunden']];
@@ -78,7 +79,7 @@ export default function Menschen() {
               {leute.map((p) => (
                 <div key={p.id} className="fb-q person-zeile">
                   <button type="button" className="person-kopf" aria-expanded={offen === p.id} onClick={() => setOffen(offen === p.id ? null : p.id)}>
-                    <b>{p.name}</b><span className={'num' + (p.faellig ? ' warn' : '')}>{seitText(p)}{p.stunden ? ` · ${STD(p.stunden * 60)}` : ''}</span>
+                    <span className="avatar" style={{ background: KREISFARBE[p.kreis] ?? 'var(--faint)' }} aria-hidden="true">{p.name.slice(0, 1)}</span><b>{p.name}</b><span className={'num' + (p.faellig ? ' warn' : '')}>{seitText(p)}{p.stunden ? ` · ${STD(p.stunden * 60)}` : ''}</span>
                   </button>
                   {p.freundschaft ? <span className="small muted">{p.freundschaft.stufe}{p.freundschaft.naechste ? `, noch ${Math.max(0, Math.round(p.freundschaft.naechste - p.stunden))} Stunden bis zur nächsten Stufe` : ''}</span> : null}
                   <Kontakt p={p} onKontakt={kontakt(p)} />

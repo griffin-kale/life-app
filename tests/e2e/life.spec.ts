@@ -162,7 +162,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.toast')).toContainText('WHOOP ist verbunden');
     await page.getByRole('button', { name: 'Jetzt abgleichen' }).click();
     await expect(page.locator('.werte')).toContainText('6:00');
-    await expect(page.locator('.werte')).toContainText('40 %');
+    await expect(page.locator('.werte')).toContainText(/40\s?%/);
     await expect(page.locator('main')).toContainText('Drei Nächte unter 6,5 Stunden');
     await expect(page.locator('main')).toContainText('40 / 180 Min.');
     await expect(page.locator('.gnote', { hasText: 'Ziel: 1,6 g' })).toContainText('82 kg');
@@ -272,9 +272,51 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Körper"]')).toContainText('Kraft');
     await expect(page.locator('section[aria-label="Körper"]')).toContainText('1 / 3');
     await expect(page.locator('section[aria-label="Meilensteine"] .meilenstein.an')).toContainText(['Erste Krafteinheit']);
-    await expect(page.locator('main')).toContainText('Life-Level');
+    await expect(page.locator('main')).toContainText('Punkte bis Level');
     await page.goto('/');
     await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
+  });
+
+  await test.step('Darstellung: Hell wählen, bleibt nach dem Neuladen, Dunkel zurück', async () => {
+    await page.goto('/einstellungen');
+    const wahl = page.getByRole('radiogroup', { name: 'Darstellung' });
+    await expect(wahl.getByRole('radio', { name: 'Dunkel' })).toHaveAttribute('aria-checked', 'true');
+    await wahl.getByRole('radio', { name: 'Hell' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#F2F1EC');
+    await expect(page.locator('.tagespunkte li')).toHaveCount(7);
+    if (process.env.SCREENSHOTS) for (const t of ['light', 'dark']) {
+      await page.evaluate((x) => { document.documentElement.dataset.theme = x; }, t);
+      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen']]) {
+        await page.context().addCookies([{ name: 'life-thema', value: t, url: new URL('/', page.url()).toString() }]);
+        await page.goto(p); await page.waitForTimeout(500);
+        await page.screenshot({ path: `test-results/design/${n}-${t}.png`, fullPage: true });
+      }
+    }
+    await page.goto('/einstellungen');
+    await page.getByRole('radiogroup', { name: 'Darstellung' }).getByRole('radio', { name: 'Dunkel' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
+
+  await test.step('Heute anpassen: Festhalten-Feld aus, Plus öffnet es, Körper kurz an, Standard zurück', async () => {
+    await page.goto('/einstellungen/heute');
+    await expect(page.getByRole('switch', { name: 'Jetzt dran anzeigen' })).toBeDisabled();
+    await page.getByRole('switch', { name: 'Festhalten-Feld anzeigen' }).click();
+    await page.getByRole('switch', { name: 'Körper kurz anzeigen' }).click();
+    await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Körper kurz');
+    await page.getByRole('button', { name: 'Körper kurz nach oben' }).click();
+    await page.goto('/');
+    await expect(page.locator('section[aria-label="Festhalten"]')).toHaveCount(0);
+    await expect(page.locator('section[aria-label="Körper kurz"]')).toContainText('Erholung');
+    await page.getByRole('button', { name: 'Festhalten' }).first().click();
+    await expect(page.locator('section[aria-label="Festhalten"] textarea')).toBeFocused();
+    const r = await page.request.put('/api/heute/bausteine', { data: { bausteine: ['coach', '<script>', 'coach'] } });
+    expect((await r.json()).bausteine).toEqual(['fragebogen', 'coach', 'jetzt']);
+    await page.goto('/einstellungen/heute');
+    await page.getByRole('button', { name: 'Zurück zum Standard' }).click();
+    await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Festhalten-Feld');
   });
 
   await test.step('Menschen: anlegen, Kontakt mit Stunden, Vorschlag aus Einträgen', async () => {

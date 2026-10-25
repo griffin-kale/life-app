@@ -2,6 +2,24 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.12.0] – 2026-10-25
+
+### Hinzugefügt
+- **Darstellung** in den Einstellungen: Dunkel (Standard), Hell oder wie das iPhone. Wirkt sofort und gilt pro Gerät. Der Server liefert die Seite gleich im richtigen Modus aus, ohne Aufblitzen.
+- **Coach** als Karte mit Verlauf in Imperial Blue. Warnsignale stehen oben als eigene Felder, die Geste darunter.
+- **Heute anpassen** unter Einstellungen: Bausteine an- und ausschalten und verschieben (Wochenstand, Kompass, Coach, Festhalten-Feld, Körper kurz, Geld kurz, Menschen, Als Nächstes, Heute erledigt). „Jetzt dran“ und der Fragebogen bleiben immer an. Gespeichert pro Mensch.
+- Ohne Festhalten-Feld sitzt auf Heute oben rechts ein Plus, das das Feld öffnet.
+- **Wochenstand** als sieben Tagespunkte: voll, halb oder leer nach Morgenfragen, Abendfragen und drei erledigten Aufgaben. Keine Serie, die reißen kann. Dazu im Kompass fünf Ringe mit Namen und der Weg mit Fahne bis zum nächsten Level.
+- **Körper:** WHOOP-Werte als große Zahlen in Kacheln. Erholung als Verlauf von Rot nach Grün mit Punkt und kurzem Hinweis.
+- **Ruhe:** jede Vorlage als eigene Verlaufskarte mit Dauer-Pillen und Play-Knopf.
+
+### Geändert
+- **Neue Schrift Fraunces** für Titel, Coach und große Zahlen (freie Lizenz, liegt im Projekt). Die optische Größe passt sich an. Instrument Serif fällt weg.
+- Mehr zeigt Kompass, Menschen, Logbuch und Einstellungen mit farbigen Symbolen wie in den iPhone-Einstellungen. Menschen bekommen Initialen in der Farbe ihres Kreises, die Energie-Bilanz ein Band.
+- Jeder Bereich trägt seine Kontenfarbe: Punkt hinter dem Titel, aktiver Reiter unten, Balken mit Verlauf. Kräftigere Kontenfarben in beiden Modi.
+- Alle Farben laufen über Tokens. Keine festen Farbwerte mehr in den Komponenten.
+- Der Kompass zeigt das Life-Level als Weg statt als einfachen Balken.
+
 ## [0.11.0] – 2026-10-25
 
 ### Hinzugefügt

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { TabBar, TopBar, api } from '../ui';
-import { FARBE, KONTEN, NAME, Ring } from '../ringe';
+import { FARBE, KONTEN, NAME, Ring, Weg } from '../ringe';
 
 type Teil = { name: string; ist: number; ziel: number; einheit?: string };
 type Woche = { woche: string; teile: Record<string, Teil[]>; ringe: Record<string, number | null>; gefuehl: Record<string, number | null>; who5: number | null; alleZu: boolean };
@@ -38,10 +38,7 @@ export default function Kompass() {
                 <a key={x} href={`#${x}`} className="ringzelle"><Ring wert={j!.ringe[x]} farbe={FARBE[x]} label={`${NAME[x]}: ${pz(j!.ringe[x])}`} /><b>{NAME[x]}</b><span className="num">{pz(j!.ringe[x])}</span></a>
               ))}
             </div>
-            <div className="kb-row">
-              <div className="kb-top"><span>Life-Level {k.gesamt.level}</span><span className="num">{k.gesamt.naechstes} Punkte bis Level {k.gesamt.level + 1}</span></div>
-              <div className="kb-bar"><i style={{ width: `${Math.round(k.gesamt.anteil * 100)}%`, background: 'var(--sand)' }} /></div>
-            </div>
+            <Weg anteil={k.gesamt.anteil} level={k.gesamt.level} naechstes={k.gesamt.naechstes} />
             {k.neu.length ? <p className="meilen-neu">Neu freigeschaltet: {k.neu.join(', ')}</p> : null}
             {j!.alleZu ? <p className="meilen-neu">Alle fünf Ringe zu. Perfekte Woche.</p> : null}
           </div>

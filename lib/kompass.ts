@@ -3,7 +3,7 @@ import { who5, wochenTag, type Antwort } from './fragen';
 import { geldStand, haushalt } from './geld';
 import { proteinZiel, trainingStand } from './koerper';
 import { heuteBerlin } from './priorisieren';
-import { KONTEN, level, meilensteineAktualisieren, MEILENSTEINE, ring, type Konto, type Summen, type Teil } from './kompass-regeln';
+import { KONTEN, level, meilensteineAktualisieren, MEILENSTEINE, ring, wochenTage, type Konto, type Summen, type Teil } from './kompass-regeln';
 
 /** Der Kompass: Ringe pro Konto für die letzten Wochen, Level, Meilensteine. Alles aus Daten, die schon da sind. */
 
@@ -47,6 +47,14 @@ export async function kompassStand(userId = 'peter') {
     sql<{ n: number }[]>`select count(*)::int as n from personen where user_id = ${userId}`,
     sql<{ w: string; n: number }[]>`select date_trunc('week', erledigt_at at time zone 'Europe/Berlin')::date::text as w, count(*)::int as n from items where user_id = ${userId} and status = 'erledigt' and wenn is not null and erledigt_at >= ${start} group by 1`,
   ]);
+  const [tagCheck, tagErledigt] = await Promise.all([
+    sql<{ tag: string; art: string }[]>`select tag::text as tag, art from checkins where user_id = ${userId} and art in ('morgen', 'abend') and tag >= ${montag}`,
+    sql<{ tag: string; n: number }[]>`select (erledigt_at at time zone 'Europe/Berlin')::date::text as tag, count(*)::int as n from items where user_id = ${userId} and status = 'erledigt' and (erledigt_at at time zone 'Europe/Berlin')::date >= ${montag}::date group by 1`,
+  ]);
+  const tagDaten = new Map<string, { morgen: boolean; abend: boolean; erledigt: number }>();
+  const tagHol = (t: string) => tagDaten.get(t) ?? (tagDaten.set(t, { morgen: false, abend: false, erledigt: 0 }), tagDaten.get(t)!);
+  for (const c of tagCheck) tagHol(c.tag)[c.art as 'morgen' | 'abend'] = true;
+  for (const e of tagErledigt) tagHol(e.tag).erledigt = e.n;
   const mK = nachWoche(kontakte), mP = nachWoche(wennN);
   const mE = nachWoche(erledigt), mW = nachWoche(wissen), mA = nachWoche(abende), mR = nachWoche(ruhe), mT = nachWoche(training), mN = nachWoche(naechte);
   const bogen = new Map(boegen.map((b) => [b.w, b.antworten]));
@@ -91,7 +99,7 @@ export async function kompassStand(userId = 'peter') {
   const m = meilensteineAktualisieren(alt, summen, heute);
   if (m.neu.length) await setSetting(`meilensteine:${userId}`, JSON.stringify(m.alle));
   return {
-    wochen, verlauf, jetzt: verlauf[verlauf.length - 1],
+    wochen, verlauf, jetzt: verlauf[verlauf.length - 1], tage: wochenTage(montag, heute, tagDaten),
     level: Object.fromEntries(KONTEN.map((k) => [k, level(punkte[k])])), gesamt: level(gesamt),
     meilensteine: MEILENSTEINE.map((x) => ({ id: x.id, name: x.name, wie: x.wie, konto: x.konto, am: m.alle[x.id] ?? null })),
     neu: m.neu.map((id) => MEILENSTEINE.find((x) => x.id === id)!.name),

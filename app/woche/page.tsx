@@ -112,6 +112,10 @@ export default function Woche() {
         <section className="gsec" aria-label="Energie-Bilanz">
           <h2 className="glabel">Energie-Bilanz der Woche</h2>
           <div className="group pad">
+            <div className="energieband" role="img" aria-label={`${st.kraft.gab.length} gaben Kraft, ${st.kraft.kostete.length} kosteten Kraft`}>
+              <i style={{ flex: st.kraft.gab.length, background: 'var(--ok)' }} /><i style={{ flex: st.kraft.kostete.length, background: 'var(--bad)' }} />
+            </div>
+            <div className="energie-legende"><span style={{ '--c': 'var(--ok)' } as React.CSSProperties}>gab Kraft {st.kraft.gab.length}</span><span style={{ '--c': 'var(--bad)' } as React.CSSProperties}>kostete Kraft {st.kraft.kostete.length}</span></div>
             {st.kraft.gab.length ? <div className="fb-q"><span className="fb-frage okc">Gab dir Kraft</span>{st.kraft.gab.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
             {st.kraft.kostete.length ? <div className="fb-q"><span className="fb-frage warn">Kostete Kraft</span>{st.kraft.kostete.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
           </div>
