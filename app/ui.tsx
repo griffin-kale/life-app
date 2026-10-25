@@ -156,6 +156,18 @@ export function TopBar({ title, back }: { title: string; back?: { label: string;
   );
 }
 
+/** Ab welcher Breite die große Ansicht gilt. Startet schmal, damit Server und Browser gleich rendern. */
+export function useBreit(px: number) {
+  const [b, setB] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia(`(min-width: ${px}px)`);
+    const f = () => setB(m.matches); f();
+    m.addEventListener('change', f);
+    return () => m.removeEventListener('change', f);
+  }, [px]);
+  return b;
+}
+
 /** iOS zeigt :active nur, wenn ein touchstart-Listener hängt. Ohne ihn gibt es beim Drücken kein Feedback. */
 export function usePressFeedback() {
   useEffect(() => { const f = () => {}; document.addEventListener('touchstart', f, { passive: true }); return () => document.removeEventListener('touchstart', f); }, []);
