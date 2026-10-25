@@ -4,8 +4,10 @@ import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { CHALLENGE_COOKIE, SESSION_COOKIE, cookieOptions, createSession, readChallenge } from '@/lib/session';
 import { rp } from '@/lib/webauthn';
+import { begrenzt } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
+  const zuViel = begrenzt(req, 'anmelden'); if (zuViel) return zuViel;
   const { response } = await req.json().catch(() => ({}));
   const challenge = await readChallenge(req.cookies.get(CHALLENGE_COOKIE)?.value, 'login');
   if (!challenge || !response?.id) return NextResponse.json({ error: 'Zeit abgelaufen. Bitte nochmal.' }, { status: 400 });

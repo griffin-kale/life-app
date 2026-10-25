@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from 'next/server';
 import { ensureSchema, sql, type Item } from '@/lib/db';
 import { createItem, enrich, TYPEN } from '@/lib/enrich';
+import { begrenzt } from '@/lib/ratelimit';
 
 export async function GET(req: NextRequest) {
   await ensureSchema();
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const { text } = await req.json().catch(() => ({}));
   if (typeof text !== 'string' || !text.trim()) return NextResponse.json({ error: 'Leer' }, { status: 400 });
   const id = await createItem(text);
