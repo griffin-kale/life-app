@@ -59,7 +59,7 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 
 ## Entscheidungen und Gründe
 
-- **Aufräumen 0.22.1 (Peter, 26.10.2026):** 0.16.1 bis 0.22.0 sind in `main`. Drei Dependabot-Merges mit roter CI (TypeScript 7, simplewebauthn 14, React 19.3) haben `main` zerbrochen und sind zurückgenommen. Regel ab jetzt: Dependabot-PRs nur mit grüner CI mergen, große Sprünge einzeln als eigene Aufgabe mit Tests (vor allem simplewebauthn, weil es die Anmeldung trifft). Gemergte Zweige werden gelöscht, der Mac arbeitet auf `main`.
+- **Aufräumen 0.22.1 (Peter, 26.10.2026):** 0.16.1 bis 0.22.0 sind in `main`. Drei Dependabot-Merges mit roter CI (TypeScript 7, simplewebauthn 14, React 19.3) haben `main` zerbrochen und sind zurückgenommen. Regel ab jetzt: Dependabot-PRs nur mit grüner CI mergen, große Sprünge einzeln als eigene Aufgabe mit Tests (vor allem simplewebauthn, weil es die Anmeldung trifft). Gemergte Zweige werden gelöscht, der Mac arbeitet auf `main`. Danach kamen die gebündelten PRs: React und React DOM 19.3.1 zusammen (#26, alle Tests grün) und die GitHub-Actions auf v7 (#25).
 
 - **Ein Feld 0.22 (Peter, 26.10.2026):** Mockup K1, ohne Umschalter zwischen Festhalten und Fragen. Alles wird gespeichert, damit nichts verloren geht. Claude erkennt beim Einordnen Fragen an den Coach. Ein Irrtum kostet wenig: Der Coach antwortet einmal zu viel, oder eine Frage steht im Logbuch. Fragen landen unter Archiviert. Preis: Die Antwort braucht den Umweg über das Einordnen, rund ein bis drei Sekunden mehr. Die Vorschläge im Gespräch gehen weiter direkt an den Coach. Fotos im Feld kommen erst, wenn feststeht, wie Essensfotos gefiltert werden.
 

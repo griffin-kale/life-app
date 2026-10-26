@@ -11,6 +11,8 @@ Aufräumen nach dem Merge von 0.16.1 bis 0.22.0 (Peter, 26.10.2026).
 
 ### Geändert
 - **Dependabot:** Große Versionssprünge kommen nicht mehr als Pull Request. Kleine Updates kommen gebündelt einmal im Monat, React und React DOM immer zusammen, GitHub-Actions als ein Pull Request. Sicherheitsupdates meldet GitHub weiter sofort.
+- **React und React DOM 19.3.1**, jetzt gemeinsam (#26). Typecheck, Unit-Tests, Build und e2e laufen damit durch.
+- **GitHub-Actions** `checkout`, `setup-node` und `upload-artifact` auf Version 7 (#25). Das betrifft nur die Prüfung bei GitHub, nicht die App.
 
 ## [0.22.0] – 2026-10-26
 
