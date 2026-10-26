@@ -135,7 +135,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen', '/wochenstart']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -164,6 +164,27 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(JSON.stringify(c)).not.toContain('[Person');
     expect(c.abend.text).toContain('Plan für morgen');
   });
+  await test.step('Heute: Empfehlung mit einem Tipp, Coach zum Ansprechen', async () => {
+    await page.goto('/');
+    const em = page.locator('section[aria-label="Empfohlen für dich"] a.empfohlen');
+    await expect(em).toBeVisible();
+    expect(await em.getAttribute('href')).toMatch(/^\//);
+    const coach = page.locator('section[aria-label="Coach"]');
+    await coach.getByRole('button', { name: 'Ich bin müde' }).click();
+    await expect(coach.locator('.chat-zeile.coach').last()).toContainText('NSDR');
+    await coach.getByLabel('Nachricht an den Coach').fill('Soll Carlotta das Angebot übernehmen?');
+    await coach.getByRole('button', { name: 'Senden' }).click();
+    await expect(coach.locator('.chat-zeile.coach:not(.working)')).toHaveCount(2);
+    await expect(coach.locator('.chat-zeile.ich').last()).toContainText('Carlotta');
+    const v = await (await page.request.get('/api/coach/chat')).json();
+    expect(v.verlauf.length).toBe(4);
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    const chat = prompts.filter((x) => x.startsWith('COACH CHAT'));
+    expect(chat.length).toBe(2);
+    expect(chat.join(' ')).not.toContain('Carlotta');
+    expect((await page.request.post('/api/coach/chat', { data: { text: '' } })).status()).toBe(400);
+  });
+
   await test.step('Körper: WHOOP verbinden und abgleichen, Warnsignal bei kurzen Nächten', async () => {
     await page.goto('/koerper');
     await page.getByRole('link', { name: 'WHOOP verbinden' }).click();
@@ -244,14 +265,15 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('12,50 Bäcker');
     await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Alltag' }).click();
     await page.getByRole('button', { name: 'Festhalten' }).click();
-    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('12,50 € · Bäcker');
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Bäcker.*12,50 €/);
     await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Claude ordnet zu' }).click();
     await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('Tanken 80');
     await page.getByRole('button', { name: 'Festhalten' }).click();
-    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('80 € · Tanken');
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Tanken.*80 €/);
     await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
     await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
-    await expect(page.locator('section[aria-label="Zuletzt"]')).toContainText('23,45 € · Testmarkt');
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Testmarkt.*23,45 €/);
+    await expect(page.locator('section[aria-label="Diese Woche"] .kachel.topf')).toHaveCount(3);
     await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufenplan');
     await page.locator('section[aria-label="Bereiche"]').getByRole('link', { name: /Monatlich/ }).click();
     await page.waitForURL('/geld/monatlich');
@@ -315,7 +337,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.tagespunkte li')).toHaveCount(7);
     if (process.env.SCREENSHOTS) for (const t of ['light', 'dark']) {
       await page.evaluate((x) => { document.documentElement.dataset.theme = x; }, t);
-      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen']]) {
+      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart']]) {
         await page.context().addCookies([{ name: 'life-thema', value: t, url: new URL('/', page.url()).toString() }]);
         await page.goto(p); await page.waitForTimeout(500);
         await page.screenshot({ path: `test-results/design/${n}-${t}.png`, fullPage: true });
@@ -436,8 +458,38 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const p = await (await page.request.get('/api/push')).json();
     expect(p.publicKey.length).toBeGreaterThan(60);
     expect((await page.request.post('/api/push', { data: { abo: { endpoint: 'https://evil.example/x', keys: { p256dh: 'a', auth: 'b' } } } })).status()).toBe(400);
+    expect((await page.request.put('/api/push', { data: { verpasst: false, nachmittag: true, wochenstart: true } })).status()).toBe(200);
+    const e = (await (await page.request.get('/api/push')).json()).einstellungen;
+    expect([e.verpasst, e.nachmittag, e.wochenstart]).toEqual([false, true, true]);
     await page.goto('/einstellungen');
     await expect(page.locator('main')).toContainText('Mitteilungen');
+  });
+
+  await test.step('Wochenstart: Rückblick, Engpass, drei Dinge, Parkplatz, seitenweise', async () => {
+    expect((await (await page.request.get('/api/coach')).json()).wochenstartOffen).toBe(true);
+    await page.goto('/woche');
+    await page.locator('.ws-banner').click();
+    await page.waitForURL('/wochenstart');
+    await expect(page.locator('main')).toContainText('Rückblick');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('radio', { name: 'Neu setzen' }).click();
+    await page.getByLabel('Neuer Engpass').fill('Erfundener Engpass der Testwoche');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    const drei = page.getByRole('group', { name: 'Drei Dinge' }).getByRole('button');
+    await drei.nth(0).click();
+    await drei.nth(1).click();
+    await expect(page.locator('main')).toContainText('2 von 3 gewählt');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await expect(page.locator('main')).toContainText('Erfundener Engpass der Testwoche');
+    await page.getByRole('button', { name: 'Wochenstart abschließen' }).click();
+    await page.waitForURL(/\/woche/);
+    await expect(page.locator('.toast')).toContainText('Wochenstart abgeschlossen');
+    await expect(page.locator('section[aria-label="Drei Dinge der Woche"] .cell')).toHaveCount(2);
+    await expect(page.locator('.engpass')).toContainText('Erfundener Engpass');
+    await expect(page.locator('.ws-banner')).toHaveCount(0);
+    expect((await (await page.request.get('/api/coach')).json()).wochenstartOffen).toBe(false);
+    expect(await (await page.request.post('/api/wochenstart', { data: { aktion: 'fokus', ids: ['x; drop table'] } })).json()).toMatchObject({ ids: [] });
   });
 
   await test.step('Abmelden sperrt die Daten, Face ID öffnet sie wieder', async () => {

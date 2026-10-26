@@ -2,6 +2,18 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.14.0] – 2026-10-26
+
+### Hinzugefügt
+- **Mit dem Coach sprechen:** auf Heute ein Feld und Vorschläge zum Antippen („Was jetzt?“, „Ich bin müde“, „Ich habe nur 30 Minuten“, „Ich schiebe etwas vor mir her“). Der Coach kennt den Tag, das Gespräch gilt für heute. Namen gehen wie immer nur als Platzhalter an Claude.
+- **Der Coach meldet sich selbst:** In der Coach-Karte steht, was heute noch offen ist (verpasste Uhrzeit, Morgenfragen, Training, Abendfragen, Wochenstart). Dazu Mitteilungen, wenn eine geplante Uhrzeit 30 Minuten vorbei ist, um 15 Uhr, wenn aus „Jetzt dran“ noch nichts erledigt ist, und montags um 8:30 für den Wochenstart. Alle drei lassen sich in den Einstellungen abschalten.
+- **Empfohlen für dich:** ein neuer Baustein auf Heute mit genau einer Sache, die jetzt passt, zum Beispiel NSDR nach kurzer Nacht, Atem am Nachmittag, Stille, Runterfahren am Abend oder die Krafteinheit am Trainingstag. Life entscheidet nach festen Regeln, der Coach greift sie in seinem Text auf, ein Tipp öffnet die passende Übung.
+- **Wochenstart** als eigene Seite in vier Schritten: Rückblick auf die letzte Woche, Engpass prüfen oder neu setzen, drei Dinge der Woche wählen, Parkplatz sichten. Die drei Dinge stehen danach auf „Woche“, Claude zieht sie beim Sortieren nach vorn.
+
+### Geändert
+- **Fragebögen zum Blättern:** eine Frage pro Seite, die Fläche bleibt stehen. Nach einer Antwort auf der Skala geht es von selbst weiter, „Fertig“ sitzt oben.
+- **Geld im Stil von Körper:** Töpfe der Woche als Kacheln mit Farbpunkt, großer Zahl und Balken. Buchungen als Zeilen mit Betrag rechts. Monatlich mit drei Kacheln (Einnahmen, feste Kosten, bleibt) und einer Liste pro Art, Sparziele und Taschengeld als Kacheln.
+
 ## [0.13.1] – 2026-10-26
 
 ### Behoben

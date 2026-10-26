@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const alt = await pushEinstellungen();
   const neu = { ...PUSH_STANDARD, ...alt };
-  for (const k of ['morgen', 'abend', 'warnung', 'training'] as const) if (typeof b[k] === 'boolean') neu[k] = b[k];
+  for (const k of ['morgen', 'abend', 'warnung', 'training', 'verpasst', 'nachmittag', 'wochenstart'] as const) if (typeof b[k] === 'boolean') neu[k] = b[k];
   for (const k of ['morgenZeit', 'abendZeit'] as const) if (typeof b[k] === 'string' && ZEIT.test(b[k])) neu[k] = b[k];
   await setSetting('push', JSON.stringify(neu));
   return NextResponse.json(neu);

@@ -1,11 +1,12 @@
 /** Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. „Jetzt dran“ und der Fragebogen bleiben immer an. */
-export const BAUSTEINE = ['woche', 'schnell', 'kompass', 'fragebogen', 'coach', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
+export const BAUSTEINE = ['woche', 'schnell', 'empfohlen', 'kompass', 'fragebogen', 'coach', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-export const STANDARD: Baustein[] = ['woche', 'schnell', 'kompass', 'fragebogen', 'coach', 'festhalten', 'jetzt', 'naechste', 'erledigt'];
+export const STANDARD: Baustein[] = ['woche', 'schnell', 'empfohlen', 'kompass', 'fragebogen', 'coach', 'festhalten', 'jetzt', 'naechste', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   woche: ['Wochenstand', 'Sieben Tagespunkte oben'],
   schnell: ['Schnellzugriffe', 'Plus mit Menü, Essen, Ausgabe, Ruhe, Training'],
+  empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
   kompass: ['Kompass', 'Fünf Ringe und Level'],
   fragebogen: ['Fragebogen', 'Erscheint, wenn er dran ist'],
   coach: ['Coach', 'Morgens und abends'],
@@ -28,11 +29,17 @@ export function bausteineAus(roh: unknown): Baustein[] {
   return aus;
 }
 
-/** Einmalig neue Bausteine in eine schon gespeicherte Liste setzen. Gibt null zurück, wenn nichts zu tun ist. */
+/** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
+const NEU: [number, Baustein, Baustein][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell']];
+export const STAND = 3;
+
+/** Setzt neue Bausteine einmal in eine gespeicherte Liste. Gibt null zurück, wenn nichts zu tun ist. */
 export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein[]; stand: number } | null {
-  if (stand >= 2) return null;
-  if (liste.includes('schnell')) return { liste, stand: 2 };
-  const i = liste.indexOf('woche');
-  const neu = [...liste]; neu.splice(i >= 0 ? i + 1 : 0, 0, 'schnell');
-  return { liste: neu, stand: 2 };
+  if (stand >= STAND) return null;
+  const neu = [...liste];
+  for (const [ab, b, hinter] of NEU) {
+    if (stand >= ab || neu.includes(b)) continue;
+    const i = neu.indexOf(hinter); neu.splice(i >= 0 ? i + 1 : 0, 0, b);
+  }
+  return { liste: neu, stand: STAND };
 }

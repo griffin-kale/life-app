@@ -275,6 +275,17 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now()
         )`;
       await sql`alter table items add column if not exists wenn text, add column if not exists energie smallint`;
+      // Version 0.14: Gespräch mit dem Coach, gilt pro Tag
+      await sql`
+        create table if not exists coach_chat (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          tag date not null,
+          rolle text not null check (rolle in ('ich', 'coach')),
+          text text not null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`create index if not exists coach_chat_tag on coach_chat (user_id, tag, id)`;
       // Rückmeldungen aller Nutzenden: Fehler, Verbesserungen, Ideen
       await sql`
         create table if not exists rueckmeldungen (

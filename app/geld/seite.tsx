@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { TabBar, TopBar, api, useToast } from '../ui';
+import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { UeberKarte } from '../ueberkarte';
 import { betragAus, euro } from '@/lib/geld-regeln';
 
@@ -18,6 +18,30 @@ type G = {
 const VORSCHLAG = ['Alltag', 'Familie', 'Spaß', 'Größeres', 'Auto', 'Drogerie'];
 const WOCHE_BETRAEGE = [5000, 10000, 15000, 20000, 30000];
 const centAus = (s: string) => betragAus(s)?.cent ?? null;
+const FARBEN = ['var(--k-geld)', 'var(--k-zeit)', 'var(--k-sozial)', 'var(--k-koerper)', 'var(--k-mental)'];
+const farbe = (i: number) => ({ '--c': FARBEN[i % FARBEN.length] }) as React.CSSProperties;
+
+/** „noch etwa 40–60 €“ wird zu großer Zahl „40–60 €“ und kleinem Wort „noch etwa“. */
+function teile(anzeige = ''): [string, string] {
+  const m = anzeige.match(/^(noch etwa|noch) (.+)$/); if (m) return [m[2], m[1]];
+  const d = anzeige.match(/^(.+) drüber$/); if (d) return [d[1], 'drüber'];
+  return [anzeige, ''];
+}
+
+/** Ein Topf als Kachel, wie die Werte auf „Körper“: Name mit Farbpunkt, Zahl in der Serife, Balken. */
+function TopfKachel({ t, i }: { t: Topf; i: number }) {
+  const [wert, wort] = teile(t.anzeige);
+  return (
+    <div className="kachel topf" style={farbe(i)}>
+      <span className="kachel-name"><i />{t.name}</span>
+      <b className={t.ueber ? 'warn' : ''}>{wert}</b>
+      <div className="kb-bar" role="progressbar" aria-label={t.name} aria-valuenow={t.ausgaben} aria-valuemax={t.rahmen}><i style={{ width: `${Math.min(100, ((t.ausgaben ?? 0) / Math.max(1, t.rahmen ?? 1)) * 100)}%` }} className={t.ueber ? 'drueber' : ''} /></div>
+      <span className="kachel-fuss">{[wort, `Rahmen ${euro(t.rahmen ?? t.betrag_cent)}`, t.uebertrag ? `${euro(Math.min(t.uebertrag, t.betrag_cent))} aus der Vorwoche` : ''].filter(Boolean).join(' · ')}</span>
+    </div>
+  );
+}
+
+const Loeschen = ({ onClick, label = 'Löschen' }: { onClick: () => void; label?: string }) => <button type="button" className="chipbtn" onClick={onClick}>{label}</button>;
 
 async function bonFoto(f: File): Promise<string> {
   const url = URL.createObjectURL(f);
@@ -37,8 +61,23 @@ function Neu({ label, platzhalter, onSenden, ohneName }: { label: string; platzh
     <div className="geld-neu">
       {ohneName ? null : <input aria-label={`${label}: Name`} placeholder={platzhalter} value={n} onChange={(e) => setN(e.target.value)} />}
       <input aria-label={`${label}: Betrag`} inputMode="decimal" placeholder={ohneName ? platzhalter : 'Betrag'} value={b} onChange={(e) => setB(e.target.value)} />
-      <button type="button" className="btn" disabled={!n.trim() || !c} onClick={async () => { await onSenden(n.trim(), c!); if (!ohneName) setN(''); setB(''); }}>{ohneName ? 'Speichern' : 'Hinzufügen'}</button>
+      {ohneName
+        ? <button type="button" className="btn" disabled={!c} onClick={async () => { await onSenden(n.trim(), c!); setB(''); }}>Speichern</button>
+        : <button type="button" className="geld-plus" aria-label="Hinzufügen" disabled={!n.trim() || !c} onClick={async () => { await onSenden(n.trim(), c!); setN(''); setB(''); }}>{Icon.plus}</button>}
     </div>
+  );
+}
+
+function Buchung({ b, g, onLoeschen }: { b: G['buchungen'][number]; g: G; onLoeschen: () => void }) {
+  const i = g.woche.findIndex((t) => t.id === b.topf_id);
+  const topf = [...g.woche, ...g.kinder].find((t) => t.id === b.topf_id)?.name ?? 'ohne Topf';
+  return (
+    <li className="cell static buchung" style={i >= 0 ? farbe(i) : undefined}>
+      <span className="bu-punkt" aria-hidden="true" />
+      <span className="bu-text"><b>{b.was}</b><span>{topf} · {b.quelle === 'bon' ? 'Bon' : b.wer}</span></span>
+      <span className="bu-betrag num">{euro(b.cent)}</span>
+      <Loeschen onClick={onLoeschen} />
+    </li>
   );
 }
 
@@ -118,33 +157,22 @@ export function GeldSeite({ teil }: { teil?: string }) {
 
         <section className="gsec" aria-label="Diese Woche">
           <h2 className="glabel">Diese Woche</h2>
-          <div className="group pad">
-            {g.woche.map((t) => (
-              <div key={t.id} className="kb-row">
-                <div className="kb-top"><span>{t.name}</span><span className={'num' + (t.ueber ? ' warn' : '')}>{t.anzeige}</span></div>
-                <div className="kb-bar" role="progressbar" aria-label={t.name} aria-valuenow={t.ausgaben} aria-valuemax={t.rahmen}><i style={{ width: `${Math.min(100, ((t.ausgaben ?? 0) / Math.max(1, t.rahmen ?? 1)) * 100)}%` }} className={t.ueber ? 'drueber' : ''} /></div>
-                {t.uebertrag ? <span className="gnote flush">{euro(Math.min(t.uebertrag, t.betrag_cent))} aus der Vorwoche dabei</span> : null}
-              </div>
-            ))}
-            <details className="disclose"><summary>Rahmen ändern</summary>
+          <div className="toepfe">{g.woche.map((t, i) => <TopfKachel key={t.id} t={t} i={i} />)}</div>
+          <details className="disclose rahmen"><summary>{Icon.chevronRight}Rahmen ändern</summary>
+            <div className="group pad">
               {g.woche.map((t) => (
                 <div key={t.id} className="fb-q"><span className="fb-sub">{t.name}</span>
                   <div className="fb-opts" role="radiogroup" aria-label={`Rahmen ${t.name}`}>{WOCHE_BETRAEGE.map((c) => <button key={c} type="button" role="radio" aria-checked={t.betrag_cent === c} className="fb-chip" onClick={async () => { await api('/api/geld', { method: 'PATCH', body: JSON.stringify({ id: t.id, betrag_cent: c }) }); laden(); }}>{euro(c)}</button>)}</div>
                 </div>
               ))}
-            </details>
-          </div>
+            </div>
+          </details>
         </section>
 
         {g.buchungen.length ? (
           <section className="gsec" aria-label="Zuletzt">
             <h2 className="glabel">Zuletzt</h2>
-            <ul className="group pad essen-liste">
-              {g.buchungen.slice(0, 3).map((b) => (
-                <li key={b.id}><div><b>{euro(b.cent)} · {b.was}</b><span>{[...g.woche, ...g.kinder].find((t) => t.id === b.topf_id)?.name ?? 'ohne Topf'} · {b.quelle === 'bon' ? 'Bon' : b.wer}</span></div>
-                  <button type="button" className="chipbtn" onClick={() => loeschen('buchung', b.id)}>Löschen</button></li>
-              ))}
-            </ul>
+            <ul className="group buchungen">{g.buchungen.slice(0, 3).map((b) => <Buchung key={b.id} b={b} g={g} onLoeschen={() => loeschen('buchung', b.id)} />)}</ul>
             {g.buchungen.length > 3 ? <p className="gnote"><Link href="/geld/zuletzt" className="linkbtn">Alle Buchungen</Link></p> : null}
           </section>
         ) : null}
@@ -165,62 +193,74 @@ export function GeldSeite({ teil }: { teil?: string }) {
           <p className="gnote">Angelehnt an Dave Ramseys Baby Steps und die Empfehlungen der Verbraucherzentrale. Life ist keine Finanzberatung.</p>
         </section> : null}
 
-        {teil === 'monatlich' ? <section className="gsec" aria-label="Monatlich">
-          <h2 className="glabel">Monatlich</h2>
-          <div className="group pad">
-            {([['einnahme', 'Einnahmen', 'Gehalt, Unternehmerlohn, Kindergeld'], ['fest', 'Feste Kosten', 'Miete, Versicherung, Abos'], ['schuld', 'Konsumschulden (Restbetrag)', 'Dispo, Ratenkredit']] as const).map(([art, titel, ph]) => (
-              <div key={art} className="fb-q">
-                <span className="fb-frage">{titel}{summe(art).length ? ` · ${euro(summe(art).reduce((a, p) => a + p.cent, 0))}` : ''}</span>
-                {summe(art).map((p) => <div key={p.id} className="geld-zeile"><span>{p.name}</span><span className="num">{euro(p.cent)}</span><button type="button" className="chipbtn" onClick={() => loeschen('posten', p.id)}>Löschen</button></div>)}
-                <Neu label={titel} platzhalter={ph} onSenden={async (name, cent) => { await post({ aktion: 'posten', art, name, cent }); }} />
+        {teil === 'monatlich' ? <section className="gsec-stapel" aria-label="Monatlich">
+          {g.posten.length ? (
+            <div className="werte drei">
+              <div className="kachel" style={farbe(3)}><span className="kachel-name"><i />Einnahmen</span><b>{euro(gesamt('einnahme'))}</b></div>
+              <div className="kachel" style={farbe(2)}><span className="kachel-name"><i />Kosten</span><b>{euro(gesamt('fest'))}</b></div>
+              <div className="kachel" style={farbe(0)}><span className="kachel-name"><i />Bleibt</span><b>{euro(gesamt('einnahme') - gesamt('fest'))}</b></div>
+            </div>
+          ) : null}
+          {([['einnahme', 'Einnahmen', 'Gehalt, Unternehmerlohn, Kindergeld'], ['fest', 'Feste Kosten', 'Miete, Versicherung, Abos'], ['schuld', 'Konsumschulden (Restbetrag)', 'Dispo, Ratenkredit']] as const).map(([art, titel, ph]) => (
+            <div key={art} className="gsec">
+              <h2 className="glabel">{titel}{summe(art).length ? ` · ${euro(gesamt(art))}` : ''}</h2>
+              <div className="group">
+                {summe(art).map((p) => <div key={p.id} className="cell static"><span className="lbl">{p.name}</span><span className="val"><span className="num">{euro(p.cent)}</span><Loeschen onClick={() => loeschen('posten', p.id)} /></span></div>)}
+                <div className="cell static neu-zeile"><Neu label={titel} platzhalter={ph} onSenden={async (name, cent) => { await post({ aktion: 'posten', art, name, cent }); }} /></div>
               </div>
-            ))}
-            <div className="fb-q">
-              <span className="fb-frage">Rücklage auf dem Tagesgeld · {euro(g.profil.ruecklage)}</span>
-              <Neu ohneName label="Rücklage" platzhalter="Stand in Euro" onSenden={async (_n, cent) => { await post({ aktion: 'profil', ruecklage_cent: cent }, 'Gespeichert'); }} />
-              <span className="fb-frage">Sparrate pro Monat · {euro(g.profil.sparrate)}</span>
-              <Neu ohneName label="Sparrate" platzhalter="Betrag pro Monat" onSenden={async (_n, cent) => { await post({ aktion: 'profil', sparrate_cent: cent }, 'Gespeichert'); }} />
-              <span className="fb-frage">Wie groß soll der Puffer sein?</span>
-              <div className="fb-opts" role="radiogroup" aria-label="Puffer in Monaten">{[3, 6, 9, 12].map((m) => <button key={m} type="button" role="radio" aria-checked={g.profil.pufferMonate === m} className="fb-chip" onClick={() => post({ aktion: 'profil', puffer_monate: m })}>{m} Monate</button>)}</div>
+            </div>
+          ))}
+          <div className="gsec">
+            <h2 className="glabel">Rücklage und Puffer</h2>
+            <div className="group pad">
+              <div className="fb-q">
+                <span className="fb-frage">Rücklage auf dem Tagesgeld · {euro(g.profil.ruecklage)}</span>
+                <Neu ohneName label="Rücklage" platzhalter="Stand in Euro" onSenden={async (_n, cent) => { await post({ aktion: 'profil', ruecklage_cent: cent }, 'Gespeichert'); }} />
+              </div>
+              <div className="fb-q">
+                <span className="fb-frage">Sparrate pro Monat · {euro(g.profil.sparrate)}</span>
+                <Neu ohneName label="Sparrate" platzhalter="Betrag pro Monat" onSenden={async (_n, cent) => { await post({ aktion: 'profil', sparrate_cent: cent }, 'Gespeichert'); }} />
+              </div>
+              <div className="fb-q">
+                <span className="fb-frage">Wie groß soll der Puffer sein?</span>
+                <div className="fb-opts" role="radiogroup" aria-label="Puffer in Monaten">{[3, 6, 9, 12].map((m) => <button key={m} type="button" role="radio" aria-checked={g.profil.pufferMonate === m} className="fb-chip" onClick={() => post({ aktion: 'profil', puffer_monate: m })}>{m} Monate</button>)}</div>
+              </div>
             </div>
           </div>
         </section> : null}
 
-        {teil === 'sparen' ? <section className="gsec" aria-label="Sparziele">
-          <h2 className="glabel">Sparziele</h2>
+        {teil === 'sparen' ? <section className="gsec-stapel" aria-label="Sparziele">
+          {g.spar.map((t, i) => (
+            <div key={t.id} className="kachel ziel" style={farbe(i + 3)}>
+              <span className="kachel-name"><i />{t.name}</span>
+              <b>{euro(t.stand_cent)}<small>von {euro(t.betrag_cent)}</small></b>
+              <div className="kb-bar" role="progressbar" aria-label={t.name} aria-valuenow={t.stand_cent} aria-valuemax={t.betrag_cent}><i style={{ width: `${Math.min(100, (t.stand_cent / Math.max(1, t.betrag_cent)) * 100)}%` }} className={t.stand_cent >= t.betrag_cent ? 'voll' : ''} /></div>
+              <div className="kachel-aktionen">{[2500, 5000, 10000].map((c) => <button key={c} type="button" className="chipbtn" onClick={() => post({ aktion: 'sparen', topf_id: t.id, cent: c }, 'Eingezahlt')}>+ {euro(c)}</button>)}<Loeschen label="Entfernen" onClick={() => loeschen('topf', t.id)} /></div>
+            </div>
+          ))}
+          <h2 className="glabel">Neues Sparziel</h2>
           <div className="group pad">
-            {g.spar.map((t) => (
-              <div key={t.id} className="kb-row">
-                <div className="kb-top"><span>{t.name}</span><span className="num">{euro(t.stand_cent)} / {euro(t.betrag_cent)}</span></div>
-                <div className="kb-bar"><i style={{ width: `${Math.min(100, (t.stand_cent / Math.max(1, t.betrag_cent)) * 100)}%` }} className={t.stand_cent >= t.betrag_cent ? 'voll' : ''} /></div>
-                <div className="fb-opts">{[2500, 5000, 10000].map((c) => <button key={c} type="button" className="fb-chip" onClick={() => post({ aktion: 'sparen', topf_id: t.id, cent: c }, 'Eingezahlt')}>+ {euro(c)}</button>)}<button type="button" className="chipbtn" onClick={() => loeschen('topf', t.id)}>Entfernen</button></div>
-              </div>
-            ))}
             <Neu label="Sparziel" platzhalter="Urlaub, Fahrrad …" onSenden={async (name, cent) => { await post({ aktion: 'topf', art: 'spar', name, betrag_cent: cent }, 'Sparziel angelegt'); }} />
           </div>
         </section> : null}
 
-        {teil === 'taschengeld' ? <section className="gsec" aria-label="Taschengeld">
-          <h2 className="glabel">Taschengeld</h2>
+        {teil === 'taschengeld' ? <section className="gsec-stapel" aria-label="Taschengeld">
+          {g.kinder.map((t, i) => (
+            <div key={t.id} className="kachel ziel" style={farbe(i + 2)}>
+              <span className="kachel-name"><i />{t.name} · {euro(t.betrag_cent)} pro Woche</span>
+              <b>{euro(t.guthaben ?? 0)}<small>Guthaben</small></b>
+              <div className="kachel-aktionen" aria-label={`Ausgabe ${t.name}`}>{[50, 100, 200, 500].map((c) => <button key={c} type="button" className="chipbtn" onClick={() => post({ aktion: 'taschengeld', topf_id: t.id, cent: c }, 'Abgezogen')}>− {euro(c)}</button>)}<Loeschen label="Entfernen" onClick={() => loeschen('topf', t.id)} /></div>
+            </div>
+          ))}
+          <h2 className="glabel">Kind anlegen</h2>
           <div className="group pad">
-            {g.kinder.map((t) => (
-              <div key={t.id} className="fb-q">
-                <div className="kb-top"><span>{t.name} · {euro(t.betrag_cent)} pro Woche</span><b className="num">{euro(t.guthaben ?? 0)}</b></div>
-                <div className="fb-opts" aria-label={`Ausgabe ${t.name}`}>{[50, 100, 200, 500].map((c) => <button key={c} type="button" className="fb-chip" onClick={() => post({ aktion: 'taschengeld', topf_id: t.id, cent: c }, 'Abgezogen')}>− {euro(c)}</button>)}<button type="button" className="chipbtn" onClick={() => loeschen('topf', t.id)}>Entfernen</button></div>
-              </div>
-            ))}
             <Neu label="Kind" platzhalter="Name" onSenden={async (name, cent) => { await post({ aktion: 'topf', art: 'kind', name, betrag_cent: cent }, 'Taschengeld angelegt'); }} />
-            <p className="gnote flush">Jeden Montag kommt der Wochenbetrag dazu. Die Namen der Kinder bleiben auf dem Server und gehen nie an Claude.</p>
           </div>
+          <p className="gnote">Jeden Montag kommt der Wochenbetrag dazu. Die Namen der Kinder bleiben auf dem Server und gehen nie an Claude.</p>
         </section> : null}
         {teil === 'zuletzt' && g?.buchungen.length ? (
           <section className="gsec" aria-label="Alle Buchungen">
-                        <ul className="group pad essen-liste">
-              {g!.buchungen.map((b) => (
-                <li key={b.id}><div><b>{euro(b.cent)} · {b.was}</b><span>{[...g!.woche, ...g!.kinder].find((t) => t.id === b.topf_id)?.name ?? 'ohne Topf'} · {b.quelle === 'bon' ? 'Bon' : b.wer}</span></div>
-                  <button type="button" className="chipbtn" onClick={() => loeschen('buchung', b.id)}>Löschen</button></li>
-              ))}
-            </ul>
+            <ul className="group buchungen">{g.buchungen.map((b) => <Buchung key={b.id} b={b} g={g} onLoeschen={() => loeschen('buchung', b.id)} />)}</ul>
           </section>
         ) : null}
 

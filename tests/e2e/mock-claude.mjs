@@ -93,7 +93,7 @@ http.createServer((req, res) => {
     const a = bon ? { laden: 'Testmarkt', summe: 23.45, topf: 'Alltag' }
       : geld ? { topf: /Tanken/.test(text) ? 'Familie' : 'Alltag' }
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
-      : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+      : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' });
       // Langer Eintrag mit „ABSCHNEIDEN“: beim ersten Versuch abgeschnitten wie bei einem zu knappen Limit

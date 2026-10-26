@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useBreit, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
-import { Coach, useCheckins } from './coach';
+import { Coach, Empfohlen, useCheckins } from './coach';
 import { FARBE, KONTEN, NAME, Ring, Tagespunkte, Weg } from './ringe';
 import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
 import { Schnellzugriff } from './schnell';
@@ -13,7 +13,7 @@ import { EnergieChips, WennChip } from './wenn';
 type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
 
 /** Auf iPad und Mac stehen diese Bausteine rechts, alles zum Tun links. */
-const RECHTS: Baustein[] = ['coach', 'kompass', 'koerper', 'geld', 'menschen'];
+const RECHTS: Baustein[] = ['empfohlen', 'coach', 'kompass', 'koerper', 'geld', 'menschen'];
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
 const nachZeit = (a: Item, b: Item) => (a.zeit && b.zeit ? a.zeit.localeCompare(b.zeit) : a.zeit ? -1 : b.zeit ? 1 : (a.rang ?? 99) - (b.rang ?? 99));
@@ -231,6 +231,7 @@ st?.erledigtHeute.length ? (
     ),
     coach: <Coach stand={ci} />,
     schnell: <Schnellzugriff onGedanke={gedanke} />,
+    empfohlen: <Empfohlen stand={ci} />,
     koerper: kurz.koerper ? <KoerperKurz k={kurz.koerper} /> : null,
     geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
     menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,

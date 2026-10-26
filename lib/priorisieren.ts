@@ -1,3 +1,4 @@
+import { montagVon } from './tagesregeln';
 import { askJson, MODEL } from './claude';
 import { ensureSchema, getSetting, setSetting, sql, type Item } from './db';
 
@@ -34,7 +35,10 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   const items = await offene();
   const tag = heuteBerlin();
   if (!items.length) return;
-  const [kontext, ziele, team] = await Promise.all([getSetting('kontext'), getSetting('ziele'), getSetting('team')]);
+  const [kontext, ziele, team, fokusRoh] = await Promise.all([getSetting('kontext'), getSetting('ziele'), getSetting('team'), getSetting('fokus:peter')]);
+  // Drei Dinge der Woche aus dem Wochenstart: nur für die laufende Woche
+  let fokus: string[] = [];
+  try { const f = JSON.parse(fokusRoh || '{}'); if (f.montag === montagVon(tag) && Array.isArray(f.ids)) fokus = f.ids; } catch { fokus = []; }
   const korr = await sql<{ von: string | null; zu: string; text: string; titel: string | null; schritt: string | null }[]>`
     select k.von, k.zu, i.text, i.titel, i.schritt from korrekturen k join items i on i.id = k.item_id
     order by k.created_at desc limit 20`;
@@ -44,7 +48,7 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   const alter = (d: string) => Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 864e5));
   const zeilen = items.map((it, n) => {
     const manuell = it.manuell_tag === tag ? ` | HEUTE VON PETER GESETZT: ${it.manuell_stapel} (nicht ändern)` : '';
-    return `${n}. ${it.schritt || it.titel || it.text.slice(0, 120)} | Eintrag: ${it.text.slice(0, 220).replace(/\n/g, ' ')} | Kategorie: ${it.kategorie} | Ziel: ${it.ziel || '-'} | Hebel: ${it.hebel ?? '-'} | Aufwand: ${AUFWAND(it.aufwand_min)} | Frist: ${it.frist || '-'} | Wer: ${it.wer === 'delegieren' ? `delegieren${it.delegieren_an ? ' an ' + it.delegieren_an : ''}` : 'Peter'} | Bisher: ${it.stapel || 'neu'} | Alter: ${alter(it.created_at)} Tage${manuell}`;
+    return `${n}. ${it.schritt || it.titel || it.text.slice(0, 120)}${fokus.includes(it.id) ? ' | DREI DINGE DER WOCHE (Peter)' : ''} | Eintrag: ${it.text.slice(0, 220).replace(/\n/g, ' ')} | Kategorie: ${it.kategorie} | Ziel: ${it.ziel || '-'} | Hebel: ${it.hebel ?? '-'} | Aufwand: ${AUFWAND(it.aufwand_min)} | Frist: ${it.frist || '-'} | Wer: ${it.wer === 'delegieren' ? `delegieren${it.delegieren_an ? ' an ' + it.delegieren_an : ''}` : 'Peter'} | Bisher: ${it.stapel || 'neu'} | Alter: ${alter(it.created_at)} Tage${manuell}`;
   });
   const prompt = [
     'SORTIERLAUF',
@@ -55,7 +59,7 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
     team ? 'Wem Peter etwas geben kann:\n' + team : 'Team: nicht angegeben. Schlage "delegieren" nur vor, wenn der Eintrag selbst eine Person nennt.',
     [
       'Regeln:',
-      '1. Engpass zuerst. Was den Engpass verkleinert, kommt vor allem anderen. Hebel 3 heißt: wirkt direkt auf den Engpass.',
+      '1. Engpass zuerst. Was den Engpass verkleinert, kommt vor allem anderen. Hebel 3 heißt: wirkt direkt auf den Engpass. Was Peter als „Drei Dinge der Woche“ gewählt hat, kommt in dieser Woche bevorzugt nach „jetzt“, nie nach „geparkt“ oder „streichen“.',
       `2. "jetzt": höchstens ${JETZT_MAX} Einträge für heute. Bevorzuge Frist heute oder morgen, hohen Hebel und Schritte, die andere freischalten. Höchstens ein halber Tag unter den dreien. Am Wochenende nur, was wirklich heute sein muss, gern Privates.`,
       '3. "woche": sinnvoll in dieser Woche. "delegieren": jemand anderes kann es gut. "geparkt": nicht diese Woche, aber behalten. "streichen": zahlt auf kein Ziel ein, ist veraltet oder doppelt erledigt. Streichen sparsam vorschlagen.',
       '4. Was Peter heute selbst gesetzt hat, bleibt genau dort.',

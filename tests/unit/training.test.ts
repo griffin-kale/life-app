@@ -173,6 +173,27 @@ test('Heute-Bausteine: unbekannte raus, doppelte raus, feste immer dabei, leer h
   assert.deepEqual(bausteineAus(['coach', 'coach', 'hack', '<b>']), ['fragebogen', 'coach', 'jetzt']);
   assert.deepEqual(bausteineAus(['woche', 'jetzt', 'fragebogen', 'koerper']), ['woche', 'jetzt', 'fragebogen', 'koerper']);
   const { nachruesten } = await import('../../lib/heute-bausteine.ts');
-  assert.deepEqual(nachruesten(['woche', 'coach', 'jetzt', 'fragebogen'], 1)?.liste, ['woche', 'schnell', 'coach', 'jetzt', 'fragebogen']);
-  assert.equal(nachruesten(['coach', 'jetzt', 'fragebogen'], 2), null);
+  assert.deepEqual(nachruesten(['woche', 'coach', 'jetzt', 'fragebogen'], 1)?.liste, ['woche', 'schnell', 'empfohlen', 'coach', 'jetzt', 'fragebogen']);
+  assert.deepEqual(nachruesten(['coach', 'jetzt', 'fragebogen'], 2)?.liste, ['empfohlen', 'coach', 'jetzt', 'fragebogen']);
+  assert.equal(nachruesten(['coach', 'jetzt', 'fragebogen'], 3), null);
+});
+
+test('Tagesregeln: Empfehlung, offene Punkte, Engpass, Montag', async () => {
+  const { empfehlung, offenePunkte, engpassSetzen, montagVon } = await import('../../lib/tagesregeln.ts');
+  const basis = { stunde: 10, wochentag: 4, erholung: 80, schlafMin: 450, morgenErholung: 3, trainingstag: false, kraftHeute: false, ruheHeuteMin: 0, kontakt: null, wochenstartOffen: false };
+  assert.equal(empfehlung({ ...basis, wochentag: 1, wochenstartOffen: true }).id, 'wochenstart');
+  assert.equal(empfehlung({ ...basis, stunde: 21 }).id, 'runter');
+  assert.equal(empfehlung({ ...basis, erholung: 20 }).id, 'nsdr');
+  assert.equal(empfehlung({ ...basis, trainingstag: true }).id, 'kraft');
+  assert.equal(empfehlung({ ...basis, trainingstag: true, erholung: 50 }).id, 'zone2');
+  assert.equal(empfehlung({ ...basis, morgenErholung: 2 }).id, 'atem');
+  assert.equal(empfehlung({ ...basis, ruheHeuteMin: 10, kontakt: 'Jonas' }).titel, 'Jonas melden');
+  assert.equal(empfehlung({ ...basis }).id, 'stille');
+  const o = { stunde: 15, minute: 10, wochentag: 2, jetzt: [{ titel: 'Angebot', zeit: '10:00', erledigt: false }, { titel: 'Anruf', zeit: null, erledigt: false }], morgen: true, abend: false, trainingstag: false, kraftHeute: false, trainingUhrzeit: '18:00', wochenstartOffen: true };
+  assert.deepEqual(offenePunkte(o), ['„Angebot“ stand für 10:00 an.', 'Der Wochenstart fehlt noch.', 'Von „Jetzt dran“ ist noch nichts erledigt (2 offen).']);
+  assert.deepEqual(offenePunkte({ ...o, stunde: 10, minute: 20, wochenstartOffen: false }), []);
+  assert.equal(engpassSetzen('Engpass: alt\nLeitsatz: x', 'neu'), 'Engpass: neu\nLeitsatz: x');
+  assert.equal(engpassSetzen('Leitsatz: x', ' neu  da '), 'Engpass: neu da\nLeitsatz: x');
+  assert.equal(montagVon('2026-10-25'), '2026-10-19');
+  assert.equal(montagVon('2026-10-26'), '2026-10-26');
 });

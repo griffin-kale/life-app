@@ -824,3 +824,107 @@ body { font-optical-sizing: auto; }
 .mi-rechts .empty { padding-top: 4rem; }
 .mi-aus, .mi-aus > .mi-liste { display: contents; }
 .heute-spalten .spalte > *, .spalte-gap > *, .mi-liste > *, .mi-rechts > * { min-width: 0; }
+
+/* ---------- 0.14: Blättern, Empfehlung, Coach-Chat, Wochenstart ---------- */
+/* Seiten zum Blättern: eine Seite pro Frage, die Fläche bleibt stehen */
+.blaetter { display: grid; gap: 12px; min-width: 0; }
+.bl-bahn { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.bl-bahn::-webkit-scrollbar { display: none; }
+.bl-seite { scroll-snap-align: start; scroll-snap-stop: always; min-width: 0; padding: 2px 1px; display: grid; align-content: start; gap: 10px; }
+.bl-leiste { display: flex; align-items: center; gap: 10px; }
+.bl-punkte { display: flex; gap: 5px; margin: 0 auto; }
+.bl-punkte i { width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--tint-rgb) / .25); transition: background-color 200ms ease-out, transform 200ms var(--ease-out); }
+.bl-punkte i.an { background: var(--ink); transform: scale(1.25); }
+.bl-zahl { font-size: .75rem; color: var(--faint); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.bl-platz { width: 64px; }
+.fb-head:has(> .fb-head-text) { display: flex; align-items: flex-start; gap: 12px; }
+.fb-head-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.fb-fertig { min-width: 0; flex: 0 0 auto; }
+
+/* Coach: Offenes und Gespräch in der Verlaufskarte (bleibt in beiden Modi dunkel) */
+.hero-offen { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hero-offen li { position: relative; padding: 8px 11px 8px 26px; border-radius: 12px; background: rgb(255 255 255 / .08); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); color: var(--hero-ink); font-size: .875rem; line-height: 1.35; }
+.hero-offen li::before { content: ''; position: absolute; left: 11px; top: 14px; width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #F2CC5B; }
+.chat { display: grid; gap: 6px; max-height: 18rem; overflow-y: auto; overscroll-behavior: contain; padding: 2px 0; }
+.chat-zeile { margin: 0; max-width: 86%; padding: 8px 12px; border-radius: 16px; font-size: .9375rem; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-zeile.coach { justify-self: start; background: rgb(255 255 255 / .12); color: var(--hero-ink); border-bottom-left-radius: 6px; }
+.chat-zeile.ich { justify-self: end; background: var(--hero-ink); color: #001D51; border-bottom-right-radius: 6px; }
+.chat-zeile.working { color: var(--hero-muted); }
+.chat-vorschlaege { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.chat-vorschlaege::-webkit-scrollbar { display: none; }
+.chat-chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 34px; padding: 0 13px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .12); color: var(--hero-ink); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer; }
+a.chat-chip { background: #F2CC5B; color: #001D51; }
+.chat-chip:disabled { opacity: .5; cursor: default; }
+.chat-chip:active { opacity: .6; transition-duration: 0s; }
+.chat-feld { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 14px; border-radius: 999px; background: rgb(0 0 0 / .22); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); }
+.chat-feld input { flex: 1; min-width: 0; min-height: 36px; border: 0; background: none; color: var(--hero-ink); font: inherit; font-size: 1rem; }
+.chat-feld input::placeholder { color: var(--hero-muted); }
+.chat-feld input:focus-visible { outline: none; }
+.chat-feld:focus-within { box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .4); }
+.chat-senden { width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--hero-ink); color: #001D51; cursor: pointer; }
+.chat-senden svg { width: 18px; height: 18px; }
+.chat-senden:disabled { background: rgb(255 255 255 / .16); color: var(--hero-muted); cursor: default; }
+
+/* Empfohlen für dich: eine Karte, ein Tipp */
+.empfohlen { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 16px; border-radius: 18px; background: var(--panel); box-shadow: var(--card-shadow), inset 3px 0 0 var(--c, var(--sky)); color: var(--ink); text-decoration: none; overflow: hidden; }
+.empfohlen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(90% 140% at 100% 50%, color-mix(in srgb, var(--c, var(--sky)) 18%, transparent), transparent 70%); pointer-events: none; }
+.em-text { position: relative; display: grid; gap: 2px; flex: 1; min-width: 0; }
+.em-kopf { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c, var(--sky)); }
+.em-text b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.25rem; line-height: 1.15; letter-spacing: -.008em; }
+.em-grund { font-size: .875rem; line-height: 1.35; color: var(--muted); text-wrap: pretty; }
+.em-los { position: relative; width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--c, var(--sky)); color: var(--on-accent); }
+.em-los svg { width: 20px; height: 20px; margin-left: 2px; }
+@media (prefers-reduced-motion: no-preference) { .empfohlen { transition: transform 120ms ease-out; } .empfohlen:active { transform: scale(.98); } }
+
+/* Wochenstart */
+.ws-seite { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.ws-titel { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.452rem; line-height: 1.05; letter-spacing: -.01em; }
+.ws-engpass { margin: 0; padding: 12px 14px; border-radius: 14px; background: rgb(var(--sand-rgb) / .12); box-shadow: inset 0 0 0 1px rgb(var(--sand-rgb) / .25); font-size: 1rem; line-height: 1.38; }
+.ws-liste { margin: 0; padding: 0; list-style: none; display: grid; }
+.ws-liste li { padding: 9px 0; font-size: .9375rem; line-height: 1.35; overflow-wrap: anywhere; }
+.ws-liste li + li { border-top: 1px solid var(--line); }
+.ws-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: var(--hero); color: var(--hero-ink); text-decoration: none; box-shadow: 0 18px 36px -24px rgb(0 40 120 / .7); }
+.ws-banner span { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.ws-banner b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.2rem; line-height: 1.15; }
+.ws-banner small { font-size: .875rem; color: var(--hero-muted); line-height: 1.35; }
+.ws-banner svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.fokus-liste .cell .lbl { white-space: normal; }
+.fokus-nr { width: 24px; height: 24px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: rgb(var(--sand-rgb) / .2); color: var(--sand); font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Ruhe: die vorgeschlagene Übung leuchtet kurz auf */
+.ruhekarte.gewaehlt { box-shadow: 0 0 0 2px #F2CC5B, 0 18px 36px -24px rgb(0 0 0 / .7), inset 0 1px 0 rgb(255 255 255 / .1); }
+
+/* Geld im Stil von Körper: Töpfe und Ziele als Kacheln, Listen als Zellen */
+.gsec-stapel { display: grid; gap: 12px; min-width: 0; }
+.gsec-stapel > .glabel { margin-top: 10px; }
+.toepfe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.toepfe .kachel:only-child, .toepfe .kachel:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.kachel.topf, .kachel.ziel { gap: 6px; }
+.kachel.topf b { font-size: 1.7rem; }
+.kachel.topf b.warn { color: var(--bad); }
+.kachel.topf .kb-bar, .kachel.ziel .kb-bar { margin-top: 4px; height: 6px; }
+.kachel.topf .kachel-fuss { margin-top: 0; line-height: 1.35; }
+.kachel-aktionen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.werte.drei { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.werte.drei .kachel b { font-size: 1.25rem; }
+.disclose.rahmen { padding: 0 16px; }
+.disclose.rahmen[open] { padding: 0; }
+.disclose.rahmen[open] summary { padding: 0 16px; }
+.disclose.rahmen .group { margin-top: 8px; }
+.buchungen { list-style: none; margin: 0; padding: 0; }
+.cell.buchung { gap: 10px; }
+.bu-punkt { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--c, var(--faint)); }
+.cell.buchung:not([style]) .bu-punkt { background: var(--faint); }
+.bu-text { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.bu-text b { font-weight: 600; font-size: .9375rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bu-text span { font-size: .8125rem; color: var(--muted); }
+.bu-betrag { color: var(--ink); font-weight: 600; font-size: .9375rem; }
+.neu-zeile { padding-block: 10px; }
+.neu-zeile .geld-neu { width: 100%; }
+.cell .val .num { color: var(--ink); }
+.geld-neu:has(.geld-plus) { flex-wrap: nowrap; }
+.geld-neu:has(.geld-plus) input:first-child { flex: 2 1 0; }
+.geld-neu:has(.geld-plus) input + input { flex: 1 1 0; }
+.geld-plus { width: var(--tap); height: var(--tap); flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); cursor: pointer; }
+.geld-plus svg { width: 20px; height: 20px; }
+.geld-plus:disabled { background: rgb(var(--ink-rgb) / .09); color: var(--faint); cursor: default; }
