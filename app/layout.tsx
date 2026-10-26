@@ -5,6 +5,7 @@ import '@fontsource-variable/fraunces/opsz-italic.css';
 import './globals.css';
 import { RAND, THEMA_COOKIE, themaAus } from '@/lib/thema';
 import { Navigation } from './navigation';
+import { Ziehen } from './ziehen';
 
 const thema = async () => themaAus((await cookies()).get(THEMA_COOKIE)?.value);
 
@@ -36,7 +37,7 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" data-theme={await thema()}>
-      <body><Navigation />{children}</body>
+      <body><Ziehen /><Navigation />{children}</body>
     </html>
   );
 }

@@ -1153,3 +1153,12 @@ body:has(.coach-leiste) .tb-schnell, body:has(.coach-leiste) .tb-halten { bottom
 .cf-fuss { display: flex; align-items: center; justify-content: space-between; font-size: .8125rem; color: var(--hero-muted); }
 .cf-gespraech { min-height: 36px; padding: 0 10px; border: 0; background: none; color: var(--hero-muted); font: inherit; font-size: .8125rem; cursor: pointer; }
 @media (prefers-reduced-motion: no-preference) { .coach-feld { animation: blatt-hoch 280ms var(--ease-out) both; } }
+
+/* 0.23: Nach unten ziehen lädt neu (nur in der App auf dem Home-Bildschirm) */
+.ziehen { position: fixed; top: env(safe-area-inset-top); left: 50%; z-index: 60; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--panel-2); color: var(--muted); box-shadow: 0 6px 18px -6px rgb(var(--shadow-rgb) / .5), inset 0 0 0 1px var(--hair); pointer-events: none; }
+.ziehen.bereit, .ziehen.laedt { color: var(--ink); }
+.ziehen.laedt svg { animation: ziehen-dreh .8s linear infinite; }
+@keyframes ziehen-dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ziehen.laedt svg { animation: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
