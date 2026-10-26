@@ -1,7 +1,8 @@
 import { ensureSchema, getSetting, setSetting, sql } from './db';
 import { ereignisse, kalenderBereit, kalenderFinden, KalenderFehler } from './caldav';
 import { artRaten, kalenderZeilen, tagesplan, type KalenderArt, type Termin } from './kalender-regeln';
-import { heuteBerlin } from './priorisieren';
+import { geschuetzteNamen } from './claude';
+import { heuteBerlin, jetztBerlin, minutenBerlin, plusTage, tagesbeginn } from './zeit';
 
 /** Kalender abgleichen und lesen. Termine bleiben auf dem Server, der Coach bekommt nur die Zusammenfassung. */
 
@@ -25,7 +26,7 @@ export async function abgleichen(userId = 'peter'): Promise<{ kalender: number; 
   if (hrefs.length) await sql`delete from kalender where user_id = ${userId} and href not in ${sql(hrefs)}`;
   const an = (await kalenderListe(userId)).filter((k) => k.an);
   const heute = heuteBerlin();
-  const von = new Date(Date.parse(heute + 'T00:00:00Z') - 864e5); const bis = new Date(Date.parse(heute + 'T00:00:00Z') + 9 * 864e5);
+  const von = tagesbeginn(plusTage(heute, -1)); const bis = tagesbeginn(plusTage(heute, 9));
   let n = 0;
   const neu: { kalender: string; uid: string; beginn: string; ende: string; ganztag: boolean; titel: string }[] = [];
   for (const k of an) {
@@ -52,12 +53,12 @@ export async function termine(userId = 'peter'): Promise<Termin[]> {
   const heute = heuteBerlin();
   const rows = await sql<{ beginn: Date; ende: Date; ganztag: boolean; titel: string; art: KalenderArt }[]>`
     select t.beginn, t.ende, t.ganztag, t.titel, k.art from termine t join kalender k on k.user_id = t.user_id and k.href = t.kalender
-    where t.user_id = ${userId} and k.an and t.ende >= ${heute + 'T00:00:00+01:00'} and t.beginn < ${new Date(Date.parse(heute + 'T00:00:00Z') + 8 * 864e5)}
+    where t.user_id = ${userId} and k.an and t.ende >= ${tagesbeginn(heute)} and t.beginn < ${tagesbeginn(plusTage(heute, 8))}
     order by t.beginn limit 500`;
   return rows.map((r) => ({ beginn: new Date(r.beginn).toISOString(), ende: new Date(r.ende).toISOString(), ganztag: r.ganztag, titel: r.titel, art: r.art }));
 }
 
-const jetztMin = () => { const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number); return h * 60 + m; };
+const jetztMin = () => minutenBerlin();
 
 export type KalenderStand = { bereit: boolean; zuletzt: string | null; kalender: KalenderZeile[]; heute: ReturnType<typeof tagesplan> | null };
 
@@ -72,14 +73,16 @@ export async function kalenderStand(userId = 'peter', ziel?: { titel: string; da
 /** Zeilen für den Coach. Leer, solange kein Kalender verbunden ist. */
 export async function kalenderKurz(userId = 'peter'): Promise<string[]> {
   if (!kalenderBereit() || !(await kalenderListe(userId)).some((k) => k.an)) return [];
-  return kalenderZeilen(await termine(userId), heuteBerlin(), jetztMin());
+  // Phase 3: Titel mit Gesundheitswörtern und unbekannten Namen nach „mit“ oder „bei“ gehen nicht an Claude
+  const bekannte = (await geschuetzteNamen()).map((n) => n.name);
+  return kalenderZeilen(await termine(userId), heuteBerlin(), jetztMin(), bekannte);
 }
 
 /** Alle 30 Minuten zwischen 6 und 22 Uhr. Fehler landen nur als kurze Meldung im Log, ohne Inhalte. */
 export async function vielleichtAbgleichen(userId = 'peter') {
   if (!kalenderBereit()) return;
   const zuletzt = Date.parse((await getSetting(`kalender_abgleich:${userId}`)) || '0');
-  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+  const h = jetztBerlin().stunde;
   if (h < 6 || h >= 22 || Date.now() - zuletzt < 30 * 60_000) return;
   await setSetting(`kalender_abgleich:${userId}`, new Date().toISOString()); // auch bei Fehler nicht jede Minute neu
   await abgleichen(userId).catch((e) => console.error('kalender', e instanceof KalenderFehler ? e.message : 'Abgleich fehlgeschlagen'));

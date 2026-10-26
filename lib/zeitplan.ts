@@ -8,6 +8,7 @@ import { abgleichen, verbunden, whoopBereit } from './whoop';
 import { geldStand } from './geld';
 import { kompassStand } from './kompass';
 import { tageslage } from './tag';
+import { jetztBerlin as zeitBerlin } from './zeit';
 import { vielleichtAbgleichen } from './kalender';
 
 /**
@@ -113,7 +114,7 @@ export async function tick(userId = 'peter') {
       const offen = lage.jetzt.filter((a) => !a.erledigt);
       if (p.nachmittag && faellig(uhr, '15:00') && offen.length && offen.length === lage.jetzt.length) await einmal('nachmittag', tag, async () =>
         (await senden({ title: 'Nachmittag', body: `Von „Jetzt dran“ ist noch nichts erledigt. Fang mit „${offen[0].titel}“ an, dreißig Minuten reichen.`, url: '/', tag: 'nachmittag' }, userId)) > 0);
-      if (p.wochenstart && lage.wochenstartOffen && new Date().getDay() === 1 && faellig(uhr, '08:30')) await einmal('wochenstart', tag, async () =>
+      if (p.wochenstart && lage.wochenstartOffen && zeitBerlin().wochentag === 'Mon' && faellig(uhr, '08:30')) await einmal('wochenstart', tag, async () =>
         (await senden({ title: 'Wochenstart', body: 'Zehn Minuten für die Woche: Rückblick, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
     }
   }
