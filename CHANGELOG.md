@@ -2,6 +2,20 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.15.0] – 2026-10-26
+
+### Hinzugefügt
+- **Standortbestimmung** in drei Etappen zu je etwa zwölf Minuten: „Wo du stehst“ (pro Bereich eine Zahl von 1 bis 10 und der Grund dahinter), „Wohin“ (Werte, ein Jahr von heute, die nächsten zwölf Wochen, was liegen bleibt) und „Was dich bremst“ (der Coach leitet mit dir den Engpass her). Eine Frage pro Seite, du erzählst frei, gern per Diktat. Danach fasst der Coach zusammen und macht Vorschläge. In deinen Stand kommt nur, was du übernimmst oder in eigenen Worten umformulierst.
+- **Dein Stand** unter Mehr: Baseline als fünf Ringe, Fokus, Engpass mit Herleitung, Werte, Jahresbild, Ziele für zwölf Wochen, Wochenziel und das Wichtigste für heute. Coach und Sortierlauf kennen den Stand bei jedem Aufruf.
+- **Kalender aus iCloud**, nur lesend: privat und Familie. Auf Heute stehen Termine, freie Zeit und ein Vorschlag, wann das Wichtigste passt. In den Einstellungen schaltest du einzelne Kalender an und aus und legst fest, was Familie ist. Familienzeit gilt als geschützt: Der Coach plant nichts hinein und sieht dort nur „Familie“.
+- Wochenstart mit **Wochenziel** und Feld für eigene Dinge der Woche.
+
+### Behoben
+- „Drei Dinge der Woche“ war leer, wenn noch nichts einsortiert war. Jetzt stehen auch neue Einträge zur Wahl, und eigene Dinge gehen direkt.
+
+### Sicherheit
+- Life spricht nur mit iCloud-Hosts (`caldav.icloud.com`), verfolgt Weiterleitungen einzeln und prüft jedes Ziel. Antworten sind begrenzt und landen nie im Log. Neue Abhängigkeit `ical.js` 2.2.1 (Mozilla-Umfeld, ohne Abhängigkeiten und ohne Installationsskripte) für Wiederholungen und Zeitzonen.
+
 ## [0.14.0] – 2026-10-26
 
 ### Hinzugefügt

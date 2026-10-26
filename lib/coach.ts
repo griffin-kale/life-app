@@ -7,6 +7,8 @@ import { koerperStand } from './koerper';
 import { geldKurz, geldStand } from './geld';
 import { menschenKurz } from './menschen';
 import { tageslage } from './tag';
+import { standZeilenLesen } from './stand';
+import { kalenderKurz } from './kalender';
 
 export { warnsignale };
 
@@ -46,7 +48,7 @@ async function grundlage(userId: string) {
     geldStand(userId).catch(() => null),
     menschenKurz(userId).catch(() => ''),
   ]);
-  const lage = await tageslage(userId).catch(() => null);
+  const [lage, stand, kalender] = await Promise.all([tageslage(userId).catch(() => null), standZeilenLesen(userId).catch(() => [] as string[]), kalenderKurz(userId).catch(() => [] as string[])]);
   const zk = await sql<{ was: string }[]>`select was from zeit_kaufen where user_id = ${userId} and status = 'idee' limit 5`.catch(() => [] as { was: string }[]);
   const warnungen = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)];
   const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
@@ -61,6 +63,9 @@ async function grundlage(userId: string) {
     'Schreibregeln: aktive Sätze mit konkretem Subjekt, keine Floskeln, keine rhetorischen Fragen, keine Konstruktion „nicht X, sondern Y“, kein Lob ohne Anlass, keine Diagnosen. Bei körperlichen Warnzeichen, die über Wochen anhalten, rätst du zu ärztlicher Abklärung.',
     `Heute ist ${wtag}.`,
     'Engpass: ' + (engpassAus(kontext) || 'nicht festgelegt'),
+    stand.length ? 'Peters Stand aus der Standortbestimmung:\n' + stand.join('\n') : '',
+    lage?.standortEtappe ? `Peter hat die Standortbestimmung noch nicht abgeschlossen (Etappe ${lage.standortEtappe} von 3 ist offen). Geht es um Richtung, Prioritäten oder den Engpass, schlag ihm diese Etappe vor: zwölf Minuten, frei erzählt.` : '',
+    ...kalender,
     jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${i.frist})` : ''}${i.wenn ? ` | Plan: ${i.wenn}` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
     warnungen.length ? 'Warnsignale (von Life berechnet, sprich sie an):\n' + warnungen.map((w) => '- ' + w).join('\n') : 'Keine Warnsignale.',
     'Körper (zusammengefasst):\n' + koerper + (k.trainingstagHeute ? `\nHeute ist ein Trainingstag (Ganzkörper, Blockwoche ${k.blockWoche} von 5).` : ''),
@@ -82,7 +87,7 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
     `COACH ${art.toUpperCase()}`,
     ...zeilen,
     art === 'morgen'
-      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Schlaf und Erholung, Training, Engpass und einen Plan von gestern Abend, falls vorhanden), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, bevorzugt für jemanden mit länger keinem Kontakt oder einem nahen Geburtstag, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
+      ? 'Antworte nur mit JSON: {"text": string (2 bis 3 Sätze, höchstens 280 Zeichen: worauf es heute ankommt, mit Bezug auf Schlaf und Erholung, Training, Engpass und einen Plan von gestern Abend, falls vorhanden; ist freie Zeit im Kalender bekannt, nenn für das Wichtigste eine konkrete Uhrzeit in einer Lücke und plane nie in Familienzeit), "geste": string (eine kleine, konkrete, nette oder unerwartete Geste für einen der genannten Menschen oder die Familie, bevorzugt für jemanden mit länger keinem Kontakt oder einem nahen Geburtstag, die heute höchstens 10 Minuten kostet, höchstens 140 Zeichen; leer, wenn niemand genannt ist)}'
       : 'Antworte nur mit JSON: {"text": string (Rückblick auf heute in 2 bis 3 Sätzen, höchstens 320 Zeichen: was du in den Antworten siehst, ein Muster der letzten Tage, falls eines da ist, und ein Satz zum Plan für morgen)}',
   ].filter(Boolean).join('\n\n');
 

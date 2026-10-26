@@ -19,5 +19,5 @@ export async function GET() {
   ]);
   const morgen = rows.find((r) => r.art === 'morgen')?.antwort ?? null;
   const abend = rows.find((r) => r.art === 'abend')?.antwort ?? null;
-  return NextResponse.json({ morgen, abend, warnungen: [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)], offen: lage?.offen ?? [], empfehlung: lage?.empfehlung ?? null, wochenstartOffen: lage?.wochenstartOffen ?? false });
+  return NextResponse.json({ morgen, abend, warnungen: [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)], offen: lage?.offen ?? [], empfehlung: lage?.empfehlung ?? null, wochenstartOffen: lage?.wochenstartOffen ?? false, standortEtappe: lage?.standortEtappe ?? null });
 }

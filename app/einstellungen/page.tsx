@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { Mitteilungen } from '../mitteilungen';
+import { KalenderEinstellungen } from '../kalender';
 import { Rueckmeldung } from '../rueckmeldung';
 import { Darstellung } from '../darstellung';
 
@@ -58,6 +59,7 @@ export default function Einstellungen() {
       </section>
 
       <Mitteilungen onToast={(t, k) => setToast(t, k)} />
+      <KalenderEinstellungen onToast={(t, k) => setToast(t, k)} />
 
       <section className="gsec">
         <h2 className="glabel">Was Claude nie sieht</h2>
@@ -107,7 +109,7 @@ export default function Einstellungen() {
 
       <Rueckmeldung onToast={(t, k) => setToast(t, k)} />
 
-      <p className="foot">Life 0.14 · Server in Deutschland</p>
+      <p className="foot">Life 0.15 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

@@ -18,6 +18,9 @@ export const TEST_ENV = {
   LIFE_ZEITPLAN: 'aus',
   GITHUB_ISSUES_TOKEN: 'github-test-token',
   GITHUB_API: 'http://127.0.0.1:4010',
+  CALDAV_URL: 'http://127.0.0.1:4011/',
+  ICLOUD_USER: 'test@example.com',
+  ICLOUD_APP_PASSWORT: 'abcd-efgh-ijkl-mnop',
 };
 
 export default defineConfig({

@@ -28,6 +28,8 @@ test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sic
   expect((await request.get('/api/items')).status()).toBe(401);
   expect((await request.get('/api/checkin')).status()).toBe(401);
   expect((await request.get('/api/coach')).status()).toBe(401);
+  for (const u of ['/api/stand', '/api/stand/1', '/api/kalender']) expect((await request.get(u)).status(), u).toBe(401);
+  expect((await request.post('/api/kalender')).status()).toBe(401);
   expect((await request.post('/api/capture', { headers: { authorization: 'Bearer falsch' }, data: { text: 'x' } })).status()).toBe(401);
   const health = await request.get('/api/health');
   expect(health.status()).toBe(200);
@@ -135,7 +137,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen', '/wochenstart']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/mehr', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -265,14 +267,14 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('12,50 Bäcker');
     await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Alltag' }).click();
     await page.getByRole('button', { name: 'Festhalten' }).click();
-    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Bäcker.*12,50 €/);
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Bäcker' })).toContainText('12,50 €');
     await page.getByRole('radiogroup', { name: 'Topf' }).getByRole('radio', { name: 'Claude ordnet zu' }).click();
     await page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker').fill('Tanken 80');
     await page.getByRole('button', { name: 'Festhalten' }).click();
-    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Tanken.*80 €/);
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Tanken' })).toContainText('80 €');
     await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
     await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
-    await expect(page.locator('section[aria-label="Zuletzt"] .buchung').first()).toContainText(/Testmarkt.*23,45 €/);
+    await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Testmarkt' })).toContainText('23,45 €');
     await expect(page.locator('section[aria-label="Diese Woche"] .kachel.topf')).toHaveCount(3);
     await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufenplan');
     await page.locator('section[aria-label="Bereiche"]').getByRole('link', { name: /Monatlich/ }).click();
@@ -337,7 +339,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.tagespunkte li')).toHaveCount(7);
     if (process.env.SCREENSHOTS) for (const t of ['light', 'dark']) {
       await page.evaluate((x) => { document.documentElement.dataset.theme = x; }, t);
-      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart']]) {
+      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart'], ['/stand', 'stand'], ['/stand/1', 'stand-etappe']]) {
         await page.context().addCookies([{ name: 'life-thema', value: t, url: new URL('/', page.url()).toString() }]);
         await page.goto(p); await page.waitForTimeout(500);
         await page.screenshot({ path: `test-results/design/${n}-${t}.png`, fullPage: true });
@@ -463,6 +465,98 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect([e.verpasst, e.nachmittag, e.wochenstart]).toEqual([false, true, true]);
     await page.goto('/einstellungen');
     await expect(page.locator('main')).toContainText('Mitteilungen');
+  });
+
+  await test.step('Kalender: iCloud lesen, Familie geschützt, Coach sieht nur Platzhalter', async () => {
+    await page.goto('/einstellungen');
+    const k = page.locator('section[aria-label="Kalender"]');
+    await k.getByRole('button', { name: 'Kalender suchen' }).click();
+    await expect(page.locator('.toast')).toContainText('2 Kalender');
+    await expect(k).toContainText('Privat');
+    await expect(k.getByLabel('Art von Familie Gneuß')).toHaveValue('familie');
+    await expect(k).not.toContainText('Erinnerungen');
+    await page.goto('/');
+    const heute = page.locator('section[aria-label="Heute im Kalender"]');
+    await expect(heute).toContainText('Abstimmung mit Carlotta');
+    await expect(heute).toContainText('Laternenumzug');
+    await expect(heute).toContainText('08:00');
+    const coach = page.locator('section[aria-label="Coach"]');
+    await coach.getByLabel('Nachricht an den Coach').fill('Wann passt das Angebot heute?');
+    await coach.getByRole('button', { name: 'Senden' }).click();
+    await expect(coach.locator('.chat-zeile.coach:not(.working)')).toHaveCount(3);
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    const letzter = prompts.filter((x) => x.startsWith('COACH CHAT')).at(-1)!;
+    expect(letzter).toContain('16:30–18:00 Familie (geschützt');
+    expect(letzter).toMatch(/10:00–11:00 Abstimmung mit \[Person \d+\]/);
+    expect(letzter).not.toContain('Laternenumzug');
+    expect(letzter).not.toContain('Carlotta');
+    // Ausgeschaltet zählt der Kalender nicht mehr
+    await page.goto('/einstellungen');
+    await page.getByRole('switch', { name: 'Familie Gneuß einbeziehen' }).click();
+    await expect(page.getByRole('switch', { name: 'Familie Gneuß einbeziehen' })).toHaveAttribute('aria-checked', 'false');
+    await page.goto('/');
+    await expect(page.locator('section[aria-label="Heute im Kalender"]')).not.toContainText('Laternenumzug');
+    await page.goto('/einstellungen');
+    await page.getByRole('switch', { name: 'Familie Gneuß einbeziehen' }).click();
+    await expect(page.locator('.toast')).toContainText('Termine abgeglichen');
+  });
+
+  await test.step('Standortbestimmung: drei Etappen, frei erzählt, Vorschläge übernehmen', async () => {
+    expect((await (await page.request.get('/api/coach')).json()).standortEtappe).toBe(1);
+    await page.goto('/');
+    await page.locator('section[aria-label="Coach"]').getByRole('link', { name: 'Standortbestimmung' }).click();
+    await page.waitForURL('/stand/1');
+    const seiten = page.locator('.bl-seite');
+    await expect(seiten).toHaveCount(6);
+    for (let i = 0; i < 5; i++) {
+      await seiten.nth(i).getByRole('radio', { name: String(i + 3) }).click();
+      await seiten.nth(i).locator('textarea').fill(i === 1 ? 'Mehr Zeit mit Carlotta und dem Team, ohne Bildschirm' : 'Erfundene Testantwort zu diesem Bereich');
+    }
+    await page.getByRole('button', { name: 'Auswerten lassen' }).click();
+    await expect(page.locator('main')).toContainText('Das habe ich gehört');
+    await expect(page.locator('section[aria-label="Vorschlag Fokus"]')).toContainText('Zeit');
+    await page.locator('section[aria-label="Vorschlag Fokus"]').getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.locator('section[aria-label="Vorschlag Fokus"]')).toContainText('Übernommen');
+    await page.getByRole('link', { name: 'Weiter zu Etappe 2' }).click();
+    await page.waitForURL('/stand/2');
+    const werte = page.getByRole('group', { name: /Welche drei Werte/ });
+    for (const w of ['Familie', 'Mut', 'Wirkung']) await werte.getByRole('button', { name: w }).click();
+    await expect(werte.getByRole('button', { name: 'Ruhe' })).toBeDisabled();
+    await page.getByLabel(/Es ist ein Jahr später/).fill('Erfundenes Jahresbild für den Test');
+    await page.getByRole('button', { name: 'Auswerten lassen' }).click();
+    await expect(page.locator('.st-vorschlag')).toHaveCount(4);
+    for (let i = 0; i < 4; i++) await page.locator('.st-vorschlag').getByRole('button', { name: 'Übernehmen' }).first().click();
+    await expect(page.locator('.st-vorschlag.ja')).toHaveCount(4);
+    await page.getByRole('link', { name: 'Weiter zu Etappe 3' }).click();
+    await page.waitForURL('/stand/3');
+    await page.getByLabel(/Erzähl den Weg/).fill('Erfundener Weg: Kontakte kommen, Gespräche nicht.');
+    await page.getByRole('button', { name: 'Auswerten lassen' }).click();
+    await expect(page.locator('.st-vorschlag')).toHaveCount(2);
+    const eng = page.locator('section[aria-label="Vorschlag Engpass"]');
+    await expect(eng).toContainText('es fehlen Gespräche');
+    await eng.getByRole('button', { name: 'Anders formulieren' }).click();
+    await eng.getByLabel('Engpass in deinen Worten').fill('Zu wenige Erstgespräche mit Behörden, Ziel acht im Monat');
+    await eng.getByRole('button', { name: 'So übernehmen' }).click();
+    await page.locator('section[aria-label="Vorschlag Wochenziel"]').getByRole('button', { name: 'Übernehmen' }).click();
+    await page.getByRole('link', { name: 'Zu deinem Stand' }).click();
+    await page.waitForURL('/stand');
+    const main = page.locator('main');
+    for (const t of ['Fokus Zeit', 'Zu wenige Erstgespräche mit Behörden', 'Familie, Mut, Wirkung', 'Acht Erstgespräche im Monat', 'Neue Shop-Produkte', 'Drei Erstgespräche vereinbart', 'Wiederholen']) await expect(main).toContainText(t);
+    await expect(page.locator('section[aria-label="Baseline"] .ringzelle')).toHaveCount(5);
+    expect((await (await page.request.get('/api/coach')).json()).standortEtappe).toBeNull();
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    const st = prompts.filter((x) => x.startsWith('STANDORT'));
+    expect(st.length).toBe(3);
+    expect(st.join(' ')).not.toContain('Carlotta');
+    expect(st[2]).toContain('Fokus: Zeit');
+    expect((await page.request.post('/api/stand/2', { data: { aktion: 'uebernehmen', vorschlag: { art: 'engpass', text: 'gibt es in Etappe 2 nicht' } } })).status()).toBe(400);
+    expect((await page.request.post('/api/stand/1', { data: { antworten: { zeit: { wert: 99 } } } })).status()).toBe(400);
+    expect((await page.request.get('/api/stand/7')).status()).toBe(404);
+    await page.goto('/woche');
+    await expect(page.locator('.engpass')).toContainText('Zu wenige Erstgespräche mit Behörden');    if (process.env.SCREENSHOTS) for (const [p2, n] of [['/stand', 'stand-voll'], ['/stand/3', 'stand-auswertung'], ['/', 'heute-kalender']] as const) {
+      await page.goto(p2); await page.waitForTimeout(600);
+      await page.screenshot({ path: `test-results/design/${n}-dark.png`, fullPage: true });
+    }
   });
 
   await test.step('Wochenstart: Rückblick, Engpass, drei Dinge, Parkplatz, seitenweise', async () => {

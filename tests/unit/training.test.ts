@@ -173,9 +173,10 @@ test('Heute-Bausteine: unbekannte raus, doppelte raus, feste immer dabei, leer h
   assert.deepEqual(bausteineAus(['coach', 'coach', 'hack', '<b>']), ['fragebogen', 'coach', 'jetzt']);
   assert.deepEqual(bausteineAus(['woche', 'jetzt', 'fragebogen', 'koerper']), ['woche', 'jetzt', 'fragebogen', 'koerper']);
   const { nachruesten } = await import('../../lib/heute-bausteine.ts');
-  assert.deepEqual(nachruesten(['woche', 'coach', 'jetzt', 'fragebogen'], 1)?.liste, ['woche', 'schnell', 'empfohlen', 'coach', 'jetzt', 'fragebogen']);
-  assert.deepEqual(nachruesten(['coach', 'jetzt', 'fragebogen'], 2)?.liste, ['empfohlen', 'coach', 'jetzt', 'fragebogen']);
-  assert.equal(nachruesten(['coach', 'jetzt', 'fragebogen'], 3), null);
+  assert.deepEqual(nachruesten(['woche', 'coach', 'jetzt', 'fragebogen'], 1)?.liste, ['woche', 'schnell', 'empfohlen', 'kalender', 'coach', 'jetzt', 'fragebogen']);
+  assert.deepEqual(nachruesten(['coach', 'jetzt', 'fragebogen'], 2)?.liste, ['empfohlen', 'kalender', 'coach', 'jetzt', 'fragebogen']);
+  assert.deepEqual(nachruesten(['woche', 'empfohlen', 'jetzt'], 3)?.liste, ['woche', 'empfohlen', 'kalender', 'jetzt']);
+  assert.equal(nachruesten(['coach', 'jetzt', 'fragebogen'], 4), null);
 });
 
 test('Tagesregeln: Empfehlung, offene Punkte, Engpass, Montag', async () => {

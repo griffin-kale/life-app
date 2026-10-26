@@ -6,7 +6,7 @@ import { api } from './ui';
 import type { Empfehlung } from '@/lib/tagesregeln';
 
 type CoachText = { text: string; geste?: string; warnungen: string[] } | null;
-type CoachStand = { morgen: CoachText; abend: CoachText; warnungen: string[]; offen?: string[]; empfehlung?: Empfehlung | null; wochenstartOffen?: boolean };
+type CoachStand = { morgen: CoachText; abend: CoachText; warnungen: string[]; offen?: string[]; empfehlung?: Empfehlung | null; wochenstartOffen?: boolean; standortEtappe?: number | null };
 type Zeile = { rolle: 'ich' | 'coach'; text: string; zeit: string };
 type Stand = { erledigt: Record<Bogen['art'], boolean>; aufgaben: string[]; who5: number | null };
 
@@ -81,6 +81,7 @@ export function Coach({ stand }: { stand: ReturnType<typeof useCheckins> }) {
         </div>
       ) : null}
       <div className="chat-vorschlaege">
+        {c.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standortbestimmung</Link> : null}
         {c.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenstart</Link> : null}
         {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={denkt} onClick={() => fragen(v)}>{v}</button>)}
       </div>

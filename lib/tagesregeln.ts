@@ -14,6 +14,7 @@ export type Lage = {
   ruheHeuteMin: number;
   kontakt: string | null;      // Name eines Menschen, bei dem es länger her ist
   wochenstartOffen: boolean;
+  standortEtappe?: number | null; // nächste offene Etappe der Standortbestimmung
 };
 
 export type Empfehlung = { id: string; titel: string; grund: string; href: string; farbe: string };
@@ -22,6 +23,7 @@ export type Empfehlung = { id: string; titel: string; grund: string; href: strin
 export function empfehlung(l: Lage): Empfehlung {
   const abends = l.stunde >= 20;
   const muede = (l.erholung !== null && l.erholung < 34) || (l.schlafMin !== null && l.schlafMin < 360) || (l.morgenErholung !== null && l.morgenErholung <= 1);
+  if (l.standortEtappe && !abends) return { id: 'standort', titel: `Standortbestimmung, Etappe ${l.standortEtappe}`, grund: 'Zwölf Minuten erzählen. Danach kennt der Coach deine Richtung und kann wirklich priorisieren.', href: `/stand/${l.standortEtappe}`, farbe: 'var(--k-mental)' };
   if (l.wochenstartOffen && l.wochentag <= 2 && !abends) return { id: 'wochenstart', titel: 'Wochenstart', grund: 'Zehn Minuten für die Woche: Rückblick, Engpass, drei Dinge.', href: '/wochenstart', farbe: 'var(--k-zeit)' };
   if (abends) return { id: 'runter', titel: 'Runterfahren, 8 Min.', grund: 'Langes Ausatmen beruhigt, danach kommen die Abendfragen.', href: '/koerper/ruhe?vorlage=runter', farbe: 'var(--k-mental)' };
   if (muede && l.stunde < 18 && l.ruheHeuteMin < 10) return { id: 'nsdr', titel: 'NSDR, 20 Min.', grund: l.erholung !== null && l.erholung < 34 ? `Erholung ${l.erholung} %. Tiefe Entspannung im Liegen holt dir einen Teil zurück.` : 'Kurze Nacht. Tiefe Entspannung im Liegen holt dir einen Teil zurück.', href: '/koerper/ruhe?vorlage=nsdr', farbe: 'var(--k-mental)' };
@@ -39,6 +41,7 @@ export type OffenLage = {
   morgen: boolean; abend: boolean;
   trainingstag: boolean; kraftHeute: boolean; trainingUhrzeit: string;
   wochenstartOffen: boolean;
+  standortEtappe?: number | null;
 };
 
 const min = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + (m || 0); };
@@ -48,6 +51,7 @@ export function offenePunkte(o: OffenLage): string[] {
   const jetzt = o.stunde * 60 + o.minute;
   const p: string[] = [];
   for (const a of o.jetzt) if (!a.erledigt && a.zeit && jetzt - min(a.zeit) >= 30) p.push(`„${a.titel}“ stand für ${a.zeit} an.`);
+  if (o.standortEtappe) p.push(`Die Standortbestimmung fehlt noch (Etappe ${o.standortEtappe} von 3).`);
   if (o.wochenstartOffen && o.wochentag <= 3) p.push('Der Wochenstart fehlt noch.');
   if (!o.morgen && o.stunde >= 9 && o.stunde < 14) p.push('Die Morgenfrage ist noch offen.');
   if (o.trainingstag && !o.kraftHeute && jetzt - min(o.trainingUhrzeit) >= 60) p.push('Heute ist Trainingstag, die Einheit fehlt noch.');

@@ -17,6 +17,7 @@ const BEREICHE: Ziel[] = [
   { href: '/geld', name: 'Geld', farbe: 'var(--k-geld)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
 ];
 const UEBERBLICK: Ziel[] = [
+  { href: '/stand', name: 'Dein Stand', farbe: 'var(--k-mental)', pfad: 'M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z' },
   { href: '/kompass', name: 'Kompass', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
   { href: '/menschen', name: 'Menschen', farbe: 'var(--k-sozial)', pfad: 'M9 11.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19c.9-2.8 3-4.3 5.5-4.3s4.6 1.5 5.5 4.3M16.5 12a2.5 2.5 0 1 0 0-5M17 14.6c1.8.3 3 1.6 3.5 3.9' },
   { href: '/archiv', name: 'Logbuch', farbe: 'var(--k-zeit)', pfad: 'M6.5 3.5h8l3 3v14h-11zM9 10h6M9 14h6' },

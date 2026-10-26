@@ -1,12 +1,13 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { TabBar, TopBar, api, useToast } from '../ui';
+import Link from 'next/link';
+import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { Blaetter, type BlaetterSteuerung } from '../blaetter';
 import { FARBE, KONTEN, NAME, Ring } from '../ringe';
 
 type Kurz = { id: string; titel: string; stapel: string | null };
-type W = { montag: string; offen: boolean; rueckblick: { ringe: Record<string, number | null> | null; alleZu: boolean; erledigt: number; liegen: Kurz[] }; engpass: string; kandidaten: Kurz[]; geparkt: Kurz[]; fokus: string[] };
+type W = { montag: string; offen: boolean; rueckblick: { ringe: Record<string, number | null> | null; alleZu: boolean; erledigt: number; liegen: Kurz[] }; engpass: string; kandidaten: Kurz[]; geparkt: Kurz[]; fokus: string[]; wochenziel: string };
 const PARK: [string, string][] = [['woche', 'In die Woche'], ['bleibt', 'Liegen lassen'], ['streichen', 'Streichen']];
 
 /** Wochenstart in vier Schritten, eine Seite pro Schritt. Alles zum Antippen, eigene Worte gehen immer. */
@@ -17,10 +18,12 @@ export default function Wochenstart() {
   const [fokus, setFokus] = useState<string[]>([]);
   const [park, setPark] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [ziel, setZiel] = useState('');
+  const [eigen, setEigen] = useState('');
   const [toast, setToast] = useToast();
   const blatt = useRef<BlaetterSteuerung>(null);
   const router = useRouter();
-  useEffect(() => { api<W>('/api/wochenstart').then((x) => { setW(x); setFokus(x.fokus); }).catch((e) => setToast((e as Error).message, 'err')); }, [setToast]);
+  useEffect(() => { api<W>('/api/wochenstart').then((x) => { setW(x); setFokus(x.fokus); setZiel(x.wochenziel); }).catch((e) => setToast((e as Error).message, 'err')); }, [setToast]);
 
   const umschalten = (id: string) => setFokus((f) => (f.includes(id) ? f.filter((x) => x !== id) : f.length >= 3 ? f : [...f, id]));
   async function parken(id: string, wohin: string) {
@@ -29,6 +32,14 @@ export default function Wochenstart() {
     try { await api(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify(wohin === 'woche' ? { stapel: 'woche' } : { status: 'archiv' }) }); }
     catch (e) { setToast((e as Error).message, 'err'); }
   }
+  async function eigenesDazu() {
+    const t = eigen.trim(); if (!t || !w) return;
+    try {
+      const r = await api<{ id: string }>('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) });
+      setW({ ...w, kandidaten: [{ id: r.id, titel: t.slice(0, 80), stapel: null }, ...w.kandidaten] });
+      setFokus((f) => (f.length >= 3 ? f : [...f, r.id])); setEigen('');
+    } catch (e) { setToast((e as Error).message, 'err'); }
+  }
   async function abschliessen() {
     setBusy(true);
     try {
@@ -36,6 +47,7 @@ export default function Wochenstart() {
       // Geparktes aus den drei Dingen kommt in die Woche
       for (const id of fokus) if (w?.geparkt.some((g) => g.id === id) && !park[id]) await api(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify({ stapel: 'woche' }) });
       await api('/api/wochenstart', { method: 'POST', body: JSON.stringify({ aktion: 'fokus', ids: fokus }) });
+      if (ziel.trim() && ziel.trim() !== w?.wochenziel) await api('/api/wochenstart', { method: 'POST', body: JSON.stringify({ aktion: 'wochenziel', text: ziel }) });
       await api('/api/wochenstart', { method: 'POST', body: JSON.stringify({ aktion: 'fertig' }) });
       api('/api/heute', { method: 'POST' }).catch(() => {});
       router.push('/woche?wochenstart=fertig');
@@ -53,6 +65,7 @@ export default function Wochenstart() {
     <div key="e" className="ws-seite">
       <h2 className="ws-titel">Engpass</h2>
       <p className="ws-engpass">{w.engpass || 'Noch kein Engpass festgelegt.'}</p>
+      {!w.engpass ? <p className="muted small">Du weißt nicht, was dich gerade bremst? <Link href="/stand/3" className="linkbtn">Leite ihn mit dem Coach her</Link>, das dauert zwölf Minuten.</p> : null}
       <div className="fb-opts" role="radiogroup" aria-label="Engpass">
         <button type="button" role="radio" aria-checked={engpass === 'passt'} className="fb-chip" onClick={() => { setEngpass('passt'); setTimeout(() => blatt.current?.zu(2), 260); }}>Passt so</button>
         <button type="button" role="radio" aria-checked={engpass === 'neu'} className="fb-chip" onClick={() => setEngpass('neu')}>Neu setzen</button>
@@ -61,9 +74,18 @@ export default function Wochenstart() {
     </div>,
     <div key="f" className="ws-seite">
       <h2 className="ws-titel">Drei Dinge der Woche</h2>
+      <span className="fb-frage">Wochenziel</span>
+      <textarea className="fb-text" rows={2} value={ziel} onChange={(e) => setZiel(e.target.value)} placeholder="Was bis Freitag geschafft sein soll, in einem Satz" aria-label="Wochenziel" />
+      <span className="fb-frage">Drei Dinge, die darauf einzahlen</span>
       <p className="muted small">{fokus.length} von 3 gewählt. Sie kommen in dieser Woche zuerst.</p>
-      <div className="fb-opts stack" role="group" aria-label="Drei Dinge">
-        {w.kandidaten.map((k) => <button key={k.id} type="button" aria-pressed={fokus.includes(k.id)} className="fb-chip left" disabled={!fokus.includes(k.id) && fokus.length >= 3} onClick={() => umschalten(k.id)}>{k.titel}{k.stapel === 'geparkt' ? ' · Parkplatz' : ''}</button>)}
+      {w.kandidaten.length ? (
+        <div className="fb-opts stack" role="group" aria-label="Drei Dinge">
+          {w.kandidaten.map((k) => <button key={k.id} type="button" aria-pressed={fokus.includes(k.id)} className="fb-chip left" disabled={!fokus.includes(k.id) && fokus.length >= 3} onClick={() => umschalten(k.id)}>{k.titel}{k.stapel === 'geparkt' ? ' · Parkplatz' : !k.stapel ? ' · neu' : ''}</button>)}
+        </div>
+      ) : <p className="muted small">Gerade liegen keine offenen Aufgaben in Life. Schreib die drei Dinge selbst dazu.</p>}
+      <div className="geld-neu">
+        <input value={eigen} onChange={(e) => setEigen(e.target.value)} placeholder="Eigenes Ding, gern diktiert" aria-label="Eigenes Ding der Woche" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); eigenesDazu(); } }} />
+        <button type="button" className="geld-plus" aria-label="Dazunehmen" disabled={!eigen.trim() || fokus.length >= 3} onClick={eigenesDazu}>{Icon.plus}</button>
       </div>
     </div>,
     <div key="p" className="ws-seite">
@@ -79,6 +101,7 @@ export default function Wochenstart() {
       <h2 className="ws-titel">Fertig</h2>
       <ul className="ws-liste">
         <li>Engpass: {engpass === 'neu' && neu.trim() ? neu.trim() : w.engpass || 'nicht festgelegt'}</li>
+        <li>Wochenziel: {ziel.trim() || 'nicht festgelegt'}</li>
         <li>Drei Dinge: {fokus.length ? w.kandidaten.filter((k) => fokus.includes(k.id)).map((k) => k.titel).join(' · ') : 'keine gewählt'}</li>
         <li>Parkplatz: {Object.keys(park).length} von {w.geparkt.length} gesichtet</li>
       </ul>

@@ -928,3 +928,69 @@ a.chat-chip { background: #F2CC5B; color: #001D51; }
 .geld-plus { width: var(--tap); height: var(--tap); flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); cursor: pointer; }
 .geld-plus svg { width: 20px; height: 20px; }
 .geld-plus:disabled { background: rgb(var(--ink-rgb) / .09); color: var(--faint); cursor: default; }
+
+/* ---------- 0.15: Standortbestimmung, Dein Stand, Kalender ---------- */
+.st-etappen { display: flex; gap: 6px; margin-top: 10px; max-width: 22rem; }
+.st-etappen span { flex: 1; height: 4px; border-radius: 4px; background: rgb(var(--tint-rgb) / .18); }
+.st-etappen span.an { background: var(--k-geld); }
+.st-etappen span.jetzt { background: rgb(var(--sand-rgb) / .55); }
+.st-karte { gap: 12px; align-content: start; }
+.st-frage { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.36rem; line-height: 1.18; letter-spacing: -.006em; text-wrap: pretty; }
+.st-nachfrage { margin: 4px 0 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.1rem; line-height: 1.22; }
+.st-hilfe { margin: 0; font-size: .875rem; line-height: 1.4; color: var(--hero-muted); }
+.st-skala { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.st-skala button { min-height: 40px; padding: 0; border: 0; border-radius: 10px; background: rgb(255 255 255 / .1); color: var(--hero-ink); font: inherit; font-size: .9375rem; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; }
+.st-skala button[aria-checked="true"] { background: var(--hero-ink); color: #001D51; }
+.st-skala-achse { display: flex; justify-content: space-between; margin-top: -6px; font-size: .6875rem; color: var(--hero-muted); }
+.st-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-chips button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .1); color: var(--hero-ink); font: inherit; font-size: .9375rem; cursor: pointer; }
+.st-chips button[aria-pressed="true"] { background: #F2CC5B; color: #001D51; font-weight: 600; }
+.st-chips button:disabled { opacity: .4; cursor: default; }
+.st-erzaehl { display: grid; gap: 6px; }
+.st-text { width: 100%; min-height: 7.5rem; field-sizing: content; max-height: 50vh; resize: none; padding: 12px; border: 0; border-radius: 16px; background: rgb(0 0 0 / .22); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); color: var(--hero-ink); font: inherit; font-size: 1rem; line-height: 1.45; }
+.st-text::placeholder { color: var(--hero-muted); }
+.st-text:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .45); }
+.st-mikro { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; color: var(--hero-muted); }
+.st-mikro svg { width: 14px; height: 14px; color: #F2CC5B; }
+.st-los { background: var(--hero-ink); color: #001D51; }
+.st-los:disabled { background: rgb(255 255 255 / .14); color: var(--hero-muted); }
+.st-auswertung { display: grid; gap: 12px; }
+.st-vorschlag { display: grid; gap: 8px; padding: 14px 16px; border-radius: 18px; background: var(--panel); box-shadow: var(--card-shadow), inset 3px 0 0 var(--k-geld); }
+.st-vorschlag.ja { box-shadow: var(--card-shadow), inset 3px 0 0 var(--ok); }
+.st-vorschlag.nein { opacity: .55; box-shadow: var(--card-shadow), inset 3px 0 0 var(--faint); }
+.st-art { font-size: .6875rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--sand); }
+.st-satz { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.15rem; line-height: 1.25; text-wrap: pretty; }
+.st-herleitung { margin: 0; font-size: .875rem; line-height: 1.4; color: var(--muted); }
+.st-ok { font-size: .875rem; font-weight: 600; color: var(--ok); }
+.st-weg { font-size: .875rem; color: var(--faint); }
+.st-weiter { margin-top: 6px; }
+.st-start { margin-bottom: 4px; }
+.st-fokus { margin: 4px 0 0; display: grid; gap: 2px; font-size: .9375rem; line-height: 1.4; }
+.st-fokus b { font-size: .6875rem; letter-spacing: .07em; text-transform: uppercase; color: var(--k-mental); }
+.cell.st-zeile { align-items: flex-start; justify-content: flex-start; gap: 12px; padding-block: 12px; line-height: 1.4; }
+.st-zeile em { flex: 0 0 6.2rem; padding-top: 2px; font-style: normal; font-size: .6875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.st-zeile > span { flex: 1; min-width: 0; font-size: .9375rem; overflow-wrap: anywhere; }
+.st-leer { color: var(--faint); }
+.st-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.st-liste b { font-weight: 600; color: var(--sand); margin-right: 4px; }
+.ringzelle small { font-size: .6875rem; font-weight: 700; }
+.ringzelle small.okc { color: var(--ok); } .ringzelle small.warn { color: var(--warn); }
+
+/* Kalender auf Heute */
+.kal { gap: 6px; }
+.kal-ganztag { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 2px; }
+.kal-chip { padding: 4px 10px; border-radius: 999px; font-size: .8125rem; font-weight: 600; background: rgb(var(--tint-rgb) / .12); }
+.kal-chip.familie { background: color-mix(in srgb, var(--k-sozial) 20%, transparent); }
+.kal-slot { display: flex; align-items: stretch; gap: 10px; font-size: .875rem; }
+.kal-slot time { flex: 0 0 2.6rem; padding-top: 7px; color: var(--faint); font-variant-numeric: tabular-nums; font-size: .8125rem; }
+.kal-slot > div { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 7px 11px; border-radius: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.kal-slot small { font-size: .75rem; color: var(--muted); }
+.kal-slot.privat > div { background: color-mix(in srgb, var(--k-zeit) 13%, transparent); box-shadow: inset 3px 0 0 var(--k-zeit); }
+.kal-slot.arbeit > div { background: color-mix(in srgb, var(--k-mental) 13%, transparent); box-shadow: inset 3px 0 0 var(--k-mental); }
+.kal-slot.familie > div { background: color-mix(in srgb, var(--k-sozial) 14%, transparent); box-shadow: inset 3px 0 0 var(--k-sozial); }
+.kal-slot.frei > div { color: var(--muted); box-shadow: inset 0 0 0 1px rgb(var(--tint-rgb) / .22); background: none; padding-block: 5px; font-size: .8125rem; }
+.kal-slot.vorschlag > div { background: rgb(var(--sand-rgb) / .14); box-shadow: inset 0 0 0 1.5px rgb(var(--sand-rgb) / .5); }
+.kal-slot.vorschlag b { font-weight: 600; }
+.kal-zeile { gap: 10px; }
+.kal-zeile .lbl { flex: 1; }
+.kal-punkt { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; }

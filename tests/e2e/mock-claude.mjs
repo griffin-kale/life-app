@@ -19,6 +19,16 @@ function einordnen(entry) {
   if (/Laternen/.test(t)) return E({ kategorie: 'privat', art: 'sozial', titel: 'Laternen basteln', bereinigt: t, schritt: 'Mit den Kindern Laternen basteln', ziel: 'Privat', hebel: 0, aufwand_min: 60 });
   return E({ bereinigt: t, schritt: t.slice(0, 60), hebel: 1 });
 }
+function standort(p) {
+  const n = Number(p.match(/STANDORT ETAPPE (\d)/)?.[1]);
+  if (n === 1) return { zusammenfassung: 'Zeit ist gerade dein engster Bereich, Sozial dein stärkster.', vorschlaege: [{ art: 'fokus', bereich: 'zeit', text: 'Zwei Stunden am Morgen ohne Mails' }] };
+  if (n === 2) return { zusammenfassung: 'Du willst mehr Wirkung bei weniger Hektik.', vorschlaege: [
+    { art: 'werte', text: 'Familie, Mut, Wirkung' }, { art: 'jahr', text: 'Die Plattform trägt sich, du arbeitest vier Tage.' },
+    { art: 'quartal', bereich: 'geschaeft', text: 'Acht Erstgespräche im Monat' }, { art: 'weglassen', text: 'Neue Shop-Produkte' }] };
+  return { zusammenfassung: 'Der Stau liegt vor dem Erstgespräch.', vorschlaege: [
+    { art: 'engpass', text: 'Zu wenige Erstgespräche', herleitung: 'Ideen und Angebote gibt es genug, es fehlen Gespräche.' },
+    { art: 'wochenziel', text: 'Drei Erstgespräche vereinbart' }, { art: 'hack', text: 'darf nicht durch' }] };
+}
 function sortieren(p) {
   const kor = (p.split('So hat Peter zuletzt korrigiert')[1] || '').split('\n\nOffene')[0];
   if (kor) console.log('KORREKTUREN:' + kor.replace(/\n/g, ' | ').slice(0, 400));
@@ -93,7 +103,7 @@ http.createServer((req, res) => {
     const a = bon ? { laden: 'Testmarkt', summe: 23.45, topf: 'Alltag' }
       : geld ? { topf: /Tanken/.test(text) ? 'Familie' : 'Alltag' }
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
-      : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+      : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' });
       // Langer Eintrag mit „ABSCHNEIDEN“: beim ersten Versuch abgeschnitten wie bei einem zu knappen Limit
@@ -101,6 +111,35 @@ http.createServer((req, res) => {
       const block = body.tool_choice?.name ? { type: 'tool_use', id: 'tu_1', name: body.tool_choice.name, input: a } : { type: 'text', text: JSON.stringify(a) };
       res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [block], stop_reason: body.tool_choice ? 'tool_use' : 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
     }, !essen && !bon && !geld && p.startsWith('SORTIERLAUF') ? 400 : 150);
+    if (text.startsWith('STANDORT')) console.log('mock standort');
     console.log('mock', bon ? 'bon' : geld ? 'geld' : essen ? 'essen' : p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);
   });
 }).listen(4010);
+
+
+// Attrappe für iCloud CalDAV (Port 4011): Privat, Familie und eine Erinnerungsliste ohne Termine.
+const BERLIN = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date()).replace(/-/g, '');
+const TZ = 'BEGIN:VTIMEZONE\r\nTZID:Europe/Berlin\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nDTSTART:19701025T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n';
+const ev = (uid, von, bis, titel, extra = '') => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${TZ}BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTART;TZID=Europe/Berlin:${von}\r\nDTEND;TZID=Europe/Berlin:${bis}\r\n${extra}SUMMARY:${titel}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
+const xml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const ms = (antworten) => `<?xml version="1.0" encoding="UTF-8"?><multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:A="http://apple.com/ns/ical/">${antworten}</multistatus>`;
+const kal = (pfad, name, farbe, comp) => `<response><href>${pfad}</href><propstat><prop><displayname>${xml(name)}</displayname><resourcetype><collection/><C:calendar/></resourcetype><A:calendar-color>${farbe}</A:calendar-color><C:supported-calendar-component-set><C:comp name="${comp}"/></C:supported-calendar-component-set></prop><status>HTTP/1.1 200 OK</status></propstat></response>`;
+http.createServer((req, res) => {
+  const ok = req.headers.authorization === 'Basic ' + Buffer.from('test@example.com:abcd-efgh-ijkl-mnop').toString('base64');
+  if (!ok) { res.writeHead(401); return res.end(); }
+  let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
+    const u = req.url; const h = BERLIN();
+    let body = '';
+    if (req.method === 'PROPFIND' && u === '/') body = ms('<response><href>/</href><propstat><prop><current-user-principal><href>/123/principal/</href></current-user-principal></prop></propstat></response>');
+    else if (req.method === 'PROPFIND' && u === '/123/principal/') body = ms('<response><href>/123/principal/</href><propstat><prop><C:calendar-home-set><href>http://127.0.0.1:4011/123/calendars/</href></C:calendar-home-set></prop></propstat></response>');
+    else if (req.method === 'PROPFIND' && u === '/123/calendars/') body = ms('<response><href>/123/calendars/</href><propstat><prop><resourcetype><collection/></resourcetype></prop></propstat></response>'
+      + kal('/123/calendars/privat/', 'Privat', '#1BADF8FF', 'VEVENT') + kal('/123/calendars/familie/', 'Familie Gneuß', '#FF9500FF', 'VEVENT') + kal('/123/calendars/erinnerungen/', 'Erinnerungen', '#CC73E1FF', 'VTODO'));
+    else if (req.method === 'REPORT' && u === '/123/calendars/privat/') body = ms(
+      [ev('p1', `${h}T100000`, `${h}T110000`, 'Abstimmung mit Carlotta'), ev('p2', '20250106T080000', '20250106T083000', 'Morgenrunde', 'RRULE:FREQ=DAILY\r\n')]
+        .map((d, i) => `<response><href>/123/calendars/privat/${i}.ics</href><propstat><prop><C:calendar-data>${xml(d)}</C:calendar-data></prop></propstat></response>`).join(''));
+    else if (req.method === 'REPORT' && u === '/123/calendars/familie/') body = ms(`<response><href>/123/calendars/familie/1.ics</href><propstat><prop><C:calendar-data>${xml(ev('f1', `${h}T163000`, `${h}T180000`, 'Laternenumzug'))}</C:calendar-data></prop></propstat></response>`);
+    else { res.writeHead(404); return res.end(); }
+    console.log('caldav', req.method, u);
+    res.writeHead(207, { 'content-type': 'application/xml; charset=utf-8' }); res.end(body);
+  });
+}).listen(4011);

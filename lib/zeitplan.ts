@@ -8,6 +8,7 @@ import { abgleichen, verbunden, whoopBereit } from './whoop';
 import { geldStand } from './geld';
 import { kompassStand } from './kompass';
 import { tageslage } from './tag';
+import { vielleichtAbgleichen } from './kalender';
 
 /**
  * Läuft jede Minute im Server: WHOOP abgleichen und Mitteilungen zur richtigen Zeit schicken.
@@ -38,6 +39,7 @@ export async function tick(userId = 'peter') {
     const abstand = minuten(uhr) >= 360 && minuten(uhr) <= 600 ? 3600_000 : 7200_000;
     if (Date.now() - zuletzt > abstand) await abgleichen(userId, 3).catch(() => {});
   }
+  await vielleichtAbgleichen(userId);
   const p = await pushEinstellungen();
   const [ci] = await sql<{ morgen: boolean; abend: boolean }[]>`
     select bool_or(art = 'morgen') as morgen, bool_or(art = 'abend') as abend from checkins where user_id = ${userId} and tag = ${tag}`;

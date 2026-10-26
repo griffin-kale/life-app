@@ -1,12 +1,13 @@
 /** Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. „Jetzt dran“ und der Fragebogen bleiben immer an. */
-export const BAUSTEINE = ['woche', 'schnell', 'empfohlen', 'kompass', 'fragebogen', 'coach', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
+export const BAUSTEINE = ['woche', 'schnell', 'empfohlen', 'kalender', 'kompass', 'fragebogen', 'coach', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-export const STANDARD: Baustein[] = ['woche', 'schnell', 'empfohlen', 'kompass', 'fragebogen', 'coach', 'festhalten', 'jetzt', 'naechste', 'erledigt'];
+export const STANDARD: Baustein[] = ['woche', 'schnell', 'empfohlen', 'kalender', 'kompass', 'fragebogen', 'coach', 'festhalten', 'jetzt', 'naechste', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   woche: ['Wochenstand', 'Sieben Tagespunkte oben'],
   schnell: ['Schnellzugriffe', 'Plus mit Menü, Essen, Ausgabe, Ruhe, Training'],
   empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
+  kalender: ['Kalender', 'Termine, freie Zeit und ein Platz fürs Wichtigste'],
   kompass: ['Kompass', 'Fünf Ringe und Level'],
   fragebogen: ['Fragebogen', 'Erscheint, wenn er dran ist'],
   coach: ['Coach', 'Morgens und abends'],
@@ -30,8 +31,8 @@ export function bausteineAus(roh: unknown): Baustein[] {
 }
 
 /** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
-const NEU: [number, Baustein, Baustein][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell']];
-export const STAND = 3;
+const NEU: [number, Baustein, Baustein][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
+export const STAND = 4;
 
 /** Setzt neue Bausteine einmal in eine gespeicherte Liste. Gibt null zurück, wenn nichts zu tun ist. */
 export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein[]; stand: number } | null {
