@@ -996,24 +996,6 @@ a.chat-chip { background: #F2CC5B; color: #001D51; }
 .kal-punkt { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; }
 
 /* ---------- 0.18: Heute aufgeräumt – Wochenringe oben, Coach als Leiste und Blatt ---------- */
-/* Wochenringe: fünf Ringe ineinander, daneben Werte und Level */
-.wochenringe { display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: 22px; background: var(--panel); box-shadow: var(--card-shadow); color: var(--ink); text-decoration: none; }
-.wochenringe:active { background: var(--press); }
-.wr-bild { flex: 0 0 auto; width: 46%; max-width: 168px; height: auto; }
-.wr-text { flex: 1; min-width: 0; display: grid; gap: 5px; font-size: .875rem; }
-.wr-kopf { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.wr-kopf em { font-style: normal; color: var(--ink); }
-.wr-zeile { display: flex; align-items: center; gap: 7px; font-weight: 600; }
-.wr-zeile i { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; }
-.wr-zeile .num { margin-left: auto; color: var(--muted); font-weight: 500; }
-.wr-level { display: grid; gap: 5px; margin-top: 3px; font-size: .75rem; color: var(--muted); }
-.wr-level b { color: var(--ink); }
-.wr-weg { display: block; height: 5px; border-radius: 3px; background: rgb(var(--tint-rgb) / .16); overflow: hidden; }
-.wr-weg span { display: block; height: 100%; border-radius: 3px; background: var(--k-geld); }
-
-/* Freie Zeit aus dem Kalender an der ersten Aufgabe */
-.chipbtn.frei { color: var(--sand); background: rgb(var(--sand-rgb) / .14); }
-
 /* Coach-Leiste über der Tab-Leiste (iPhone, iPad hochkant schmal). Verlaufskarte, bleibt in beiden Modi dunkel. */
 .coach-leiste { position: fixed; z-index: 11; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(66px + env(safe-area-inset-bottom, 0px)); max-width: 616px; margin: 0 auto; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 16px; border: 0; border-radius: 20px; background: var(--hero); color: var(--hero-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 14px 30px -12px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .12); }
 .coach-leiste:active { opacity: .85; }
@@ -1060,11 +1042,49 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .coach-panel .chat { max-height: none; overflow: visible; }
 .coach-panel .coach-eingabe { margin: 2px -16px -18px; padding-bottom: 16px; }
 
-/* Engpass als Zeile oben in „Jetzt dran“ (0.18, Variante E3) */
-.jd-engpass { display: flex; align-items: flex-start; gap: 9px; padding: 11px 16px; background: rgb(var(--sand-rgb) / .1); color: var(--sand); font-size: .8125rem; line-height: 1.38; text-decoration: none; }
-.jd-engpass svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
-.jd-engpass span { min-width: 0; overflow-wrap: anywhere; }
-.jd-engpass b { color: var(--ink); font-weight: 500; }
-.jd-engpass.leer { align-items: center; color: var(--sky); background: rgb(var(--tint-rgb) / .06); }
-.jd-engpass.leer .chev { margin-left: auto; }
-.jd-engpass:active { background: var(--press); }
+/* ---------- 0.19: The ONE Thing – eine Sache, der Rest eine Ebene tiefer ---------- */
+.titel-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.mini-ringe { flex: 0 0 auto; min-width: 48px; min-height: 48px; display: grid; place-items: center; border-radius: 50%; }
+.mini-ringe:active { opacity: .6; }
+.eins-bereich { display: grid; gap: 10px; }
+.engpass-zeile { display: flex; align-items: flex-start; gap: 8px; padding: 0 2px; color: var(--sand); font-size: .875rem; line-height: 1.38; text-decoration: none; }
+.engpass-zeile svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+.engpass-zeile span { min-width: 0; overflow-wrap: anywhere; }
+.engpass-zeile.leer { align-items: center; color: var(--sky); }
+.engpass-zeile:active { opacity: .6; }
+.eine-sache { display: grid; gap: 14px; padding: 20px 18px 18px; border-radius: 24px; background: var(--panel); box-shadow: var(--card-shadow); transition: opacity 280ms ease-out, transform 280ms var(--ease-out); }
+.eine-sache.leaving { opacity: 0; transform: scale(.98); }
+.eine-sache.leer { gap: 8px; padding: 16px 18px; }
+.eine-sache.leer p { margin: 0; }
+.es-kopf { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.es-titel { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.875rem; line-height: 1.12; letter-spacing: -.012em; color: var(--ink); text-decoration: none; text-wrap: pretty; overflow-wrap: anywhere; }
+.es-titel:active { opacity: .6; }
+.es-frei, .es-zeit { justify-self: start; display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(var(--sand-rgb) / .14); color: var(--sand); font: inherit; font-size: .8125rem; font-weight: 600; }
+.es-frei { cursor: pointer; }
+.es-wenn { margin: 0; font-size: .875rem; line-height: 1.38; color: var(--muted); }
+.es-knoepfe { display: flex; gap: 8px; }
+.es-ok { flex: 1; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 15px; background: var(--ink); color: var(--on-ink); font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
+.es-ok svg { width: 18px; height: 18px; }
+.es-ok:active { opacity: .7; }
+.es-mehr { width: 50px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 15px; background: rgb(var(--tint-rgb) / .12); color: var(--ink); cursor: pointer; }
+.es-mehr svg { width: 20px; height: 20px; }
+.es-blatt .blatt-titel { font-size: 1.2rem; line-height: 1.2; }
+.es-aktionen { display: flex; flex-wrap: wrap; gap: 8px; }
+.aufklapp { display: grid; gap: 8px; }
+.ak-zeile { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 6px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: 1rem; text-align: left; cursor: pointer; }
+.ak-zeile span { flex: 1; }
+.ak-zeile b { color: var(--ink); font-weight: 500; }
+.ak-zeile .chev { width: 16px; height: 16px; transition: transform 200ms var(--ease-out); }
+.ak-zeile[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.aufklapp + .aufklapp .ak-zeile { border-top: 0; }
+/* Kompass: Konten als aufklappbare Zeilen */
+.konto + .konto { border-top: 1px solid var(--line); }
+.konto-zeile { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; list-style: none; cursor: pointer; }
+.konto-zeile::-webkit-details-marker { display: none; }
+.konto-zeile b { flex: 1; font-weight: 600; }
+.konto-zeile .num { color: var(--ink); }
+.konto-level { font-size: .8125rem; color: var(--muted); min-width: 4.6em; text-align: right; }
+.konto-zeile .chev { width: 14px; height: 14px; color: var(--faint); transition: transform 200ms var(--ease-out); }
+.konto[open] .konto-zeile .chev { transform: rotate(90deg); }
+.konto-mehr { display: grid; gap: 8px; padding: 2px 14px 14px 58px; }
+.einordnung > .group { margin-top: 10px; }

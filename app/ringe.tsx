@@ -52,31 +52,24 @@ export function Tagespunkte({ tage, heute }: { tage: { tag: string; wert: number
   );
 }
 
-/** Die Woche als fünf Ringe ineinander, wie bei Apple Fitness, daneben die Werte und das Level. Ganz oben auf Heute. */
-export function Wochenringe({ ringe, level, naechstes, anteil }: { ringe: Record<string, number | null>; level: number; naechstes: number; anteil: number }) {
+/** Die Woche als fünf kleine Ringe ineinander neben dem Titel. Tippen öffnet den Kompass mit allen Zahlen. */
+export function MiniRinge({ ringe, level }: { ringe: Record<string, number | null>; level: number }) {
   const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
-  const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : null;
-  const dicke = 10; const abstand = 12; const aussen = 66; const g = (aussen + dicke / 2) * 2 + 2;
+  const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : 0;
+  const g = 48; const dicke = 4; const abstand = 4.6; const aussen = g / 2 - dicke / 2 - 1;
   return (
-    <Link href="/kompass" className="wochenringe" aria-label={`Kompass: diese Woche ${schnitt ?? 0} Prozent, Level ${level}`}>
-      <svg width={g} height={g} viewBox={`0 0 ${g} ${g}`} aria-hidden="true" className="wr-bild">
+    <Link href="/kompass" className="mini-ringe" aria-label={`Kompass: diese Woche ${schnitt} Prozent, Level ${level}`}>
+      <svg width={g} height={g} viewBox={`0 0 ${g} ${g}`} aria-hidden="true">
         {KONTEN.map((x, i) => {
           const r = aussen - i * abstand; const u = 2 * Math.PI * r; const v = ringe[x] === null ? 0 : Math.min(1, ringe[x]!);
           return (
             <g key={x}>
-              <circle cx={g / 2} cy={g / 2} r={r} fill="none" stroke={FARBE[x]} strokeOpacity={0.18} strokeWidth={dicke} />
+              <circle cx={g / 2} cy={g / 2} r={r} fill="none" stroke={FARBE[x]} strokeOpacity={0.2} strokeWidth={dicke} />
               {v > 0 ? <circle cx={g / 2} cy={g / 2} r={r} fill="none" stroke={FARBE[x]} strokeWidth={dicke} strokeLinecap="round" strokeDasharray={`${u * v} ${u}`} transform={`rotate(-90 ${g / 2} ${g / 2})`} /> : null}
             </g>
           );
         })}
       </svg>
-      <span className="wr-text">
-        <span className="wr-kopf">Diese Woche{schnitt !== null ? <em className="num"> · {schnitt} %</em> : null}</span>
-        {KONTEN.map((x) => (
-          <span key={x} className="wr-zeile"><i style={{ background: FARBE[x] }} aria-hidden="true" />{NAME[x]}<span className="num">{ringe[x] === null ? '–' : `${Math.round(Math.min(1, ringe[x]!) * 100)} %`}</span></span>
-        ))}
-        <span className="wr-level"><span><b>Level {level}</b> · noch {naechstes} Punkte</span><span className="wr-weg" aria-hidden="true"><span style={{ width: `${Math.round(Math.max(0, Math.min(1, anteil)) * 100)}%` }} /></span></span>
-      </span>
     </Link>
   );
 }

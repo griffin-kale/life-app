@@ -46,7 +46,7 @@ export function useCheckins(mitWoche = false) {
   };
 }
 
-const VORSCHLAEGE = ['Was jetzt?', 'Ich bin müde', 'Ich habe nur 30 Minuten', 'Ich schiebe etwas vor mir her'];
+const VORSCHLAEGE = ['Was jetzt?', 'Ich bin müde'];
 
 /** Gespräch mit dem Coach für heute. Liegt auf Heute, damit Blatt und Mac-Spalte denselben Stand zeigen. */
 export function useCoachChat() {
@@ -98,13 +98,15 @@ export function CoachInhalt({ stand, chat, spuren, onFesthalten, fokus, kompakt,
   async function fragen(t: string) { sprache.stop(); if (await chat.fragen(t)) setText(''); }
 
   const abends = stunde() >= 17 && !!c?.abend;
+  // Wochenstart und Standortbestimmung stehen schon als Knopf da, nicht noch einmal als Punkt
+  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Der Wochenstart')) && !(c?.standortEtappe && o.startsWith('Die Standortbestimmung')));
   const k = c ? (abends ? c.abend : c.morgen) : null;
   return (
     <>
       <span className="hero-kopf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg>Coach · {abends ? 'Abend' : 'Morgen'}</span>
       {c?.warnungen.length ? <ul className="hero-warn">{c.warnungen.map((w) => <li key={w}>{w}</li>)}</ul> : null}
-      {c?.offen?.length ? <ul className="hero-offen" aria-label="Noch offen">{c.offen.map((o) => <li key={o}>{o}</li>)}</ul> : null}
-      {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : !zahl ? <p className="coach-text">Halte fest, was dir durch den Kopf geht, oder frag mich, was jetzt dran ist.</p> : null}
+      {offen.length ? <ul className="hero-offen" aria-label="Noch offen">{offen.map((o) => <li key={o}>{o}</li>)}</ul> : null}
+      {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : null}
       {k?.geste ? <p className="coach-geste"><b>Kleine Geste</b>{k.geste}</p> : null}
       {zahl ? (
         <div className="chat" aria-live="polite">

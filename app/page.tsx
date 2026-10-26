@@ -1,17 +1,17 @@
 'use client';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import { Icon, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useBreit, useToast, type Item, type Stand } from './ui';
+import { Icon, TabBar, TopBar, api, isPending, useBreit, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
 import { CoachBlatt, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
 import { KalenderHeute, useKalender } from './kalender';
-import { Tagespunkte, Wochenringe } from './ringe';
+import { MiniRinge } from './ringe';
+import { Danach, EineSache, Erledigt } from './eine-sache';
 import { useSprache } from './sprache';
 import { hhmm } from '@/lib/kalender-regeln';
 import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
 import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
-import { EnergieChips, WennChip } from './wenn';
 
 /** Auf iPad und Mac stehen diese Bausteine rechts unter dem Coach, alles zum Tun links. */
 const RECHTS: Baustein[] = ['empfohlen', 'kalender', 'koerper', 'geld', 'menschen'];
@@ -68,19 +68,13 @@ export default function Heute() {
       if (fertig) { await pause(); setToast('Erledigt', 'ok', { label: 'Rückgängig', run: () => act(() => patch(it.id, { erledigt: false })) }); }
     }).finally(() => setLeaving(null));
   }
-  function spaeter(it: Item) {
+  function spaeter(it: Item, warEins = false) {
     setLeaving(it.id);
     act(async () => {
       await patch(it.id, { stapel: 'woche' });
       await pause();
-      setToast('In die Woche geschoben', 'ok', { label: 'Rückgängig', run: () => act(() => patch(it.id, { stapel: 'jetzt' })) });
+      setToast('In die Woche geschoben', 'ok', { label: 'Rückgängig', run: () => act(() => patch(it.id, warEins ? { stapel: 'jetzt', eineSache: true } : { stapel: 'jetzt' })) });
     }).finally(() => setLeaving(null));
-  }
-  function holen(it: Item) {
-    act(async () => {
-      const r = await patch(it.id, { stapel: 'jetzt' });
-      setToast(r.verdraengt ? `„${r.verdraengt.slice(0, 40)}“ rückt in die Woche` : 'Nach Jetzt geholt');
-    });
   }
   function zeit(it: Item, v: string) {
     setSt((s) => s && { ...s, items: s.items.map((x) => (x.id === it.id ? { ...x, zeit: v || null } : x)) });
@@ -104,12 +98,9 @@ export default function Heute() {
     try { if (await festhalten(t)) { setText(''); setDone(true); } } finally { setBusy(false); }
   }
 
-  const heuteTag = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
   const today = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   const items = st?.items ?? [];
   const jetzt = items.filter((i) => i.stapel === 'jetzt').sort(nachZeit);
-  const naechste = items.filter((i) => i.stapel === 'woche').sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99)).slice(0, 3);
-  const neu = items.filter((i) => !i.stapel).length;
 
   // Gedanke aus Schnellzugriff, Taste N oder ?festhalten=1: Coach mit Feld öffnen
   const gedanke = useCallback(() => { setCoachOffen(true); setCoachFokus((n) => n + 1); }, []);
@@ -124,13 +115,14 @@ export default function Heute() {
     .map((it) => ({ id: it.id, text: it.roh || it.text, zeit: uhrBerlin(it.created_at), titel: it.titel, laeuft: isPending(it) }));
   const coachInhalt = <CoachInhalt stand={ci} chat={chat} spuren={spuren} onFesthalten={festhalten} fokus={coachFokus > 0} key={coachFokus} kompakt onFehler={(m) => setToast(m, 'err')} />;
 
-  // Der Engpass steht dort, wo die Aufgaben auf ihn einzahlen (Peter, 26.10.2026: Variante E3)
+  // Der Engpass steht als eine Zeile über der einen Sache, ohne Erklärung (Peter, 26.10.2026)
   const zielscheibe = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></svg>;
   const engpassZeile = st?.engpass
-    ? <Link href="/einstellungen" className="jd-engpass" aria-label={`Engpass: ${st.engpass}. Ändern in den Einstellungen`}>{zielscheibe}<span>Zahlt ein auf deinen Engpass: <b>{st.engpass}</b></span></Link>
-    : <Link href="/einstellungen" className="jd-engpass leer">{zielscheibe}<span>Engpass festlegen, dann sortiert Claude danach</span>{Icon.chevronRight}</Link>;
+    ? <Link href="/einstellungen" className="engpass-zeile" aria-label={`Engpass: ${st.engpass}`}>{zielscheibe}<span>{st.engpass}</span></Link>
+    : st ? <Link href="/einstellungen" className="engpass-zeile leer">{zielscheibe}<span>Engpass festlegen</span>{Icon.chevronRight}</Link> : null;
+  const eins = [...jetzt].sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99))[0] ?? null;
+  const danach = jetzt.filter((x) => x !== eins);
   const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
-    kompass: kompass && ringe ? <Wochenringe ringe={ringe} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} anteil={kompass.gesamt.anteil} /> : null,
     fragebogen: (
 ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
@@ -158,60 +150,19 @@ ci.zeige ? (
       </section></>
     ),
     jetzt: (
-<><section className="gsec" aria-label="Jetzt dran">
-        <h2 className="glabel">Jetzt dran</h2>
+      <div className="eins-bereich">
+        {engpassZeile}
         {st === null ? <div className="loading">Lädt …</div>
-          : jetzt.length ? (
-            <div className="group">
-            {engpassZeile}
-            <ul className="tasks">
-              {jetzt.map((it, n) => (
-                <TaskRow key={it.id} it={it} big={n === 0} onToggle={() => toggle(it)} leaving={leaving === it.id}>
-                  {n === 0 && vorschlag && !it.zeit ? <button type="button" className="chipbtn frei" aria-label={`Im Kalender frei von ${hhmm(vorschlag.von)} bis ${hhmm(vorschlag.bis)}, als Uhrzeit setzen`} onClick={() => zeit(it, hhmm(vorschlag.von))}>{hhmm(vorschlag.von)}–{hhmm(vorschlag.bis)} frei</button> : null}
-                  <TimeChip value={it.zeit} onChange={(v) => zeit(it, v)} />
-                  <button type="button" className="chipbtn" onClick={() => spaeter(it)}>Nicht heute</button>
-                  <WennChip aufgabe={it.schritt || it.titel || it.text.slice(0, 80)} wert={it.wenn} onSetzen={(w) => act(() => patch(it.id, { wenn: w }))} />
-                  {it.wenn ? <span className="wenn-satz">{it.wenn}</span> : null}
-                </TaskRow>
-              ))}
-            </ul>
-            </div>
-          )
-          : st.laeuft ? <div className="group pad"><p className="note working">Claude sortiert deinen Tag …</p></div>
-          : <div className="group pad"><p className="muted small">{items.length ? 'Für heute ist nichts gesetzt.' : 'Nichts offen. Halte unten fest, was ansteht. Claude sortiert es ein.'}</p></div>}
+          : eins ? <EineSache key={eins.id} it={eins} frei={vorschlag && !eins.zeit ? { von: hhmm(vorschlag.von), bis: hhmm(vorschlag.bis) } : null} leaving={leaving === eins.id}
+              onErledigt={() => toggle(eins)} onZeit={(v) => zeit(eins, v)} onSpaeter={() => spaeter(eins, true)} onWenn={(w) => act(() => patch(eins.id, { wenn: w }))}
+              sortiert={{ laeuft: st.laeuft, am: st.sortiertAm }} onNeuSortieren={neuSortieren} />
+          : st.laeuft ? <p className="note working">Claude sucht die eine Sache …</p>
+          : <section className="eine-sache leer" aria-label="Die eine Sache"><p className="muted">{items.length ? 'Für heute ist nichts gesetzt.' : 'Nichts offen.'}</p>{items.length ? <button type="button" className="linkbtn" onClick={neuSortieren}>Neu sortieren</button> : null}</section>}
         {st?.fehler ? <p className="gnote bad">Sortieren hat nicht geklappt: {st.fehler}</p> : null}
-        {st && items.length > 0 ? (
-          <p className="gnote">
-            {st.laeuft ? <span className="working">Claude sortiert …</span> : st.sortiertAm ? `Sortiert um ${fTime(st.sortiertAm)}` : 'Noch nicht sortiert'}
-            {neu && !st.laeuft ? ` · ${neu} neu` : ''}
-            {' · '}<button type="button" className="linkbtn" onClick={neuSortieren} disabled={st.laeuft}>Neu sortieren</button>
-          </p>
-        ) : null}
-      </section></>
+      </div>
     ),
-    naechste: (
-naechste.length ? (
-        <section className="gsec" aria-label="Als Nächstes">
-          <h2 className="glabel">Als Nächstes</h2>
-          <ul className="tasks group">
-            {naechste.map((it) => (
-              <TaskRow key={it.id} it={it} onToggle={() => toggle(it)} leaving={leaving === it.id}>
-                <button type="button" className="chipbtn" onClick={() => holen(it)}>{Icon.up}Nach Jetzt</button>
-              </TaskRow>
-            ))}
-          </ul>
-          <p className="gnote"><Link href="/woche" className="linkbtn">Ganze Woche ansehen</Link></p>
-        </section>
-      ) : null
-    ),
-    erledigt: (
-st?.erledigtHeute.length ? (
-        <section className="gsec" aria-label="Heute erledigt">
-          <h2 className="glabel">Heute erledigt · {st.erledigtHeute.length}</h2>
-          <ul className="tasks group">{st.erledigtHeute.map((it) => <TaskRow key={it.id} it={it} onToggle={() => toggle(it)}><EnergieChips wert={it.energie} onSetzen={(n) => act(() => patch(it.id, { energie: n }))} /></TaskRow>)}</ul>
-        </section>
-      ) : null
-    ),
+    naechste: <Danach items={danach} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
+    erledigt: <Erledigt items={st?.erledigtHeute ?? []} onToggle={toggle} onEnergie={(it, n) => act(() => patch(it.id, { energie: n }))} />,
     schnell: <Schnellzugriff onGedanke={gedanke} />,
     empfohlen: <Empfohlen stand={ci} />,
     kalender: <KalenderHeute />,
@@ -219,15 +170,14 @@ st?.erledigtHeute.length ? (
     geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
     menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
   };
-  const reihe = bausteine.filter((b) => b !== 'woche');
+  const reihe = bausteine.filter((b) => b !== 'kompass');
 
   return (
     <main className="wrap breit">
       <TopBar title="Heute" />
       <header className="head">
         <span className="eyebrow">{today}</span>
-        <h1 className="title">Heute<i>.</i></h1>
-        {bausteine.includes('woche') && kompass?.tage ? <Tagespunkte tage={kompass.tage} heute={heuteTag} /> : null}
+        <div className="titel-zeile"><h1 className="title">Heute<i>.</i></h1>{bausteine.includes('kompass') && ringe && kompass ? <MiniRinge ringe={ringe} level={kompass.gesamt.level} /> : null}</div>
       </header>
 
       {breit ? (
