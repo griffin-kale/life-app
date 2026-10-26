@@ -83,6 +83,7 @@ export function GeldSeite({ teil }: { teil?: string }) {
   const [toast, setToast] = useToast();
   const foto = useRef<HTMLInputElement>(null);
   const [bon, setBon] = useState<File | null>(null);
+  const [zielAendern, setZielAendern] = useState<string | null>(null);
   const laden = useCallback(async () => setG(await api<G>('/api/geld')), []);
   useEffect(() => { laden().catch((e) => setToast((e as Error).message, 'err')); }, [laden, setToast]);
   // Aus dem Schnellzugriff: direkt ins Ausgabe-Feld
@@ -227,7 +228,11 @@ export function GeldSeite({ teil }: { teil?: string }) {
               <span className="kachel-name"><i />{t.name}</span>
               <b>{euro(t.stand_cent)}<small>von {euro(t.betrag_cent)}</small></b>
               <div className="kb-bar" role="progressbar" aria-label={t.name} aria-valuenow={t.stand_cent} aria-valuemax={t.betrag_cent}><i style={{ width: `${Math.min(100, (t.stand_cent / Math.max(1, t.betrag_cent)) * 100)}%` }} className={t.stand_cent >= t.betrag_cent ? 'voll' : ''} /></div>
-              <div className="kachel-aktionen">{[2500, 5000, 10000].map((c) => <button key={c} type="button" className="chipbtn" onClick={() => post({ aktion: 'sparen', topf_id: t.id, cent: c }, 'Eingezahlt')}>+ {euro(c)}</button>)}<Loeschen label="Entfernen" onClick={() => loeschen('topf', t.id)} /></div>
+              <div className="kachel-aktionen">{[2500, 5000, 10000].map((c) => <button key={c} type="button" className="chipbtn" onClick={() => post({ aktion: 'sparen', topf_id: t.id, cent: c }, 'Eingezahlt')}>+ {euro(c)}</button>)}<button type="button" className="chipbtn" aria-expanded={zielAendern === t.id} onClick={() => setZielAendern(zielAendern === t.id ? null : t.id)}>Ziel ändern</button><Loeschen label="Entfernen" onClick={() => loeschen('topf', t.id)} /></div>
+              {zielAendern === t.id ? <Neu ohneName label={`Ziel für ${t.name}`} platzhalter="Neue Zielsumme in Euro" onSenden={async (_n, cent) => {
+                try { await api('/api/geld', { method: 'PATCH', body: JSON.stringify({ id: t.id, betrag_cent: cent }) }); await laden(); setZielAendern(null); setToast(`Ziel ist jetzt ${euro(cent)}`); }
+                catch (e) { setToast((e as Error).message, 'err'); }
+              }} /> : null}
             </div>
           ))}
           <h2 className="glabel">Neues Sparziel</h2>
