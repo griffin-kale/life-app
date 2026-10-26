@@ -1,4 +1,5 @@
 # Baut bei jedem Versions-Tag (v1.2.3) das fertige Paket für den Server und legt es privat bei GitHub ab.
+# Nur wenn der Tag auf einem Commit von main steht und dieselben Prüfungen wie in der CI grün sind.
 # Der Server holt es mit deploy.sh ab und muss nichts selbst bauen.
 name: Release
 
@@ -8,14 +9,33 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
+  auf-main:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Tag steht auf main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Der Tag zeigt auf einen Commit außerhalb von main."; exit 1; }
+      - name: Version im Tag passt zu package.json
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME" || { echo "Tag und package.json passen nicht zusammen."; exit 1; }
+
+  pruefen:
+    needs: auf-main
+    uses: ./.github/workflows/ci.yml
+
   image:
+    needs: [auf-main, pruefen]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Bei GitHub-Paketen anmelden
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Bauen und hochladen
@@ -24,3 +44,5 @@ jobs:
           docker build --platform linux/amd64 -t "$IMAGE:${GITHUB_REF_NAME}" -t "$IMAGE:latest" .
           docker push "$IMAGE:${GITHUB_REF_NAME}"
           docker push "$IMAGE:latest"
+          # Digest festhalten: so lässt sich prüfen, dass der Server genau dieses Paket fährt
+          echo "Digest: $(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:${GITHUB_REF_NAME}")" | tee -a "$GITHUB_STEP_SUMMARY"
