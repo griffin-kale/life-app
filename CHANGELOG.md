@@ -2,6 +2,32 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.19.0] – 2026-10-26
+
+Heute nach The ONE Thing von Gary Keller, dazu ein Sweep durch die ganze App: so wenig wie möglich, nur so viel wie nötig (Peter, 26.10.2026). Grundlage: drei Mockups (Peters Wahl O1), Recherche zu Kellers Leitfrage, Aufmerksamkeitsrest (Leroy 2009), offenen Zielen mit Plan (Masicampo und Baumeister 2011), Hick-Gesetz und Progressive Disclosure.
+
+### Neu
+- **Die eine Sache.** Heute zeigt eine große Karte mit der einen Sache des Tages, „Erledigt“ und „⋯“. Im Menü liegen Uhrzeit, „Nicht heute“, Wenn-dann-Plan und „Neu sortieren“. Freie Zeit aus dem Kalender steht als Chip auf der Karte.
+- **Claude wählt mit der Leitfrage.** Beim Sortieren ist Rang 1 in „Jetzt“ die Sache, durch die alles andere leichter oder unnötig wird. Die anderen sind die Dominosteine danach.
+- **Zur einen Sache.** Unter „Danach“ holt ein Tipp eine andere Aufgabe nach vorn. Claude lernt daraus wie aus jeder Korrektur.
+- **Danach und Heute erledigt** sind zugeklappt und zeigen nur eine Zahl.
+- **Wochenringe klein neben dem Titel.** Tippen öffnet den Kompass.
+
+### Geändert
+- **Engpass:** eine Zeile mit Zielscheibe über der Karte, ohne Erklärsatz. Auf Woche steht er nicht mehr doppelt.
+- **Aufgabenzeilen überall:** nur Titel, Frist und Übergabe. Begründung, Ziel, Aufwand und Engpass-Marke stehen im Eintrag.
+- **Heute standardmäßig:** Ringe, die eine Sache, Fragebogen (wenn fällig), Danach, Heute erledigt. Empfohlen und Schnellzugriffe sind nicht mehr Standard (der Coach formuliert die Empfehlung), die Tagespunkte fallen weg. Gespeicherte Listen stellt Life einmal um (`STAND = 6`).
+- **Coach:** zwei Vorschläge statt vier. Wochenstart und Standortbestimmung stehen nur noch als Knopf, nicht zusätzlich als offener Punkt.
+- **Woche:** Karten nur mit Zahl, Erklärsätze unter Parkplatz, Streichen und Energie weg, WHO-5 nur noch, wenn der Wert unter 51 liegt.
+- **Eintrag:** eine Begründung statt zwei. Kategorie, Art, Typ, Hebel und Aufwand liegen unter „Einordnung“ zum Aufklappen.
+- **Kompass:** Konten als Zeilen mit Ring, Prozent und Level, Details zum Aufklappen. Wohlbefinden und Meilensteine sind zugeklappt, der Punkte-Erklärsatz ist weg.
+- **Körper:** drei Karten statt vier (Training und Ausdauer sind „Bewegung“), Erholung nur mit Zahl und Satz, Abgleich auf der Seite Nacht.
+- **Geld:** Karten nur mit Zahl („Frei pro Monat“ statt „Monatlich“), Topf-Kacheln ohne Rahmen und Übertrag, kurzer Text beim Einrichten.
+- **Mehr:** Zeilen ohne Unterzeile.
+
+### Tests
+- Ende-zu-Ende: die eine Sache mit Menü, Rückgängig nach „Nicht heute“, „Zur einen Sache“, zugeklappte Listen, Kompass-Konten, Körper-Abgleich auf Nacht. Unit: Umbau der gespeicherten Listen auf Stand 6.
+
 ## [0.18.0] – 2026-10-26
 
 Heute aufgeräumt (Peter, 26.10.2026): Richtung B aus drei Mockups, der Coach geht wie in Richtung A als Blatt auf. Zieht Teile von Phase 4 aus `docs/VERBESSERUNG.md` vor.
