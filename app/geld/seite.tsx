@@ -36,7 +36,7 @@ function TopfKachel({ t, i }: { t: Topf; i: number }) {
       <span className="kachel-name"><i />{t.name}</span>
       <b className={t.ueber ? 'warn' : ''}>{wert}</b>
       <div className="kb-bar" role="progressbar" aria-label={t.name} aria-valuenow={t.ausgaben} aria-valuemax={t.rahmen}><i style={{ width: `${Math.min(100, ((t.ausgaben ?? 0) / Math.max(1, t.rahmen ?? 1)) * 100)}%` }} className={t.ueber ? 'drueber' : ''} /></div>
-      <span className="kachel-fuss">{[wort, `Rahmen ${euro(t.rahmen ?? t.betrag_cent)}`, t.uebertrag ? `${euro(Math.min(t.uebertrag, t.betrag_cent))} aus der Vorwoche` : ''].filter(Boolean).join(' · ')}</span>
+      {wort ? <span className="kachel-fuss">{wort}</span> : null}
     </div>
   );
 }
@@ -111,10 +111,10 @@ export function GeldSeite({ teil }: { teil?: string }) {
   const gesamt = (a: G['posten'][number]['art']) => summe(a).reduce((x, p) => x + p.cent, 0);
   const karten = !teil && g ? (
     <section className="ueber" aria-label="Bereiche">
-      <UeberKarte c={{ href: '/geld/plan', titel: 'Stufenplan', farbe: 'var(--k-geld)', zahl: `Stufe ${g.aktuell.nr}`, sub: g.aktuell.titel }} />
-      <UeberKarte c={{ href: '/geld/monatlich', titel: 'Monatlich', farbe: 'var(--k-zeit)', zahl: g.posten.length ? euro(gesamt('einnahme') - gesamt('fest')) : '–', sub: g.posten.length ? 'bleibt nach festen Kosten' : 'Einnahmen und Kosten eintragen' }} />
-      <UeberKarte c={{ href: '/geld/sparen', titel: 'Sparziele', farbe: 'var(--k-koerper)', zahl: g.spar.length ? euro(g.spar.reduce((x, t) => x + t.stand_cent, 0)) : '–', sub: g.spar.length ? `von ${euro(g.spar.reduce((x, t) => x + t.betrag_cent, 0))} in ${g.spar.length} ${g.spar.length === 1 ? 'Ziel' : 'Zielen'}` : 'Noch kein Sparziel', aktion: { href: '/geld/sparen', text: g.spar.length ? 'Einzahlen' : '+ Sparziel' } }} />
-      <UeberKarte c={{ href: '/geld/taschengeld', titel: 'Taschengeld', farbe: 'var(--k-sozial)', zahl: g.kinder.length ? euro(g.kinder.reduce((x, t) => x + (t.guthaben ?? 0), 0)) : '–', sub: g.kinder.length ? `Guthaben von ${g.kinder.length} ${g.kinder.length === 1 ? 'Kind' : 'Kindern'}` : 'Noch kein Kind angelegt' }} />
+      <UeberKarte c={{ href: '/geld/plan', titel: 'Stufenplan', farbe: 'var(--k-geld)', zahl: `Stufe ${g.aktuell.nr}` }} />
+      <UeberKarte c={{ href: '/geld/monatlich', titel: 'Frei pro Monat', farbe: 'var(--k-zeit)', zahl: g.posten.length ? euro(gesamt('einnahme') - gesamt('fest')) : '–' }} />
+      <UeberKarte c={{ href: '/geld/sparen', titel: 'Sparziele', farbe: 'var(--k-koerper)', zahl: g.spar.length ? euro(g.spar.reduce((x, t) => x + t.stand_cent, 0)) : '–' }} />
+      <UeberKarte c={{ href: '/geld/taschengeld', titel: 'Taschengeld', farbe: 'var(--k-sozial)', zahl: g.kinder.length ? euro(g.kinder.reduce((x, t) => x + (t.guthaben ?? 0), 0)) : '–' }} />
     </section>
   ) : null;
   return (
@@ -128,7 +128,7 @@ export function GeldSeite({ teil }: { teil?: string }) {
         <section className="gsec" aria-label="Töpfe einrichten">
           <h2 className="glabel">Wochentöpfe einrichten</h2>
           <div className="group pad fb">
-            <div className="fb-head"><b>Wenige Töpfe pro Woche</b><span>Jede Ausgabe landet in einem Topf. Am Ende der Woche zeigt Life den Rest als Spanne, weil genaue Restbeträge zum Ausgeben verleiten. Übrig Gebliebenes wandert eine Woche weiter.</span></div>
+            <div className="fb-head"><b>Wenige Töpfe pro Woche</b></div>
             {VORSCHLAG.map((n) => (
               <div key={n} className="fb-q">
                 <button type="button" aria-pressed={n in wahl} className="fb-chip left" onClick={() => setWahl((w) => { const x = { ...w }; if (n in x) delete x[n]; else x[n] = 5000; return x; })}>{n}</button>

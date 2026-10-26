@@ -233,21 +233,16 @@ export function TimeChip({ value, onChange }: { value: string | null; onChange: 
   );
 }
 
-/** Aufgabenzeile wie in Erinnerungen: Kreis zum Abhaken, Titel, Grund, leise Angaben, darunter Aktionen. */
+/** Aufgabenzeile wie in Erinnerungen: Kreis zum Abhaken, Titel, höchstens Frist und Übergabe. Gründe und Einordnung stehen im Eintrag (0.19, so wenig wie nötig). */
 export function TaskRow({ it, big, from, onToggle, children, leaving }: { it: Item; big?: boolean; from?: string; onToggle?: () => void; children?: ReactNode; leaving?: boolean }) {
   const done = it.status === 'erledigt';
-  const frist = fristLabel(it.frist);
-  const aufwand = aufwandLabel(it.aufwand_min);
+  const frist = done ? null : fristLabel(it.frist);
   return (
     <li className={'task' + (big ? ' lead' : '') + (done ? ' done' : '') + (leaving ? ' leaving' : '')}>
       {onToggle ? <button type="button" className="tick" aria-pressed={done} aria-label={done ? 'Wieder öffnen' : 'Erledigt'} onClick={onToggle}>{Icon.check}</button> : <span className="tick-space" />}
       <div className="tbody">
         <Link href={`/eintrag/${it.id}${from ? `?von=${from}` : ''}`} className="ttitle">{taskTitle(it)}</Link>
-        {it.grund && !done ? <p className="tgrund">{it.grund}</p> : null}
         <div className="tmeta">
-          {it.kategorie === 'engpass' ? <span className="k k-engpass">Engpass</span> : null}
-          {it.ziel ? <span>{it.ziel}</span> : null}
-          {aufwand ? <span>{aufwand}</span> : null}
           {frist ? <span className={frist.spaet ? 'spaet' : undefined}>{frist.text}</span> : null}
           {it.wer === 'delegieren' && it.delegieren_an ? <span>an {it.delegieren_an}</span> : null}
         </div>

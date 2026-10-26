@@ -57,7 +57,7 @@ export function EintragDetail({ id, back, eingebettet, onGeaendert }: { id: stri
       </header>
 
       {pending ? <p className="note working" role="status">Claude ordnet ein …</p> : null}
-      {it.fehler ? <p className="err" role="alert">Claude konnte das nicht einordnen ({it.fehler}). Tipp unten auf „Neu einordnen“.</p> : null}
+      {it.fehler ? <p className="err" role="alert">Claude konnte das nicht einordnen ({it.fehler}).</p> : null}
 
       {it.kern ? (
         <section className="gsec">
@@ -112,19 +112,17 @@ export function EintragDetail({ id, back, eingebettet, onGeaendert }: { id: stri
                       <option value="">keins</option>{ziele.map((z) => <option key={z} value={z}>{z}</option>)}
                     </select></label>
                 ) : null}
-                <div className="cell static"><span>Hebel auf den Engpass</span><span className="val"><span>{it.hebel == null ? 'offen' : ['keiner', 'gering', 'mittel', 'direkt'][it.hebel]}</span></span></div>
-                {aufwandLabel(it.aufwand_min) ? <div className="cell static"><span>Aufwand</span><span className="val"><span>{aufwandLabel(it.aufwand_min)}</span></span></div> : null}
                 {it.frist ? <div className="cell static"><span>Frist</span><span className={'val' + (fristLabel(it.frist)?.spaet ? ' spaet' : '')}><span>{fristLabel(it.frist)?.text}</span></span></div> : null}
                 {it.wer === 'delegieren' ? <div className="cell static"><span>Delegieren</span><span className="val"><span>{it.delegieren_an ?? 'jemand im Team'}</span></span></div> : null}
                 <button type="button" className="cell tint strong" onClick={() => patch({ erledigt: true }, 'Erledigt')}>Erledigt</button>
               </>}
           </div>
-          {it.grund && it.status !== 'erledigt' ? <p className="gnote">{it.grund}</p> : null}
         </section>
       ) : null}
 
-      <section className="gsec">
-        <h2 className="glabel">Einordnung</h2>
+      {/* So wenig wie nötig (0.19): wie Claude den Eintrag einordnet, liegt eine Ebene tiefer */}
+      <details className="disclose einordnung">
+        <summary>{Icon.chevronRight}Einordnung</summary>
         <div className="group">
           <label className="cell"><span>Kategorie</span><span className="val"><span>{it.kategorie ? KAT[it.kategorie] : 'offen'}</span>{Icon.updown}</span>
             <select aria-label="Kategorie" value={it.kategorie ?? ''} onChange={(e) => patch({ kategorie: e.target.value }, 'Umsortiert')}>
@@ -138,9 +136,11 @@ export function EintragDetail({ id, back, eingebettet, onGeaendert }: { id: stri
             <select aria-label="Typ" value={it.typ} onChange={(e) => patch({ typ: e.target.value }, 'Gespeichert')}>
               {Object.entries(TYP).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select></label>
+          {AKTIV.includes(it.kategorie ?? '') ? <div className="cell static"><span>Hebel auf den Engpass</span><span className="val"><span>{it.hebel == null ? 'offen' : ['keiner', 'gering', 'mittel', 'direkt'][it.hebel]}</span></span></div> : null}
+          {aufwandLabel(it.aufwand_min) ? <div className="cell static"><span>Aufwand</span><span className="val"><span>{aufwandLabel(it.aufwand_min)}</span></span></div> : null}
         </div>
-        {isParked(it) ? <p className="gnote">Ideen bleiben 72 Stunden geparkt, bis {fWhen(it.parken_bis!)}. Danach entscheidest du, ob sie wichtig bleiben.</p> : null}
-      </section>
+      </details>
+      {isParked(it) ? <p className="gnote">Geparkt bis {fWhen(it.parken_bis!)}.</p> : null}
 
       <section className="gsec">
         <div className="group">
@@ -158,7 +158,7 @@ export function EintragDetail({ id, back, eingebettet, onGeaendert }: { id: stri
             <button type="button" className="cell tint" onClick={() => setConfirmDel(false)}>Abbrechen</button>
           </> : <button type="button" className="cell danger" onClick={() => setConfirmDel(true)}>Löschen</button>}
         </div>
-        {confirmDel ? <p className="gnote">Lässt sich nicht rückgängig machen. Archivieren hebt den Eintrag auf, ohne dass er stört.</p> : null}
+        {confirmDel ? <p className="gnote">Lässt sich nicht rückgängig machen.</p> : null}
       </section>
       {toast}
     </>);

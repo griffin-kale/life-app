@@ -10,12 +10,12 @@ const EINTRAEGE: [string, string, string, string, string][] = [
   ['/einstellungen', 'Einstellungen', 'Darstellung, Heute, Mitteilungen, Namen', 'var(--faint)', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8'],
 ];
 
-/** Zeile wie in den iPhone-Einstellungen: farbiges Symbol, Name, kurze Beschreibung. */
-function Zeile({ href, name, sub, farbe, pfad }: { href: string; name: string; sub: string; farbe: string; pfad: string }) {
+/** Zeile wie in den iPhone-Einstellungen: farbiges Symbol und Name. */
+function Zeile({ href, name, farbe, pfad }: { href: string; name: string; farbe: string; pfad: string }) {
   return (
     <Link className="cell mehr-zeile" href={href}>
       <span className="mehr-symbol" style={{ background: farbe }} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={pfad} /></svg></span>
-      <span className="lbl">{name}<small>{sub}</small></span>
+      <span className="lbl">{name}</span>
       {Icon.chevronRight}
     </Link>
   );
@@ -29,12 +29,12 @@ export default function Mehr() {
       <header className="head"><h1 className="title">Mehr<i>.</i></h1></header>
       <section className="gsec">
         <div className="group">
-          {EINTRAEGE.slice(0, 4).map(([href, name, sub, farbe, pfad]) => <Zeile key={href} href={href} name={name} sub={sub} farbe={farbe} pfad={pfad} />)}
+          {EINTRAEGE.slice(0, 4).map(([href, name, , farbe, pfad]) => <Zeile key={href} href={href} name={name} farbe={farbe} pfad={pfad} />)}
         </div>
       </section>
       <section className="gsec">
         <div className="group">
-          {EINTRAEGE.slice(4).map(([href, name, sub, farbe, pfad]) => <Zeile key={href} href={href} name={name} sub={sub} farbe={farbe} pfad={pfad} />)}
+          {EINTRAEGE.slice(4).map(([href, name, , farbe, pfad]) => <Zeile key={href} href={href} name={name} farbe={farbe} pfad={pfad} />)}
         </div>
       </section>
       <TabBar />
