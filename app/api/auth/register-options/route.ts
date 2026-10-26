@@ -1,14 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { ensureSchema, sql } from '@/lib/db';
-import { CHALLENGE_COOKIE, cookieOptions, sameSecret, signChallenge } from '@/lib/session';
+import { challengeCookie, cookieOptions, signChallenge } from '@/lib/session';
+import { darfEinrichten, einrichtenVerboten } from '@/lib/sitzung';
 import { rp } from '@/lib/webauthn';
 import { begrenzt } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
   const zuViel = begrenzt(req, 'einrichten'); if (zuViel) return zuViel;
   const { token } = await req.json().catch(() => ({}));
-  if (!sameSecret(token, process.env.SETUP_TOKEN)) return NextResponse.json({ error: 'Einrichtungscode stimmt nicht.' }, { status: 403 });
+  const darf = await darfEinrichten(token); if (darf !== 'ok') return einrichtenVerboten(darf);
   await ensureSchema();
   const existing = await sql`select id from credentials`;
   const { rpID } = rp(req);
@@ -20,6 +21,6 @@ export async function POST(req: NextRequest) {
     excludeCredentials: existing.map((c) => ({ id: c.id as string })),
   });
   const res = NextResponse.json(options);
-  res.cookies.set(CHALLENGE_COOKIE, await signChallenge(options.challenge, 'register'), cookieOptions(300));
+  res.cookies.set(challengeCookie(), await signChallenge(options.challenge, 'register'), cookieOptions(300));
   return res;
 }

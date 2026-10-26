@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { ensureSchema, sql, type Item } from '@/lib/db';
+import { ohneSitzung } from '@/lib/sitzung';
 
 // Alle Einträge als eine Markdown-Datei. Deine Daten gehören dir, auch ohne diese App.
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const items = await sql<Item[]>`select * from items order by created_at asc`;
   const fmt = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });

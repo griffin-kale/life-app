@@ -16,6 +16,7 @@ export const LIMITS = {
   code: { max: 10, windowMs: 15 * 60_000 },        // Passwort und Einmal-Code
   erfassen: { max: 60, windowMs: 60_000 },         // Kurzbefehl
   schreiben: { max: 120, windowMs: 60_000 },       // Einträge und Änderungen aus der App
+  sortieren: { max: 10, windowMs: 15 * 60_000 },   // Sortierlauf auf Knopfdruck, jeder Lauf kostet Claude-Aufrufe
 } as const;
 
 /** Gibt eine 429-Antwort zurück, wenn das Limit erreicht ist, sonst null. */

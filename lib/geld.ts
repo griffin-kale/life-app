@@ -3,6 +3,7 @@ import { ensureSchema, sql } from './db';
 import { wochenTag } from './fragen';
 import { heuteBerlin } from './priorisieren';
 import { aktuelleStufe, euro, stufen, taschengeldGuthaben, topfStand, type Profil } from './geld-regeln';
+import { Hinweis } from './fehler';
 
 /** Geld des Haushalts. Beträge bleiben auf dem Server. Claude sieht nur Ladenname und Text einer Ausgabe oder ein Bon-Foto. */
 
@@ -72,7 +73,7 @@ export async function topfVorschlag(was: string, toepfe: { id: string; name: str
 export async function bonLesen(jpegBase64: string, toepfe: string[]): Promise<{ laden: string; cent: number; topf: string | null }> {
   const a = await askJsonBild<{ laden?: unknown; summe?: unknown; topf?: unknown }>(['BON', 'Lies diesen Kassenbon. Nur Ladenname und Gesamtsumme, keine einzelnen Posten.', toepfe.length ? 'Töpfe: ' + toepfe.join(', ') : '', 'Antworte nur mit JSON: {"laden": string (höchstens 4 Wörter), "summe": Zahl in Euro mit Punkt, "topf": string (genau einer der Töpfe oder leer)}'].filter(Boolean).join('\n\n'), jpegBase64, undefined, 300);
   const summe = Number(a.summe);
-  if (!Number.isFinite(summe) || summe <= 0 || summe > 100000) throw new Error('Auf dem Bon war keine Summe zu lesen. Tipp sie ein.');
+  if (!Number.isFinite(summe) || summe <= 0 || summe > 100000) throw new Hinweis('Auf dem Bon war keine Summe zu lesen. Tipp sie ein.');
   const topf = toepfe.find((t) => t.toLowerCase() === String(a.topf || '').toLowerCase()) ?? null;
   return { laden: String(a.laden || 'Einkauf').slice(0, 60), cent: Math.round(summe * 100), topf };
 }

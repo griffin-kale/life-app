@@ -1,20 +1,15 @@
 import { getSetting, setSetting, sql, ensureSchema } from './db';
-import { hashPasswort, pruefePasswort, verschluesseln, entschluesseln } from './passwort-core';
+import { aufschliessen, hashPasswort, pruefePasswort, zuschliessen } from './passwort-core';
 import { neuerSchluessel, otpauthUrl, pruefeCode } from './totp-core';
 
 /**
  * Anmeldung mit Passwort und Einmal-Code als zweiter Weg neben dem Passkey.
- * Gespeichert in settings: pw_hash (scrypt), totp_enc (AES-GCM, Schlüssel aus SESSION_SECRET),
+ * Gespeichert in settings: pw_hash (scrypt), totp_enc (AES-GCM, Schlüssel aus ENCRYPTION_KEY, früher SESSION_SECRET),
  * totp_last (zuletzt benutzter Zeitschritt), pw_pending (Einrichtung, 10 Minuten gültig).
  */
 
 const GUELTIG_MS = 10 * 60_000;
 
-function geheim(): string {
-  const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error('SESSION_SECRET fehlt oder ist kürzer als 32 Zeichen');
-  return s;
-}
 
 export function passwortOk(pw: unknown): pw is string {
   return typeof pw === 'string' && pw.length >= 16 && pw.length <= 200;
@@ -28,7 +23,7 @@ export async function aktiv(): Promise<boolean> {
 /** Schritt 1: Passwort merken (noch nicht aktiv) und neuen Schlüssel für die Code-App erzeugen. */
 export async function starten(passwort: string): Promise<{ secret: string; otpauth: string }> {
   const secret = neuerSchluessel();
-  const pending = { hash: hashPasswort(passwort), enc: verschluesseln(secret, geheim()), exp: Date.now() + GUELTIG_MS };
+  const pending = { hash: hashPasswort(passwort), enc: zuschliessen(secret, 'totp'), exp: Date.now() + GUELTIG_MS };
   await setSetting('pw_pending', JSON.stringify(pending));
   return { secret, otpauth: otpauthUrl(secret, 'Peter', 'Life') };
 }
@@ -40,7 +35,7 @@ export async function abschliessen(code: string): Promise<'ok' | 'abgelaufen' | 
   let p: { hash: string; enc: string; exp: number };
   try { p = JSON.parse(raw); } catch { return 'abgelaufen'; }
   if (!p.exp || Date.now() > p.exp) { await setSetting('pw_pending', ''); return 'abgelaufen'; }
-  const r = pruefeCode(entschluesseln(p.enc, geheim()), code, -1);
+  const r = pruefeCode(aufschliessen(p.enc, 'totp'), code, -1);
   if (!r.ok) return 'falsch';
   await sql.begin(async (tx) => {
     for (const [k, v] of [['pw_hash', p.hash], ['totp_enc', p.enc], ['totp_last', String(r.step)], ['pw_pending', '']]) {
@@ -56,7 +51,7 @@ export async function anmelden(passwort: string, code: string): Promise<boolean>
   const pwOk = pruefePasswort(passwort, hash || null);
   if (!enc) return false;
   let secret: string;
-  try { secret = entschluesseln(enc, geheim()); } catch { return false; }
+  try { secret = aufschliessen(enc, 'totp'); } catch { return false; }
   const r = pruefeCode(secret, code, Number(last) || -1);
   if (!pwOk || !r.ok) return false;
   // Jeder Code gilt einmal, auch bei zwei gleichzeitigen Anfragen

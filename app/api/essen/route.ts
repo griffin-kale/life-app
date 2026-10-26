@@ -4,8 +4,12 @@ import { eanOk, MAHLZEITEN, produkt, schaetzenFoto, schaetzenText, type Mahlzeit
 import { proteinZiel } from '@/lib/koerper';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
+import { oeffentlich } from '@/lib/fehler';
+import { jpegSaeubern } from '@/lib/jpeg';
 
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const tag = heuteBerlin();
   const [liste, pz] = await Promise.all([
@@ -17,6 +21,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
@@ -39,18 +44,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, schaetzung: s });
     }
     if (b.quelle === 'foto' && typeof b.bild === 'string') {
-      const bild = b.bild.replace(/^data:image\/jpeg;base64,/, '');
-      if (bild.length > 2_000_000 || !/^[A-Za-z0-9+/=]+$/.test(bild)) return NextResponse.json({ error: 'Foto zu groß oder ungültig' }, { status: 400 });
+      const roh = b.bild.replace(/^data:image\/jpeg;base64,/, '');
+      const bild = roh.length <= 2_000_000 ? jpegSaeubern(roh) : null;
+      if (!bild) return NextResponse.json({ error: 'Foto zu groß oder ungültig' }, { status: 400 });
       const s = await schaetzenFoto(bild, typeof b.notiz === 'string' ? b.notiz : '');
       await sql`insert into mahlzeiten (user_id, tag, mahlzeit, quelle, name, kcal, kcal_bis, protein, protein_bis, gemuese)
         values ('peter', ${tag}, ${mahlzeit}, 'foto', ${s.name}, ${s.kcal}, ${s.kcal_bis}, ${s.protein}, ${s.protein_bis}, ${s.gemuese})`;
       return NextResponse.json({ ok: true, schaetzung: s });
     }
-  } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 502 }); }
+  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Schätzen hat nicht geklappt. Bitte nochmal.') }, { status: 502 }); }
   return NextResponse.json({ error: 'Nichts zum Festhalten' }, { status: 400 });
 }
 
 export async function DELETE(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const id = Number(req.nextUrl.searchParams.get('id'));
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
   await sql`delete from mahlzeiten where id = ${id} and user_id = 'peter'`;

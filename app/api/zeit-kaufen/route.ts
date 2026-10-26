@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { ensureSchema, sql } from '@/lib/db';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 /** Liste „Zeit kaufen“: Was du abgeben könntest, wie viele Stunden im Monat es frei macht, was es kostet. */
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   return NextResponse.json(await sql`select id::text, was, stunden_monat::float, kosten_cent, status from zeit_kaufen where user_id = 'peter' order by status, created_at`);
 }
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
@@ -20,6 +23,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const b = await req.json().catch(() => ({}));
   if (!['idee', 'gemacht'].includes(b.status)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
   await sql`update zeit_kaufen set status = ${b.status} where id = ${Number(b.id)} and user_id = 'peter'`;
@@ -27,6 +31,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await sql`delete from zeit_kaufen where id = ${Number(req.nextUrl.searchParams.get('id'))} and user_id = 'peter'`;
   return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,7 @@ import { ensureSchema, getSetting, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 import { safeFetch } from './safefetch';
 import { kontakteAusEintrag } from './menschen';
+import { oeffentlich } from './fehler';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -94,7 +95,7 @@ export async function enrich(id: string): Promise<void> {
     // Etwas zu tun? Dann gleich in die Stapel einsortieren.
     if ((AKTIV as readonly string[]).includes(kategorie)) await sortiere('nachtrag').catch(() => {});
   } catch (e) {
-    await sql`update items set fehler = ${String((e as Error).message || e).slice(0, 300)}, updated_at = now() where id = ${id}`;
+    await sql`update items set fehler = ${oeffentlich(e, 'Einordnen hat nicht geklappt.', 'einordnen')}, updated_at = now() where id = ${id}`;
   }
 }
 

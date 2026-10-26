@@ -4,12 +4,14 @@ import { BOEGEN, pruefeAntworten, who5, wochenTag, type Antwort, type Bogen } fr
 import { coachErstellen } from '@/lib/coach';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 const USER = 'peter';
 const tagFuer = (art: Bogen['art'], heute: string) => (art === 'woche' ? wochenTag(heute) : heute);
 
 /** Welche Bögen heute offen sind, plus die Aufgaben für den Wenn-dann-Plan. */
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const heute = heuteBerlin();
   const rows = await sql<{ art: string; tag: string; antworten: Record<string, Antwort> }[]>`
@@ -29,6 +31,7 @@ export async function GET() {
 
 /** Speichert einen Bogen. Ein zweites Absenden am selben Tag überschreibt den ersten. */
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));

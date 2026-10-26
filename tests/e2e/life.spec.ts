@@ -1,6 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import './test-env';
+import { randomBytes } from 'node:crypto';
+import postgres from 'postgres';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { signSession } from '../../lib/session';
+import { sql as testSql } from '../../lib/db';
+import { umschluesseln } from '../../lib/tresor';
+import { aufschliessen } from '../../lib/passwort-core';
 import { TEST_ENV } from '../../playwright.config';
 import { schritt, totp } from '../../lib/totp-core';
+
+// Schreibende Anfragen brauchen die Herkunft von Life (Schutz vor CSRF). Der Browser schickt sie selbst, die Test-Anfragen hier ausdrücklich.
+const H = { origin: TEST_ENV.PUBLIC_ORIGIN };
 
 // Ein Durchlauf wie im echten Leben: einrichten, festhalten, sortieren lassen, abhaken, korrigieren,
 // abmelden, wieder anmelden. Dazu die Schutzmechanismen, die nicht kaputtgehen dürfen.
@@ -20,28 +30,54 @@ const EINTRAEGE = [
   'Podcast mit Feuerwehr machen',
 ];
 
+/** Meldet einen Browser-Kontext an, wie es ein zweites Gerät nach Face ID wäre. Nur mit dem Testgeheimnis. */
+async function anmelden(context: BrowserContext) {
+  process.env.SESSION_SECRET = TEST_ENV.SESSION_SECRET;
+  const sid = randomBytes(24).toString('base64url');
+  const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
+  await sql`insert into sitzungen (id, user_id) values (${sid}, 'peter')`;
+  await sql.end();
+  const { value } = await signSession({ sid, userId: 'peter' });
+  await context.addCookies([{ name: 'life_session', value, url: TEST_ENV.PUBLIC_ORIGIN }]);
+}
+
 async function warteBisRuhig(page: Page, sekunden = 40) {
   await expect(page.locator('.working')).toHaveCount(0, { timeout: sekunden * 1000 });
 }
 
-test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sicherheits-Header', async ({ request }) => {
+test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sicherheits-Header', async ({ request, playwright }) => {
   expect((await request.get('/api/items')).status()).toBe(401);
   expect((await request.get('/api/checkin')).status()).toBe(401);
   expect((await request.get('/api/coach')).status()).toBe(401);
   for (const u of ['/api/stand', '/api/stand/1', '/api/kalender']) expect((await request.get(u)).status(), u).toBe(401);
-  expect((await request.post('/api/kalender')).status()).toBe(401);
+  expect((await request.post('/api/kalender', { headers: H })).status()).toBe(401);
   // Ein Challenge-Cookie aus der offenen Anmeldung darf nie als Sitzung gelten
-  const opt = await request.post('/api/auth/login-options');
+  const opt = await request.post('/api/auth/login-options', { headers: H });
   const ch = (opt.headers()['set-cookie'] || '').match(/life_challenge=([^;]+)/)?.[1];
   expect(ch).toBeTruthy();
   expect((await request.get('/api/export', { headers: { cookie: `life_session=${ch}` } })).status()).toBe(401);
   expect((await request.post('/api/capture', { headers: { authorization: 'Bearer falsch' }, data: { text: 'x' } })).status()).toBe(401);
+  // CSRF: schreibende Anfragen nur mit der Herkunft von Life. Der Kurzbefehl mit Schlüssel braucht keine.
+  expect((await request.post('/api/auth/login-options', { headers: { origin: 'https://boese.example' } })).status()).toBe(403);
+  const ohne = await playwright.request.newContext({ baseURL: TEST_ENV.PUBLIC_ORIGIN });
+  expect((await ohne.post('/api/auth/login-options')).status()).toBe(403);
+  expect((await ohne.post('/api/items', { data: { text: 'x' } })).status()).toBe(403);
+  expect((await ohne.post('/api/capture', { headers: { authorization: 'Bearer falsch' }, data: { text: 'x' } })).status()).toBe(401);
+  await ohne.dispose();
   const health = await request.get('/api/health');
   expect(health.status()).toBe(200);
   expect(await health.json()).toEqual({ ok: true, db: 'ok' });
   const login = await request.get('/login');
   const h = login.headers();
   expect(h['content-security-policy']).toContain("default-src 'self'");
+  const script = h['content-security-policy'].match(/script-src ([^;]*)/)?.[1] ?? '';
+  expect(script).toMatch(/'nonce-[A-Za-z0-9+/=]{20,}'/);
+  expect(script).toContain("'strict-dynamic'");
+  expect(script).not.toContain('unsafe-inline');
+  // Jede Antwort hat eine neue Nonce, und Nexts eigene Skripte tragen sie
+  const nonce = script.match(/'nonce-([^']+)'/)![1];
+  expect((await request.get('/login')).headers()['content-security-policy']).not.toContain(nonce);
+  expect(await login.text()).toContain(`nonce="${nonce}"`);
   expect(h['x-content-type-options']).toBe('nosniff');
   expect(h['referrer-policy']).toBe('no-referrer');
 });
@@ -122,7 +158,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Claude: abgeschnittene Antwort wird mit mehr Platz wiederholt', async () => {
-    const r = await (await page.request.post('/api/items', { data: { text: 'Langer diktierter Gedanke zum ABSCHNEIDEN, Umfrage seitenweise statt scrollen' } })).json();
+    const r = await (await page.request.post('/api/items', { headers: H, data: { text: 'Langer diktierter Gedanke zum ABSCHNEIDEN, Umfrage seitenweise statt scrollen' } })).json();
     await expect.poll(async () => { const it = await (await page.request.get(`/api/items/${r.id}`)).json(); return it.status === 'neu' && !it.fehler ? 'wartet' : (it.fehler ?? 'ok'); }, { timeout: 15000 }).toBe('ok');
   });
 
@@ -162,10 +198,12 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Morgen und Abend per Schnittstelle, Coach antwortet mit echten Namen', async () => {
-    expect((await page.request.post('/api/checkin', { data: { art: 'morgen', antworten: {} } })).status()).toBe(400);
-    expect((await page.request.post('/api/checkin', { data: { art: 'morgen', antworten: { erholung: { wert: 4 } } } })).status()).toBe(200);
-    expect((await page.request.post('/api/checkin', { data: { art: 'abend', antworten: { tag: { wert: 2 }, kraft: { auswahl: ['Termine', 'erfunden'] }, plan: { aufgabe: 'Newsletter schreiben', zeit: 'am Vormittag' } } } })).status()).toBe(200);
+    expect((await page.request.post('/api/checkin', { headers: H, data: { art: 'morgen', antworten: {} } })).status()).toBe(400);
+    expect((await page.request.post('/api/checkin', { headers: H, data: { art: 'morgen', antworten: { erholung: { wert: 4 } } } })).status()).toBe(200);
+    expect((await page.request.post('/api/checkin', { headers: H, data: { art: 'abend', antworten: { tag: { wert: 2 }, kraft: { auswahl: ['Termine', 'erfunden'] }, plan: { aufgabe: 'Newsletter schreiben', zeit: 'am Vormittag' } } } })).status()).toBe(200);
     await expect.poll(async () => (await (await page.request.get('/api/coach')).json()).morgen?.text ?? '', { timeout: 20_000 }).toContain('Newsletter');
+    // Morgen und Abend entstehen nacheinander im Hintergrund
+    await expect.poll(async () => (await (await page.request.get('/api/coach')).json()).abend?.text ?? '', { timeout: 20_000 }).toContain('Plan für morgen');
     const c = await (await page.request.get('/api/coach')).json();
     expect(c.morgen.geste).toContain('Carlotta');
     expect(JSON.stringify(c)).not.toContain('[Person');
@@ -189,7 +227,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const chat = prompts.filter((x) => x.startsWith('COACH CHAT'));
     expect(chat.length).toBe(2);
     expect(chat.join(' ')).not.toContain('Carlotta');
-    expect((await page.request.post('/api/coach/chat', { data: { text: '' } })).status()).toBe(400);
+    expect((await page.request.post('/api/coach/chat', { headers: H, data: { text: '' } })).status()).toBe(400);
   });
 
   await test.step('Körper: WHOOP verbinden und abgleichen, Warnsignal bei kurzen Nächten', async () => {
@@ -367,7 +405,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Körper kurz"]')).toContainText('Erholung');
     await page.getByRole('button', { name: 'Festhalten' }).first().click();
     await expect(page.locator('section[aria-label="Festhalten"] textarea')).toBeFocused();
-    const r = await page.request.put('/api/heute/bausteine', { data: { bausteine: ['coach', '<script>', 'coach'] } });
+    const r = await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: ['coach', '<script>', 'coach'] } });
     expect((await r.json()).bausteine).toEqual(['fragebogen', 'coach', 'jetzt']);
     await page.goto('/einstellungen/heute');
     await page.getByRole('button', { name: 'Zurück zum Standard' }).click();
@@ -464,8 +502,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(c.warnungen.join(' ')).toContain('Drei Nächte');
     const p = await (await page.request.get('/api/push')).json();
     expect(p.publicKey.length).toBeGreaterThan(60);
-    expect((await page.request.post('/api/push', { data: { abo: { endpoint: 'https://evil.example/x', keys: { p256dh: 'a', auth: 'b' } } } })).status()).toBe(400);
-    expect((await page.request.put('/api/push', { data: { verpasst: false, nachmittag: true, wochenstart: true } })).status()).toBe(200);
+    expect((await page.request.post('/api/push', { headers: H, data: { abo: { endpoint: 'https://evil.example/x', keys: { p256dh: 'a', auth: 'b' } } } })).status()).toBe(400);
+    expect((await page.request.put('/api/push', { headers: H, data: { verpasst: false, nachmittag: true, wochenstart: true } })).status()).toBe(200);
     const e = (await (await page.request.get('/api/push')).json()).einstellungen;
     expect([e.verpasst, e.nachmittag, e.wochenstart]).toEqual([false, true, true]);
     await page.goto('/einstellungen');
@@ -554,8 +592,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(st.length).toBe(3);
     expect(st.join(' ')).not.toContain('Carlotta');
     expect(st[2]).toContain('Fokus: Zeit');
-    expect((await page.request.post('/api/stand/2', { data: { aktion: 'uebernehmen', vorschlag: { art: 'engpass', text: 'gibt es in Etappe 2 nicht' } } })).status()).toBe(400);
-    expect((await page.request.post('/api/stand/1', { data: { antworten: { zeit: { wert: 99 } } } })).status()).toBe(400);
+    expect((await page.request.post('/api/stand/2', { headers: H, data: { aktion: 'uebernehmen', vorschlag: { art: 'engpass', text: 'gibt es in Etappe 2 nicht' } } })).status()).toBe(400);
+    expect((await page.request.post('/api/stand/1', { headers: H, data: { antworten: { zeit: { wert: 99 } } } })).status()).toBe(400);
     expect((await page.request.get('/api/stand/7')).status()).toBe(404);
     await page.goto('/woche');
     await expect(page.locator('.engpass')).toContainText('Zu wenige Erstgespräche mit Behörden');    if (process.env.SCREENSHOTS) for (const [p2, n] of [['/stand', 'stand-voll'], ['/stand/3', 'stand-auswertung'], ['/', 'heute-kalender']] as const) {
@@ -588,14 +626,19 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.engpass')).toContainText('Erfundener Engpass');
     await expect(page.locator('.ws-banner')).toHaveCount(0);
     expect((await (await page.request.get('/api/coach')).json()).wochenstartOffen).toBe(false);
-    expect(await (await page.request.post('/api/wochenstart', { data: { aktion: 'fokus', ids: ['x; drop table'] } })).json()).toMatchObject({ ids: [] });
+    expect(await (await page.request.post('/api/wochenstart', { headers: H, data: { aktion: 'fokus', ids: ['x; drop table'] } })).json()).toMatchObject({ ids: [] });
   });
 
-  await test.step('Abmelden sperrt die Daten, Face ID öffnet sie wieder', async () => {
+  await test.step('Abmelden sperrt die Daten, auch für ein kopiertes Cookie, Face ID öffnet sie wieder', async () => {
+    const alt = (await context.cookies()).find((c) => c.name === 'life_session')?.value;
+    expect(alt).toBeTruthy();
     await page.goto('/einstellungen');
-    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: 'Abmelden', exact: true }).click();
     await page.waitForURL('/login');
     expect((await page.request.get('/api/items')).status()).toBe(401);
+    // Die Signatur stimmt noch, die Sitzung ist aber widerrufen
+    expect((await page.request.get('/api/items', { headers: { cookie: `life_session=${alt}` } })).status()).toBe(401);
+    expect((await page.request.get('/api/export', { headers: { cookie: `life_session=${alt}` } })).status()).toBe(401);
     await page.click('text=Mit Face ID anmelden');
     await page.waitForURL('/');
   });
@@ -618,14 +661,24 @@ test('Namen erreichen Claude nur als Platzhalter', async ({ request }) => {
   for (const p of spaeter.slice(-1)) expect(p).not.toContain('Jonas');
 });
 
-test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', async ({ page, request }) => {
+test('Einrichtungscode gilt nach der Einrichtung nicht mehr', async ({ request }) => {
+  for (const [url, data] of [['/api/auth/register-options', { token: TEST_ENV.SETUP_TOKEN }], ['/api/auth/code/start', { token: TEST_ENV.SETUP_TOKEN, password: 'x'.repeat(20) }]] as const) {
+    const r = await request.post(url, { headers: H, data });
+    expect(r.status(), url).toBe(403);
+    expect((await r.json()).error).toContain('schon eingerichtet');
+  }
+});
+
+test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', async ({ page, request, context, browser }) => {
   const PW = 'erfundenes-test-passwort-1234';
   let secret = ''; let setupSchritt = 0;
 
-  await test.step('Einrichten mit kopierbarem Schlüssel', async () => {
+  await test.step('Einrichten mit kopierbarem Schlüssel, angemeldet und ohne Einrichtungscode', async () => {
+    await anmelden(context);
     await page.goto('/setup');
+    await expect(page.getByText('Du bist angemeldet')).toBeVisible();
+    await expect(page.locator('#tok')).toHaveCount(0);
     await page.getByRole('button', { name: 'Passwort und Code statt Passkey' }).click();
-    await page.fill('#tok', TEST_ENV.SETUP_TOKEN);
     await page.fill('#pw', 'zu-kurz');
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
     await page.fill('#pw', PW);
@@ -647,7 +700,7 @@ test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', as
   });
 
   await test.step('Abmelden, falscher Code abgelehnt, richtiger Code meldet an', async () => {
-    await page.request.post('/api/auth/logout');
+    await page.request.post('/api/auth/logout', { headers: H });
     await page.goto('/login');
     await page.getByRole('button', { name: 'Mit Passwort und Code anmelden' }).click();
     await page.fill('#pw', PW);
@@ -660,16 +713,27 @@ test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', as
     await page.fill('#code', code);
     await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
     await page.waitForURL('/');
-    const nochmal = await page.request.post('/api/auth/code/login', { data: { password: PW, code } });
+    const nochmal = await page.request.post('/api/auth/code/login', { headers: H, data: { password: PW, code } });
     expect(nochmal.status()).toBe(401);
-    const falschesPw = await page.request.post('/api/auth/code/login', { data: { password: 'falsch-falsch-falsch-1', code: totp(secret) } });
+    const falschesPw = await page.request.post('/api/auth/code/login', { headers: H, data: { password: 'falsch-falsch-falsch-1', code: totp(secret) } });
     expect(falschesPw.status()).toBe(401);
   });
 
   await test.step('Ohne Sitzung kein Status und kein Ausschalten', async () => {
     expect((await request.get('/api/auth/code')).status()).toBe(401);
-    expect((await request.delete('/api/auth/code')).status()).toBe(401);
-    expect((await request.post('/api/auth/code/start', { data: { token: 'falsch', password: 'x'.repeat(20) } })).status()).toBe(403);
+    expect((await request.delete('/api/auth/code', { headers: H })).status()).toBe(401);
+    expect((await request.post('/api/auth/code/start', { headers: H, data: { token: 'falsch', password: 'x'.repeat(20) } })).status()).toBe(403);
+  });
+
+  await test.step('Auf allen Geräten abmelden beendet auch die Sitzung auf dem anderen Gerät', async () => {
+    const anderes = await browser.newContext();
+    await anmelden(anderes);
+    expect((await anderes.request.get('/api/items')).status()).toBe(200);
+    await page.goto('/einstellungen');
+    await page.getByRole('button', { name: 'Auf allen Geräten abmelden' }).click();
+    await page.waitForURL('/login');
+    expect((await anderes.request.get('/api/items')).status()).toBe(401);
+    await anderes.close();
   });
 });
 
@@ -681,6 +745,24 @@ test('Kurzbefehl erfasst mit richtigem Schlüssel', async ({ request }) => {
 
 test('Begrenzung: nach 10 Einrichtungsversuchen ist Schluss', async ({ request }) => {
   const codes: number[] = [];
-  for (let i = 0; i < 12; i++) codes.push((await request.post('/api/auth/register-options', { data: { token: 'falsch' } })).status());
+  for (let i = 0; i < 12; i++) codes.push((await request.post('/api/auth/register-options', { headers: H, data: { token: 'falsch' } })).status());
   expect(codes).toContain(429);
+});
+
+test('ENCRYPTION_KEY: Umschlüsseln hebt gespeicherte Geheimnisse einmal auf v2', async () => {
+  // Läuft im Testprozess gegen die Testdatenbank. Der Einmal-Code aus dem Test oben liegt noch als v1 dort.
+  const sql = testSql;
+  const vorher = (await sql<{ value: string }[]>`select value from settings where key = 'totp_enc'`)[0]?.value ?? '';
+  expect(vorher).toMatch(/^v1\./);
+  const klar = aufschliessen(vorher, 'totp');
+  delete process.env.ENCRYPTION_KEY;
+  expect(await umschluesseln()).toBe(0); // ohne Schlüssel passiert nichts
+  process.env.ENCRYPTION_KEY = 'test-encryption-key-nur-fuer-tests-fedcba9876543210';
+  try {
+    expect(await umschluesseln()).toBeGreaterThanOrEqual(1);
+    const nachher = (await sql<{ value: string }[]>`select value from settings where key = 'totp_enc'`)[0].value;
+    expect(nachher).toMatch(/^v2\./);
+    expect(aufschliessen(nachher, 'totp')).toBe(klar);
+    expect(await umschluesseln()).toBe(0); // zweiter Start: nichts mehr zu tun
+  } finally { delete process.env.ENCRYPTION_KEY; await sql.end(); }
 });

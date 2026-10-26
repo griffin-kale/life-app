@@ -32,18 +32,30 @@ test('safeFetch lehnt interne Ziele, fremde Ports und andere Protokolle ab', asy
   await assert.rejects(safeFetch('http://localhost/'));
 });
 
-test('Sitzung: ein Challenge-Cookie gilt nie als Sitzung, alte Sitzungen ohne Typ auch nicht', async () => {
+test('Sitzung: ein Challenge-Cookie gilt nie als Sitzung, Sitzungen ohne Kennung (bis 0.15) auch nicht', async () => {
   process.env.SESSION_SECRET = 'test-session-secret-nur-fuer-tests-0123456789abcdef';
-  const { createSession, validSession, signChallenge, readChallenge } = await import('../../lib/session.ts');
+  const { signSession, readSession, validSession, signChallenge, readChallenge } = await import('../../lib/session.ts');
   const { SignJWT } = await import('jose');
   const challenge = await signChallenge('abc', 'login');
   assert.equal(await validSession(challenge), false);
   assert.equal(await readChallenge(challenge, 'login'), 'abc');
   assert.equal(await readChallenge(challenge, 'register'), null);
-  const s = await createSession();
-  assert.equal(await validSession(s.value), true);
+  const s = await signSession({ sid: 'a'.repeat(32), userId: 'peter' });
+  assert.deepEqual(await readSession(s.value), { sid: 'a'.repeat(32), userId: 'peter' });
   assert.equal(await readChallenge(s.value, 'login'), null);
   const alt = await new SignJWT({ sub: 'peter' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('30d').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
   assert.equal(await validSession(alt), false);
   assert.equal(await validSession('kaputt'), false);
+});
+
+test('Cookies tragen über HTTPS den Präfix __Host-', async () => {
+  const { sessionCookie, challengeCookie, cookieOptions } = await import('../../lib/session.ts');
+  process.env.PUBLIC_ORIGIN = 'https://life.example.de';
+  assert.equal(sessionCookie(), '__Host-life_session');
+  assert.equal(challengeCookie(), '__Host-life_challenge');
+  const o = cookieOptions(60);
+  assert.equal(o.secure, true); assert.equal(o.path, '/'); assert.equal(o.httpOnly, true);
+  process.env.PUBLIC_ORIGIN = 'http://localhost:3100';
+  assert.equal(sessionCookie(), 'life_session');
+  delete process.env.PUBLIC_ORIGIN;
 });

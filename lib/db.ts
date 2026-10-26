@@ -110,6 +110,9 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now()
         )`;
       await sql`create table if not exists settings (key text primary key, value text not null)`;
+      // Version 0.16: Sitzungen in der Datenbank, damit Abmelden wirklich abmeldet
+      await sql`create table if not exists sitzungen (id text primary key, user_id text not null default 'peter', erstellt timestamptz not null default now(), zuletzt timestamptz not null default now(), widerrufen timestamptz)`;
+      await sql`create index if not exists sitzungen_user on sitzungen (user_id) where widerrufen is null`;
       // Version 0.6: mehrere Menschen pro Haushalt vorbereiten. Sichtbar ist vorerst nur Peter.
       await sql`create table if not exists haushalte (id text primary key, name text not null, created_at timestamptz not null default now())`;
       await sql`create table if not exists nutzer (id text primary key, haushalt_id text not null references haushalte(id), name text not null, rolle text not null default 'erwachsen', created_at timestamptz not null default now())`;

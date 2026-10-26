@@ -3,16 +3,19 @@ import { setSetting } from '@/lib/db';
 import { abbestellen, abonnieren, aboAnzahl, endpointOk, senden, vapid } from '@/lib/push';
 import { begrenzt } from '@/lib/ratelimit';
 import { PUSH_STANDARD, pushEinstellungen } from '@/lib/zeitplan';
+import { ohneSitzung } from '@/lib/sitzung';
 
 const ZEIT = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const [k, n, e] = await Promise.all([vapid(), aboAnzahl(), pushEinstellungen()]);
   return NextResponse.json({ publicKey: k.publicKey, geraete: n, einstellungen: e });
 }
 
 /** Gerät anmelden oder eine Probe schicken. */
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   if (b.probe) return NextResponse.json({ gesendet: await senden({ title: 'Life', body: 'So sehen Mitteilungen von Life aus.', url: '/einstellungen', tag: 'probe' }) });
@@ -24,6 +27,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const alt = await pushEinstellungen();
@@ -35,6 +39,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const b = await req.json().catch(() => ({}));
   if (typeof b.endpoint === 'string') await abbestellen(b.endpoint);
   return NextResponse.json({ ok: true });

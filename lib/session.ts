@@ -1,7 +1,16 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-export const SESSION_COOKIE = 'life_session';
-export const CHALLENGE_COOKIE = 'life_challenge';
+/**
+ * Signierte Cookies für Sitzung und Challenge. Läuft auch in der Middleware (Edge), deshalb ohne Datenbank.
+ * Ob eine Sitzung widerrufen ist, prüft `lib/sitzung.ts` in jeder API-Route gegen die Tabelle `sitzungen`.
+ */
+
+/** Über HTTPS tragen die Cookies den Präfix __Host-: nur diese Domain, nur HTTPS, Pfad /. Lokal und in Tests ohne. */
+export const sicher = () => (process.env.PUBLIC_ORIGIN ?? '').startsWith('https://');
+const name = (n: string) => (sicher() ? `__Host-${n}` : n);
+export const sessionCookie = () => name('life_session');
+export const challengeCookie = () => name('life_challenge');
+
 const SESSION_DAYS = 30;
 
 function geheimnis(): string {
@@ -13,6 +22,7 @@ function geheimnis(): string {
 /**
  * Eigener Schlüssel pro Zweck, abgeleitet aus SESSION_SECRET (HMAC-SHA-256 mit Zweck als Nachricht).
  * Ein Challenge-Cookie kann so nie als Sitzung gelten, auch wenn jemand die Prüfung der Claims vergisst.
+ * v2 seit 0.16: Sitzungen tragen eine Kennung (sid), ältere Sitzungen gelten nicht mehr.
  */
 const schluessel = new Map<string, Promise<Uint8Array>>();
 function key(zweck: 'sitzung' | 'challenge'): Promise<Uint8Array> {
@@ -20,23 +30,32 @@ function key(zweck: 'sitzung' | 'challenge'): Promise<Uint8Array> {
   const k = `${zweck}|${roh}`;
   if (!schluessel.has(k)) schluessel.set(k, (async () => {
     const basis = await crypto.subtle.importKey('raw', new TextEncoder().encode(roh), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return new Uint8Array(await crypto.subtle.sign('HMAC', basis, new TextEncoder().encode(`life:${zweck}:v1`)));
+    return new Uint8Array(await crypto.subtle.sign('HMAC', basis, new TextEncoder().encode(`life:${zweck}:v2`)));
   })());
   return schluessel.get(k)!;
 }
 
-export async function createSession(): Promise<{ value: string; maxAge: number }> {
+export type Sitzung = { sid: string; userId: string };
+
+/** Signiert eine Sitzung. Anlegen in der Datenbank übernimmt `neueSitzung` in lib/sitzung.ts. */
+export async function signSession(s: Sitzung): Promise<{ value: string; maxAge: number }> {
   const maxAge = SESSION_DAYS * 24 * 3600;
-  const value = await new SignJWT({ sub: 'peter', typ: 'sitzung' }).setProtectedHeader({ alg: 'HS256' }).setAudience('life:sitzung').setIssuedAt().setExpirationTime(`${SESSION_DAYS}d`).sign(await key('sitzung'));
+  const value = await new SignJWT({ sub: s.userId, sid: s.sid, typ: 'sitzung' }).setProtectedHeader({ alg: 'HS256' }).setAudience('life:sitzung').setIssuedAt().setExpirationTime(`${SESSION_DAYS}d`).sign(await key('sitzung'));
   return { value, maxAge };
 }
 
-export async function validSession(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+/** Prüft nur die Signatur. Ob die Sitzung widerrufen wurde, weiß erst die Datenbank. */
+export async function readSession(token: string | undefined): Promise<Sitzung | null> {
+  if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, await key('sitzung'), { algorithms: ['HS256'], audience: 'life:sitzung' });
-    return payload.typ === 'sitzung' && payload.sub === 'peter';
-  } catch { return false; }
+    if (payload.typ !== 'sitzung' || typeof payload.sub !== 'string' || typeof payload.sid !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.sid)) return null;
+    return { sid: payload.sid, userId: payload.sub };
+  } catch { return null; }
+}
+
+export async function validSession(token: string | undefined): Promise<boolean> {
+  return (await readSession(token)) !== null;
 }
 
 /** Challenge für Passkey-Anmeldung, 5 Minuten gültig, signiert im Cookie. */
@@ -52,7 +71,7 @@ export async function readChallenge(token: string | undefined, purpose: 'registe
   } catch { return null; }
 }
 
-export const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', maxAge });
+export const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: sicher() || process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', maxAge });
 
 /** Vergleicht zwei Geheimnisse in konstanter Zeit. */
 export function sameSecret(a: string | null | undefined, b: string | undefined): boolean {
@@ -61,4 +80,11 @@ export function sameSecret(a: string | null | undefined, b: string | undefined):
   let diff = x.length ^ y.length;
   for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
   return diff === 0;
+}
+
+/** Erlaubte Herkunft für schreibende Anfragen. Ohne PUBLIC_ORIGIN (lokal) zählt der Host der Anfrage. */
+export function erlaubteHerkunft(host: string | null, proto: string | null): string | null {
+  if (process.env.PUBLIC_ORIGIN) return new URL(process.env.PUBLIC_ORIGIN).origin;
+  if (!host) return null;
+  return `${proto ?? 'http'}://${host}`;
 }

@@ -6,6 +6,7 @@ import { begrenzt } from '@/lib/ratelimit';
 import { aufgabe } from '@/lib/tag';
 import { engpassSetzen, montagVon } from '@/lib/tagesregeln';
 import { wochenziel, wochenzielSetzen } from '@/lib/stand';
+import { ohneSitzung } from '@/lib/sitzung';
 
 /** Wochenstart: Rückblick, Engpass prüfen, drei Dinge der Woche, Parkplatz sichten. */
 const kurz = (i: Item) => ({ id: i.id, titel: aufgabe(i), stapel: i.stapel });
@@ -15,6 +16,7 @@ async function fokusLesen(montag: string): Promise<string[]> {
 }
 
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const heute = heuteBerlin(); const montag = montagVon(heute);
   const vor = new Date(Date.parse(montag + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10);
@@ -43,6 +45,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const montag = montagVon(heuteBerlin());
