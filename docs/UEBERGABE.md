@@ -2,9 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.20.0.
+Stand: 26. Oktober 2026, Version 0.21.0.
 
-Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist noch offen.
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist mit 0.21.0 erledigt.
 
 ## Worum es geht
 
@@ -14,6 +14,7 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 
 | Bereich | Stand | Wo im Code |
 |---|---|---|
+| Datenschutz Phase 3: kein Datum an Claude, Kalendertitel mit Schutzliste, Bon zuschneiden, YouTube nur mit Video-ID, Zeit zentral | 0.21 | `lib/zeit.ts`, `lib/kalender-regeln.ts` (`schutzTitel`), `app/bon-zuschnitt.tsx`, `lib/youtube.ts` |
 | Schwebende Leiste mit Heute in der Mitte, Plus mit sechs Wegen auf Heute, Halten auf Körper und Geld | 0.20 | `app/tabbar.tsx` |
 | The ONE Thing auf Heute (eine Sache, Danach, Heute erledigt), Claude wählt Rang 1 mit Kellers Leitfrage, Sweep „so wenig wie nötig“ durch alle Seiten | 0.19 | `app/eine-sache.tsx`, `app/page.tsx`, `lib/priorisieren.ts` (Regel 8), `app/api/items/[id]` (`eineSache`), `app/ui.tsx` (`TaskRow`), `app/ringe.tsx` (`MiniRinge`) |
 | Heute aufgeräumt: Wochenringe oben, Coach-Leiste und Coach-Blatt mit einem Feld für Festhalten und Fragen, Spur im Gespräch, freie Zeit an der ersten Aufgabe, Coach fest rechts auf dem Mac | 0.18 | `app/page.tsx`, `app/coach.tsx` (`CoachInhalt`, `CoachLeiste`, `CoachBlatt`, `useCoachChat`), `app/ringe.tsx` (`Wochenringe`), `app/sprache.ts`, `lib/heute-bausteine.ts` |
@@ -56,6 +57,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Datenschutz 0.21 (Peter, 26.10.2026):** Phase 3. Kalender mit Schutzliste statt ganz ohne Titel, damit der Coach weiter sinnvoll planen kann. Restrisiko: Ein unbekannter Name ohne „mit“ oder „bei“ davor („Jonas Geburtstag“) geht beim ersten Mal noch im Klartext raus, wie bei Einträgen. Bons werden im Browser auf einen Streifen zugeschnitten, Essensfotos gehen weiter ganz raus, aber ohne Metadaten (Server prüft JPEG und entfernt EXIF). YouTube bleibt als fester Fremddienst, nur mit Video-ID. Sortierlauf bekommt Fristen relativ, damit auch dort kein Datum mehr steht.
 
 - **Leiste 0.20 (Peter, 26.10.2026):** Variante N2 mit Halten aus N1. Die Mitte ist Heute, auf Heute wird sie zum Plus. Halten ist nur Abkürzung, weil versteckte Gesten kaum gefunden werden. Jeder Weg im Haltemenü steht auch sichtbar auf der Seite. In der Web-App unterdrückt die Leiste Textauswahl und Kontextmenü, Vibration gibt es auf iOS im Browser nicht. Empfohlen ist wieder Standard unter der einen Sache.
 

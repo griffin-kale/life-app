@@ -2,6 +2,22 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.21.0] – 2026-10-26
+
+Phase 3 aus `docs/VERBESSERUNG.md`: Datenschutz (Peters Wahl, 26.10.2026).
+
+### Datenschutz
+- **Kein Datum an Claude.** Coach und Sortierlauf nennen nur den Wochentag. Fristen gehen relativ raus („morgen“, „in 3 Tagen“, „2 Tage überfällig“), nicht als Datum.
+- **Kalendertitel mit Schutzliste.** Termine mit Wörtern zu Gesundheit, Behörden, Recht oder Geld gehen nur als „Termin privat“ an Claude. Unbekannte Namen nach „mit“, „bei“, „von“, „für“ werden zu „jemandem“. Bekannte Namen ersetzt wie bisher die Pseudonymisierung.
+- **Bon zuschneiden.** Vor dem Senden ziehst du zwei Kanten auf Posten und Summe. Nur dieser Streifen verlässt den Browser, Adresse oben und Kartennummer unten bleiben auf dem iPhone. Mit Pfeiltasten geht es auch ohne Ziehen.
+- **YouTube nur mit Video-ID.** Life fragt YouTube nur noch mit der ID nach dem Titel, ohne Zeitmarken, Playlists und Tracking-Parameter, und folgt keinen Weiterleitungen. Die Ausnahme steht in `CLAUDE.md`.
+
+### Behoben
+- **Zeitzone.** `lib/zeit.ts` rechnet Datum, Uhrzeit und Tagesbeginn in Berlin an einer Stelle. Der Kalender las bisher mit festem `+01:00` und verschob im Sommer den Tagesbeginn um eine Stunde. Wochenstart-Mitteilung und Zeit-kaufen-Hinweis prüfen den Montag jetzt in Berliner Zeit statt in der Zeitzone des Servers.
+
+### Tests
+- Neu: `tests/unit/zeit.test.ts` (Tagesbeginn in Winter, Sommer und an beiden Umstellungstagen, relative Fristen, Schutzliste, Video-ID). Ende-zu-Ende: Bon-Zuschnitt, kein Datum in Coach- und Sortier-Prompts.
+
 ## [0.20.0] – 2026-10-26
 
 Neue Leiste unten (Peter, 26.10.2026): Variante N2 mit Halten aus N1. Grundlage: Apples schwebende Tab-Leiste aus iOS 26, Erfahrungen mit versteckten Gesten (3D Touch), Instagrams Umbau 2026 (die Mitte gehört dem Häufigsten), Daumenzone.
