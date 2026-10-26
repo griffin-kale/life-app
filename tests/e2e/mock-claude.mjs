@@ -105,11 +105,16 @@ http.createServer((req, res) => {
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
       : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
+      // Modelle mit „ohne-zwang“ im Namen lehnen ein erzwungenes Werkzeug ab wie die neueren Claude-Modelle
+      if (/ohne-zwang/.test(body.model || '') && (body.tool_choice?.type === 'tool' || body.tool_choice?.type === 'any')) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'tool_choice: type "tool" and "any" are not supported for this model.' } }));
+      }
       res.writeHead(200, { 'content-type': 'application/json' });
       // Langer Eintrag mit „ABSCHNEIDEN“: beim ersten Versuch abgeschnitten wie bei einem zu knappen Limit
       if (text.includes('Eintrag (oft diktiert') && !text.startsWith('COACH') && !text.startsWith('SORTIERLAUF') && text.includes('ABSCHNEIDEN') && (body.max_tokens ?? 0) <= 1500) return res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [{ type: 'tool_use', id: 'tu_1', name: 'ergebnis', input: {} }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1 } }));
-      const block = body.tool_choice?.name ? { type: 'tool_use', id: 'tu_1', name: body.tool_choice.name, input: a } : { type: 'text', text: JSON.stringify(a) };
-      res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [block], stop_reason: body.tool_choice ? 'tool_use' : 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
+      const block = body.tool_choice?.name || body.tool_choice?.type === 'auto' ? { type: 'tool_use', id: 'tu_1', name: body.tool_choice.name || 'ergebnis', input: a } : { type: 'text', text: JSON.stringify(a) };
+      res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [block], stop_reason: body.tool_choice?.name || body.tool_choice?.type === 'auto' ? 'tool_use' : 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
     }, !essen && !bon && !geld && p.startsWith('SORTIERLAUF') ? 400 : 150);
     if (text.startsWith('STANDORT')) console.log('mock standort');
     console.log('mock', bon ? 'bon' : geld ? 'geld' : essen ? 'essen' : p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);

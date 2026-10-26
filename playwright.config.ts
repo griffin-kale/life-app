@@ -10,6 +10,8 @@ export const TEST_ENV = {
   CAPTURE_TOKEN: 'capture-test-token-1234567890abc',
   ANTHROPIC_API_KEY: 'sk-test-nur-fuer-die-attrappe',
   ANTHROPIC_BASE_URL: 'http://127.0.0.1:4010',
+  // Das große Modell lehnt in der Attrappe ein erzwungenes Werkzeug ab (wie claude-sonnet-5-5), das schnelle nicht
+  CLAUDE_MODEL: 'claude-test-ohne-zwang',
   PUBLIC_ORIGIN: `http://localhost:${PORT}`,
   WHOOP_CLIENT_ID: 'test-client',
   WHOOP_CLIENT_SECRET: 'test-secret',

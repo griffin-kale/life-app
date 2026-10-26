@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.16.0.
+Stand: 26. Oktober 2026, Version 0.16.1.
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt, als Nächstes kommt Phase 2 Betrieb.
 
@@ -52,6 +52,7 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 
 ## Entscheidungen und Gründe
 
+- **Claude-Werkzeug 0.16.1 (26.10.2026):** Manche Modelle lehnen `tool_choice` „tool“ mit Fehler 400 ab. `lib/claude.ts` (`senden`) versucht das erzwungene Werkzeug, erkennt die Ablehnung (`zwangAbgelehnt` in `lib/fehler.ts`), merkt sich das Modell im Speicher und fragt mit „auto“ nach. Die Systemanweisung bittet um genau einen Aufruf von „ergebnis“, notfalls holt Life das JSON aus dem Text. Antworten prüft Life weiter gegen feste Listen. Strukturierte Ausgaben (`output_config.format`) wären die sauberere Lösung, brauchen aber pro Aufruf ein festes Schema. Das ist ein Kandidat für Phase 5 Technik.
 - **Sicherheit 0.16 (Peter, 26.10.2026):** Phase 1 aus `docs/VERBESSERUNG.md`. `ENCRYPTION_KEY` kommt mit diesem Release (Peters Wahl), alte Geheimnisse bleiben lesbar und werden beim Start umgeschlüsselt. Abweichung vom Plan: statt eines Zählers `sitzung_version` eine Tabelle `sitzungen`. Mit dem Zähler hätte Abmelden auf dem iPhone auch den Mac abgemeldet, mit der Tabelle widerruft Abmelden genau eine Sitzung und „Auf allen Geräten abmelden“ alle. Die Middleware läuft im Edge-Runtime ohne Datenbank, deshalb prüft sie nur die Signatur, jede API-Route prüft zusätzlich die Tabelle. Seiten laden ihre Daten nur über die API.
 - **Standortbestimmung und Kalender 0.15 (Peter, 26.10.2026):** Direkt in Life gebaut, drei Etappen à zwölf Minuten (Baseline mit Skalenfragen, Richtung, Engpass nach der Engpasstheorie). Claude schlägt vor, übernommen wird nur, was Peter antippt (feste Liste der Vorschlagsarten in `pruefeAuswertung`). Stand in `stand:peter`, Wochenziel in `wochenziel:peter`. Kalender: iCloud per CalDAV mit app-spezifischem Passwort (Peters Wahl, obwohl das Passwort auch Mail und Kontakte öffnet; Life nutzt es nur für PROPFIND und REPORT auf `caldav.icloud.com`). Arbeitskalender kommt später. Familientermine gehen ohne Titel an Claude.
 - **Coach und Tag 0.14 (Peter, 26.10.2026):** Gespräch direkt auf Heute, Verlauf pro Tag (Tabelle `coach_chat`). Proaktiv über vier Wege: verpasste Uhrzeit, Nachmittags-Check um 15 Uhr, Offenes in der Coach-Karte, Wochenstart am Montag. Wochenstart in vier Schritten (Rückblick, Engpass, drei Dinge, Parkplatz), abgeschlossen steht in `wochenstart:peter`, die drei Dinge in `fokus:peter`. „Empfohlen für dich“: feste Regeln in `lib/tagesregeln.ts` entscheiden, die Karte braucht keinen Claude-Aufruf und ist sofort da. Der Coach bekommt die Empfehlung als Grundlage und formuliert sie in seinem Text. Fragebögen blättern seitlich, eine Frage pro Seite. Geld folgt dem Kachelmuster von Körper.
