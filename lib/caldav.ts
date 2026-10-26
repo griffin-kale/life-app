@@ -54,7 +54,7 @@ export async function kalenderFinden(): Promise<Kalender[]> {
   if (!heim) throw new KalenderFehler('Kalender: keine Kalender gefunden');
   const l = await dav('PROPFIND', new URL(heim, h.url).toString(), '<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:ic="http://apple.com/ns/ical/"><d:prop><d:displayname/><d:resourcetype/><ic:calendar-color/><c:supported-calendar-component-set/></d:prop></d:propfind>', '1');
   return antworten(l.text)
-    .filter((r) => /<(?:[\w-]+:)?calendar\b/i.test(erstes(r, 'resourcetype')) && (!/supported-calendar-component-set/i.test(r) || /name="VEVENT"/i.test(r)))
+    .filter((r) => /<(?:[\w-]+:)?calendar\b/i.test(erstes(r, 'resourcetype')) && (!/supported-calendar-component-set/i.test(r) || /name=["']VEVENT["']/i.test(r)))
     .map((r) => ({ href: new URL(href(r), l.url).toString(), name: entities(erstes(r, 'displayname').trim()).slice(0, 80) || 'Kalender', farbe: entities(erstes(r, 'calendar-color').trim()).slice(0, 9) }))
     .filter((k) => hostErlaubt(k.href, process.env.CALDAV_URL));
 }

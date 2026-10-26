@@ -2,6 +2,11 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.15.1] – 2026-10-26
+
+### Behoben
+- „Kalender suchen“ fand bei iCloud keinen Kalender. iCloud schreibt die Kalenderart als `name='VEVENT'` in einfachen Anführungszeichen, Life erwartete doppelte. Die Testattrappe antwortet jetzt genauso wie iCloud.
+
 ## [0.15.0] – 2026-10-26
 
 ### Hinzugefügt

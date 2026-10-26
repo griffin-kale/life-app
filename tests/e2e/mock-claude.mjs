@@ -118,12 +118,13 @@ http.createServer((req, res) => {
 
 
 // Attrappe für iCloud CalDAV (Port 4011): Privat, Familie und eine Erinnerungsliste ohne Termine.
+// Wie iCloud: Attribute in einfachen Anführungszeichen (<comp name='VEVENT'/>).
 const BERLIN = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date()).replace(/-/g, '');
 const TZ = 'BEGIN:VTIMEZONE\r\nTZID:Europe/Berlin\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nDTSTART:19701025T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n';
 const ev = (uid, von, bis, titel, extra = '') => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${TZ}BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTART;TZID=Europe/Berlin:${von}\r\nDTEND;TZID=Europe/Berlin:${bis}\r\n${extra}SUMMARY:${titel}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
 const xml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const ms = (antworten) => `<?xml version="1.0" encoding="UTF-8"?><multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:A="http://apple.com/ns/ical/">${antworten}</multistatus>`;
-const kal = (pfad, name, farbe, comp) => `<response><href>${pfad}</href><propstat><prop><displayname>${xml(name)}</displayname><resourcetype><collection/><C:calendar/></resourcetype><A:calendar-color>${farbe}</A:calendar-color><C:supported-calendar-component-set><C:comp name="${comp}"/></C:supported-calendar-component-set></prop><status>HTTP/1.1 200 OK</status></propstat></response>`;
+const kal = (pfad, name, farbe, comp) => `<response><href>${pfad}</href><propstat><prop><displayname>${xml(name)}</displayname><resourcetype><collection/><C:calendar/></resourcetype><A:calendar-color>${farbe}</A:calendar-color><C:supported-calendar-component-set><comp name='${comp}' xmlns='urn:ietf:params:xml:ns:caldav'/></C:supported-calendar-component-set></prop><status>HTTP/1.1 200 OK</status></propstat></response>`;
 http.createServer((req, res) => {
   const ok = req.headers.authorization === 'Basic ' + Buffer.from('test@example.com:abcd-efgh-ijkl-mnop').toString('base64');
   if (!ok) { res.writeHead(401); return res.end(); }
