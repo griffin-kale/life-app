@@ -2,6 +2,12 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.15.3] – 2026-10-26
+
+### Dokumentation
+- Plan für das Fundament in `docs/VERBESSERUNG.md`: fünf Phasen (Sicherheit, Betrieb, Datenschutz, UX und UI, Technik), Noten der Prüfung vom 26.10.2026 und Ziele.
+- `docs/UEBERGABE.md` auf Stand 0.15.3 gebracht und auf den Plan verwiesen. Der Weg nach `main` läuft jetzt über einen einzigen Pull Request vom neuesten Zweig.
+
 ## [0.15.2] – 2026-10-26
 
 ### Sicherheit

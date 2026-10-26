@@ -2,7 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 25. Oktober 2026, Version 0.11.0.
+Stand: 26. Oktober 2026, Version 0.15.3.
+
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen, Sicherheit zuerst).
 
 ## Worum es geht
 
@@ -39,7 +41,7 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 
 1. **Anthropic-Schlüssel** in der Console der Griffin & Kale GmbH anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen, Schlüssel in `/opt/life/deploy/.env` als `ANTHROPIC_API_KEY=` eintragen, dann `docker compose up -d --force-recreate app`. Ohne Schlüssel sortiert nichts und der Coach schweigt.
 2. **WHOOP-App** auf developer.whoop.com registrieren. Weiterleitung `https://life.gneuss.xyz/api/whoop/callback`, Scopes: offline, read:recovery, read:cycles, read:sleep, read:workout, read:body_measurement. `WHOOP_CLIENT_ID` und `WHOOP_CLIENT_SECRET` in die `.env`, App neu starten, in Life unter Körper „WHOOP verbinden“.
-3. **Pull Requests** `feature/fundament`, `feature/koerper`, `feature/ruhe`, `feature/geld` `feature/kompass` und `feature/menschen` nach `main` mergen, danach Tag auf die neueste Version. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
+3. **Alles nach `main` bringen:** Ein Pull Request von `chore/plan` nach `main` enthält den ganzen Stapel bis 0.15.3 (alle Feature-Zweige stecken darin). Nach „Merge“ den Tag `v0.15.3` auf `main` setzen und `GHCR_IMAGE` in der `.env` eintragen. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
 4. **Mitteilungen einschalten:** Life vom Home-Bildschirm öffnen, Einstellungen, „Mitteilungen einschalten“, „Probe schicken“.
 5. **GitHub-Schlüssel für Rückmeldungen** (optional): Fine-grained Token nur für `griffin-kale/life-app`, nur „Issues: Read and write“, als `GITHUB_ISSUES_TOKEN=` in die `.env`. Ohne Schlüssel bleiben Meldungen nur in Life.
 6. **Kalender verbinden:** auf account.apple.com unter „Anmelden und Sicherheit“ → „App-spezifische Passwörter“ eines mit dem Namen „Life“ anlegen. In die `.env` `ICLOUD_USER=` (deine Apple-ID) und `ICLOUD_APP_PASSWORT=` eintragen, `docker compose up -d --force-recreate app`, dann in Life Einstellungen → Kalender → „Kalender suchen“. Widerrufen geht jederzeit an derselben Stelle.
@@ -103,6 +105,7 @@ Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, F
 ## Arbeitsweise
 
 - Zweig pro Stufe, Pull Request mit CHANGELOG, Peter mergt. Tests: `npm run typecheck`, `npm run test:unit`, `npm run build && npm run test:e2e` (braucht Postgres auf Port 5433, siehe `playwright.config.ts`). Die Attrappe `tests/e2e/mock-claude.mjs` spielt Claude, WHOOP und Open Food Facts.
+- Auf Peters Mac ist `NODE_ENV=production` gesetzt. Deshalb dort `NODE_ENV=development npm ci --include=dev`, sonst fehlen TypeScript und Playwright.
 - Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` oder im Notfall `--build`. Jede SSH-Verbindung fragt Touch ID ab.
 - Geheimnisse trägt nur Peter auf dem Server ein. Claude liest die `.env` nicht.
 - Arbeitet Claude aus einer Cloud-Sitzung, kommt der Code per `git bundle` auf den Mac und von dort zu GitHub, weil die Cloud nicht auf das Repo schreiben darf.
