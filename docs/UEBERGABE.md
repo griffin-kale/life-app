@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.22.0.
+Stand: 26. Oktober 2026, Version 0.22.1.
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist mit 0.21.0 erledigt.
 
@@ -58,6 +58,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Aufräumen 0.22.1 (Peter, 26.10.2026):** 0.16.1 bis 0.22.0 sind in `main`. Drei Dependabot-Merges mit roter CI (TypeScript 7, simplewebauthn 14, React 19.3) haben `main` zerbrochen und sind zurückgenommen. Regel ab jetzt: Dependabot-PRs nur mit grüner CI mergen, große Sprünge einzeln als eigene Aufgabe mit Tests (vor allem simplewebauthn, weil es die Anmeldung trifft). Gemergte Zweige werden gelöscht, der Mac arbeitet auf `main`.
 
 - **Ein Feld 0.22 (Peter, 26.10.2026):** Mockup K1, ohne Umschalter zwischen Festhalten und Fragen. Alles wird gespeichert, damit nichts verloren geht. Claude erkennt beim Einordnen Fragen an den Coach. Ein Irrtum kostet wenig: Der Coach antwortet einmal zu viel, oder eine Frage steht im Logbuch. Fragen landen unter Archiviert. Preis: Die Antwort braucht den Umweg über das Einordnen, rund ein bis drei Sekunden mehr. Die Vorschläge im Gespräch gehen weiter direkt an den Coach. Fotos im Feld kommen erst, wenn feststeht, wie Essensfotos gefiltert werden.
 
