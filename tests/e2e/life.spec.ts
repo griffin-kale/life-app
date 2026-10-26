@@ -66,7 +66,7 @@ test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sic
   await ohne.dispose();
   const health = await request.get('/api/health');
   expect(health.status()).toBe(200);
-  expect(await health.json()).toEqual({ ok: true, db: 'ok' });
+  expect(await health.json()).toEqual({ ok: true, db: 'ok', zeitplan: 'aus', backup: 'aus', restore: 'aus' });
   const login = await request.get('/login');
   const h = login.headers();
   expect(h['content-security-policy']).toContain("default-src 'self'");
