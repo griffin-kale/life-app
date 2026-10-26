@@ -2,6 +2,25 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.16.0] – 2026-10-26
+
+Phase 1 aus `docs/VERBESSERUNG.md`: Sicherheit. Nach dem Aufspielen meldet sich jedes Gerät einmal neu an.
+
+### Sicherheit
+- **Einrichtungscode ist kein Generalschlüssel mehr.** Er gilt nur, solange weder Passkey noch Passwort eingerichtet sind. Weitere Geräte richtest du angemeldet ein: Einstellungen → „Weiteres Gerät einrichten“.
+- **Abmelden meldet wirklich ab.** Sitzungen stehen jetzt in der Datenbank (Tabelle `sitzungen`). Abmelden widerruft die Sitzung, ein kopiertes Cookie gilt danach nicht mehr. Neu in den Einstellungen: „Auf allen Geräten abmelden“.
+- **Zwei Riegel:** Die Middleware lässt nur genau benannte Pfade ohne Anmeldung durch, keine Präfixe mehr. Jede API-Route prüft die Sitzung zusätzlich selbst gegen die Datenbank.
+- **Schutz vor untergeschobenen Anfragen (CSRF):** Schreibende Anfragen an `/api` brauchen die Herkunft von Life. Ausnahme ist der Kurzbefehl mit eigenem Schlüssel. Cookies tragen über HTTPS den Präfix `__Host-`.
+- **Pseudonymisierung fällt geschlossen aus:** Kann Life die Namensliste nicht lesen, bricht der Claude-Aufruf ab, statt Namen im Klartext zu schicken.
+- **Begrenzungen:** Neu sortieren auf Knopfdruck höchstens zehnmal in 15 Minuten. Bei Passwort und Code zählen über alle Adressen nur noch Fehlversuche, damit dich niemand mit Anfragen aussperren kann.
+- **Feste Fehlermeldungen:** Texte von Anthropic, WHOOP, iCloud und simplewebauthn gehen nicht mehr an die Oberfläche oder in die Datenbank, nur eigene deutsche Meldungen.
+- **CSP ohne `unsafe-inline` für Skripte:** Jede Seite bekommt eine eigene Nonce, dazu `'strict-dynamic'` und `object-src 'none'`.
+- **Fotos:** Der Server prüft, ob ein Foto ein JPEG ist, und entfernt EXIF, IPTC und Kommentare, bevor es an Claude geht. Caddy nimmt höchstens 8 MB pro Anfrage an.
+- **Eigener `ENCRYPTION_KEY`** für gespeicherte Geheimnisse (Einmal-Code, WHOOP, Push). Beim Start schlüsselt Life einmal um. Ein Wechsel von `SESSION_SECRET` beendet damit nur Sitzungen und macht nichts mehr unlesbar. Ohne `ENCRYPTION_KEY` läuft alles weiter wie bisher.
+
+### Tests
+- Zu jedem Befund ein Test, der auf 0.15.3 rot war: Einrichtungscode nach der Einrichtung, kopiertes Cookie nach dem Abmelden, Anfragen ohne oder mit fremder Herkunft, CSP mit Nonce. Neu: `tests/unit/riegel.test.ts` (jede Route hat den zweiten Riegel), Tests für Umschlüsseln, JPEG und Fehlertexte.
+
 ## [0.15.3] – 2026-10-26
 
 ### Dokumentation

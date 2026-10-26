@@ -36,14 +36,16 @@ Life ist eine App der Griffin & Kale GmbH, gebaut zuerst für Peter persönlich:
 
 - **Datenbank:** Änderungen nur additiv in `lib/db.ts` (`add column if not exists`). Spalten erst entfernen, wenn eine ältere Version sie nicht mehr braucht, und nie im selben Release.
 - **Abruf fremder URLs nur über `lib/safefetch.ts`.** Nie direkt `fetch` mit einer Adresse aus einem Eintrag.
-- **Neue offene Endpunkte** (ohne Sitzung) bekommen `begrenzt()` aus `lib/ratelimit.ts` und kommen in `OPEN` in `middleware.ts` nur nach Rückfrage.
+- **Zwei Riegel:** Die Middleware prüft die Signatur der Sitzung und die Herkunft (`Origin`) jeder schreibenden Anfrage. Jede API-Route beginnt zusätzlich mit `const aus = await ohneSitzung(); if (aus) return aus;` (`lib/sitzung.ts`, prüft gegen die Tabelle `sitzungen`). `tests/unit/riegel.test.ts` prüft das für jede Route.
+- **Neue offene Endpunkte** (ohne Sitzung) bekommen `begrenzt()` aus `lib/ratelimit.ts` und kommen als genauer Pfad (kein Präfix) in `OPEN` in `middleware.ts`, nur nach Rückfrage.
+- **Fehlermeldungen:** An die Oberfläche und in die Datenbank gehen nur eigene Texte (`oeffentlich()` und `Hinweis` aus `lib/fehler.ts`), nie Texte aus Bibliotheken oder fremden Diensten.
 - **Claude-Antworten sind unsichere Eingaben.** Immer gegen feste Listen prüfen (siehe `lib/enrich.ts`, `lib/priorisieren.ts`), nie als HTML ausgeben, kein `dangerouslySetInnerHTML`.
 - **Abhängigkeiten:** neue nur nach Prüfung (Herkunft, Pflege, Alter, Installationsskripte). `.npmrc` verbietet Installationsskripte.
-- **CSP** in `next.config.mjs` nur verschärfen, nie lockern. Freigegebene Ausnahmen (Peter, 25.10.2026): Kamera für Barcode und Essensfoto (`camera=(self)`), `worker-src 'self'` für den Service Worker der Mitteilungen, `blob:` für Bilder und Video. `/sw.js` ist offen, weil iOS die Datei auch nach Ablauf der Sitzung lädt.
+- **CSP** in `middleware.ts` (pro Anfrage eine Nonce, `'strict-dynamic'`, kein `'unsafe-inline'` für Skripte) nur verschärfen, nie lockern. Freigegebene Ausnahmen (Peter, 25.10.2026): Kamera für Barcode und Essensfoto (`camera=(self)`), `worker-src 'self'` für den Service Worker der Mitteilungen, `blob:` für Bilder und Video. `/sw.js` ist offen, weil iOS die Datei auch nach Ablauf der Sitzung lädt.
 - **Feste Fremddienste** (kein Eintragstext, kein Name): WHOOP (`lib/whoop.ts`, OAuth), Open Food Facts (nur Barcode-Nummer), Push-Dienste von Apple und Co. (Inhalt verschlüsselt), GitHub-Issues für Rückmeldungen (Namen als Platzhalter), iCloud CalDAV nur lesend (`lib/caldav.ts`, nur `caldav.icloud.com`, Zugang aus der .env).
 - **Fragen an Peter sind klickbar.** In der App gibt es keine Freitext-Pflichtfelder: Antworten zum Antippen (`lib/fragen.ts`, `app/fragebogen.tsx`), dazu immer „Etwas dazu sagen“ für eigene Worte.
 - **Mehrere Menschen:** Tabellen haben `user_id` (Standard `peter`), Haushalte stehen in `haushalte` und `nutzer`. Neue Tabellen bekommen `user_id` von Anfang an. Bevor ein zweiter Mensch Life nutzt, filtert jede Abfrage nach `user_id`.
-- **Anmeldung:** Passkey ist der bevorzugte Weg. Passwort und Code (`lib/zweifaktor.ts`) sind die Ausweichlösung und fliegen raus, sobald Passkeys auf Peters Geräten gehen. Der Code-Schlüssel ist mit `SESSION_SECRET` verschlüsselt: wer `SESSION_SECRET` wechselt, muss Passwort und Code neu einrichten.
+- **Anmeldung:** Passkey ist der bevorzugte Weg. Passwort und Code (`lib/zweifaktor.ts`) sind die Ausweichlösung und fliegen raus, sobald Passkeys auf Peters Geräten gehen. Der Einrichtungscode (`SETUP_TOKEN`) gilt nur, solange weder Passkey noch Passwort existieren. Weitere Geräte richtet man angemeldet ein. Gespeicherte Geheimnisse (Code-Schlüssel, WHOOP, Push) sind mit `ENCRYPTION_KEY` verschlüsselt (`zuschliessen`/`aufschliessen` in `lib/passwort-core.ts`), ohne ihn noch mit `SESSION_SECRET`. `SESSION_SECRET` wechseln beendet nur alle Sitzungen. `ENCRYPTION_KEY` nie entfernen oder wechseln.
 
 ## Texte in der App
 
