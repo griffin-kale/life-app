@@ -393,6 +393,29 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.getByLabel('Kind: Betrag').fill('3');
     await page.locator('section[aria-label="Taschengeld"]').getByRole('button', { name: 'Hinzufügen' }).click();
     await expect(page.locator('section[aria-label="Taschengeld"]')).toContainText('Testkind · 3 € pro Woche');
+    // 0.23: Zielsumme eines Sparziels ändern, in der App und über den Coach
+    await page.goto('/geld/sparen');
+    const spar = page.locator('section[aria-label="Sparziele"]');
+    await page.getByLabel('Sparziel: Name').fill('Testurlaub');
+    await page.getByLabel('Sparziel: Betrag').fill('1000');
+    await spar.getByRole('button', { name: 'Hinzufügen' }).click();
+    await expect(spar).toContainText('von 1.000 €');
+    await spar.getByRole('button', { name: 'Ziel ändern' }).click();
+    await page.getByLabel('Ziel für Testurlaub: Betrag').fill('1500');
+    await spar.getByRole('button', { name: 'Speichern' }).click();
+    await expect(spar).toContainText('von 1.500 €');
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Setz mein Sparziel Testurlaub auf 2000 Euro' } });
+    let verlauf: { text: string }[] = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toBe('✓ Gespeichert: Ziel für „Testurlaub“ ist jetzt 2.000 €.');
+    await page.reload();
+    await expect(spar).toContainText('von 2.000 €');
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Setz mein Sparziel Mondreise auf 5000 Euro' } });
+    verlauf = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toMatch(/^Nicht geändert: Ein Sparziel mit diesem Namen gibt es nicht/);
+    // Entscheidungen gehen an das stärkste Modell
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Soll ich mehr sparen oder zuerst tilgen?' } });
+    const modelle: string[] = await (await page.request.get('http://127.0.0.1:4010/modelle')).json();
+    expect(modelle.at(-1)).toBe('claude-opus-5-5');
     await page.goto('/geld');
     await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufe 3');
     expect((await page.request.get('/geld/gibtsnicht')).status()).toBe(404);
@@ -628,10 +651,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.locator('.coach-leiste').click();
     await page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' }).getByRole('button', { name: 'Gespräch öffnen' }).click();
     const coach = page.getByRole('dialog', { name: 'Coach' });
+    const vorher = (await (await page.request.get('/api/coach/chat')).json()).verlauf.length;
     await coach.getByLabel('Was geht dir durch den Kopf?').fill('Wann passt das Angebot heute, was jetzt?');
     await coach.getByRole('button', { name: 'Senden' }).click();
     await expect(coach.locator('.chat-zeile.working')).toHaveCount(0);
-    await expect.poll(async () => (await (await page.request.get('/api/coach/chat')).json()).verlauf.length).toBe(6);
+    await expect.poll(async () => (await (await page.request.get('/api/coach/chat')).json()).verlauf.length).toBe(vorher + 2);
     const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
     const letzter = prompts.filter((x) => x.startsWith('COACH CHAT')).at(-1)!;
     expect(letzter).toContain('16:30–18:00 Familie (geschützt');

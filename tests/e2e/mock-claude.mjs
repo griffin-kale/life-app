@@ -63,6 +63,7 @@ function coach(p) {
     : { text: 'Der Tag war zäh, der Plan für morgen steht. Leg das Handy um 22 Uhr weg.' };
 }
 const prompts = [];
+const modelle = [];
 const issues = [];
 const json = (res, o, status = 200) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
 // WHOOP-Attrappe: drei kurze Nächte, eine lockere Laufeinheit, 82 kg
@@ -78,6 +79,7 @@ function whoop(pfad) {
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (req.method === 'GET' && u.pathname === '/prompts') return json(res, prompts);
+  if (req.method === 'GET' && u.pathname === '/modelle') return json(res, modelle);
   if (req.method === 'GET' && u.pathname === '/oauth/oauth2/auth') {
     res.writeHead(302, { location: `${u.searchParams.get('redirect_uri')}?code=testcode&state=${encodeURIComponent(u.searchParams.get('state'))}` }); return res.end();
   }
@@ -97,6 +99,7 @@ http.createServer((req, res) => {
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}');
     const p = body.messages?.[0]?.content || '';
+    modelle.push(body.model || '');
     prompts.push(Array.isArray(p) ? p.map((x) => x.type === 'text' ? x.text : '[Bild]').join('\n') : p);
     const text = (Array.isArray(p) ? p.map((x) => x.text || '').join('\n') : p).trim();
     const bon = text.startsWith('BON'); const geld = text.startsWith('GELD');
@@ -104,7 +107,7 @@ http.createServer((req, res) => {
     const a = bon ? { laden: 'Testmarkt', summe: 23.45, topf: 'Alltag' }
       : geld ? { topf: /Tanken/.test(text) ? 'Familie' : 'Alltag' }
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
-      : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+      : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? coachChat(p) || { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       // Modelle mit „ohne-zwang“ im Namen lehnen ein erzwungenes Werkzeug ab wie die neueren Claude-Modelle
       if (/ohne-zwang/.test(body.model || '') && (body.tool_choice?.type === 'tool' || body.tool_choice?.type === 'any')) {
@@ -150,3 +153,11 @@ http.createServer((req, res) => {
     res.writeHead(207, { 'content-type': 'application/xml; charset=utf-8' }); res.end(body);
   });
 }).listen(4011);
+
+// Will Peter im Gespräch ein Sparziel ändern, schlägt der Coach die Aktion vor. Life führt sie aus und bestätigt selbst.
+function coachChat(p) {
+  // Nur die letzte Nachricht im Gespräch zählt. „Peter“ kommt dort als Platzhalter an.
+  const letzte = (p.split('Gespräch von heute:\n')[1] || '').split('\n\n')[0].split('\n').at(-1) || '';
+  const m = /Sparziel (\S+) auf (\d+)/.exec(letzte);
+  return m ? { text: 'Erledigt, das Ziel ist angepasst.', aktion: { art: 'sparziel_ziel', ziel: m[1], euro: Number(m[2]) } } : null;
+}
