@@ -2,6 +2,16 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.22.1] – 2026-10-26
+
+Aufräumen nach dem Merge von 0.16.1 bis 0.22.0 (Peter, 26.10.2026).
+
+### Behoben
+- **`main` baut wieder.** Drei Dependabot-Updates sind zurückgenommen: TypeScript 7 (Next.js fand die Pfade `@/lib` nicht mehr), `@simplewebauthn/server` 14 (die Passkey-Anmeldung nutzt Typen, die es dort nicht mehr gibt) und React 19.3 ohne passendes `react-dom`. Der Code ist danach derselbe wie in 0.22.0, das live läuft.
+
+### Geändert
+- **Dependabot:** Große Versionssprünge kommen nicht mehr als Pull Request. Kleine Updates kommen gebündelt einmal im Monat, React und React DOM immer zusammen, GitHub-Actions als ein Pull Request. Sicherheitsupdates meldet GitHub weiter sofort.
+
 ## [0.22.0] – 2026-10-26
 
 Ein Feld für alles (Peter, 26.10.2026): Mockup K1, ohne Umschalter.
