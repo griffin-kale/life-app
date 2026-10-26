@@ -173,31 +173,8 @@ export function usePressFeedback() {
   useEffect(() => { const f = () => {}; document.addEventListener('touchstart', f, { passive: true }); return () => document.removeEventListener('touchstart', f); }, []);
 }
 
-const TABS: [string, string, ReactNode, string[]][] = [
-  ['/', 'Heute', <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" /></>, []],
-  ['/woche', 'Woche', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>, []],
-  ['/koerper', 'Körper', <><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></>, []],
-  ['/geld', 'Geld', <><rect x="3" y="6.5" width="18" height="12" rx="2.5" /><circle cx="12" cy="12.5" r="2.6" /><path d="M6.5 9.5v.01M17.5 15.5v.01" /></>, []],
-  ['/mehr', 'Mehr', <><circle cx="5.5" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="18.5" cy="12" r="1.3" fill="currentColor" /></>, ['/archiv', '/einstellungen', '/eintrag', '/menschen', '/kompass']],
-];
-
-export function TabBar() {
-  const path = usePathname();
-  usePressFeedback();
-  return (
-    <nav className="tabbar" aria-label="Bereiche">
-      {TABS.map(([href, label, icon, auch]) => {
-        const on = href === '/' ? path === '/' : path.startsWith(href) || auch.some((a) => path.startsWith(a));
-        return (
-          <Link key={href} href={href} aria-current={on ? 'page' : undefined}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={on ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icon}</svg>
-            <span>{label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
+/** Die untere Leiste liegt in tabbar.tsx. */
+export { TabBar } from './tabbar';
 
 type ToastAction = { label: string; run: () => void };
 type ToastState = { text: string; kind: 'ok' | 'err'; action?: ToastAction; n: number } | null;

@@ -111,6 +111,8 @@ export default function Heute() {
     return () => clearTimeout(t);
   }, [gedanke]);
   useEffect(() => { window.addEventListener('life-festhalten', gedanke); return () => window.removeEventListener('life-festhalten', gedanke); }, [gedanke]);
+  // „Coach“ im Schnellmenü der Mitte öffnet das Gespräch ohne Tastatur
+  useEffect(() => { const f = () => setCoachOffen(true); window.addEventListener('life-coach', f); return () => window.removeEventListener('life-coach', f); }, []);
   const spuren: Spur[] = [...(st?.zuletzt ?? [])].reverse()
     .map((it) => ({ id: it.id, text: it.roh || it.text, zeit: uhrBerlin(it.created_at), titel: it.titel, laeuft: isPending(it) }));
   const coachInhalt = <CoachInhalt stand={ci} chat={chat} spuren={spuren} onFesthalten={festhalten} fokus={coachFokus > 0} key={coachFokus} kompakt onFehler={(m) => setToast(m, 'err')} />;
