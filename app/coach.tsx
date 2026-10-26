@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Bogen } from '@/lib/fragen';
 import { api } from './ui';
+import { useSprache } from './sprache';
 import type { Empfehlung } from '@/lib/tagesregeln';
 
 type CoachText = { text: string; geste?: string; warnungen: string[] } | null;
@@ -45,52 +46,127 @@ export function useCheckins(mitWoche = false) {
   };
 }
 
-const VORSCHLAEGE = ['Was jetzt?', 'Ich bin müde', 'Ich habe nur 30 Minuten', 'Ich schiebe etwas vor mir her'];
+const VORSCHLAEGE = ['Was jetzt?', 'Ich bin müde'];
 
-/** Der Coach auf „Heute“: Warnsignale und Offenes zuerst, dann der Satz des Tages, die Geste und das Gespräch. */
-export function Coach({ stand }: { stand: ReturnType<typeof useCheckins> }) {
-  const c = stand.coach;
+/** Gespräch mit dem Coach für heute. Liegt auf Heute, damit Blatt und Mac-Spalte denselben Stand zeigen. */
+export function useCoachChat() {
   const [verlauf, setVerlauf] = useState<Zeile[]>([]);
-  const [text, setText] = useState('');
   const [denkt, setDenkt] = useState(false);
-  const ende = useRef<HTMLDivElement>(null);
   useEffect(() => { api<{ verlauf: Zeile[] }>('/api/coach/chat').then((r) => setVerlauf(r.verlauf)).catch(() => {}); }, []);
   async function fragen(t: string) {
-    const n = t.trim(); if (!n || denkt) return;
-    setText(''); setDenkt(true);
+    const n = t.trim(); if (!n || denkt) return false;
+    setDenkt(true);
     setVerlauf((v) => [...v, { rolle: 'ich', text: n, zeit: '' }]);
     try { const r = await api<{ verlauf: Zeile[] }>('/api/coach/chat', { method: 'POST', body: JSON.stringify({ text: n }) }); setVerlauf(r.verlauf); }
     catch (e) { setVerlauf((v) => [...v, { rolle: 'coach', text: (e as Error).message, zeit: '' }]); }
-    finally { setDenkt(false); setTimeout(() => ende.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50); }
+    finally { setDenkt(false); }
+    return true;
   }
-  if (!c) return null;
-  const abends = stunde() >= 17 && !!c.abend;
-  const k = abends ? c.abend : c.morgen;
+  return { verlauf, denkt, fragen };
+}
+
+/** Was heute festgehalten wurde, als Spur im Gespräch. Kommt aus /api/heute, nicht aus dem Chat, und geht nie an Claude. */
+export type Spur = { id: string; text: string; zeit: string; titel: string | null; laeuft: boolean };
+type Eintrag = { art: 'zeile'; z: Zeile } | { art: 'spur'; s: Spur };
+
+/** Alles im Coach: Warnsignale, Offenes, Satz des Tages, Geste, Gespräch mit Spuren, ein Feld für Festhalten und Fragen. */
+export function CoachInhalt({ stand, chat, spuren, onFesthalten, fokus, kompakt, onFehler }: {
+  stand: ReturnType<typeof useCheckins>; chat: ReturnType<typeof useCoachChat>; spuren: Spur[];
+  onFesthalten: (text: string) => Promise<boolean>; fokus?: boolean; kompakt?: boolean; onFehler: (m: string) => void;
+}) {
+  const c = stand.coach;
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [alles, setAlles] = useState(!kompakt);
+  const feld = useRef<HTMLTextAreaElement>(null);
+  const ende = useRef<HTMLDivElement>(null);
+  const sprache = useSprache(text, setText, onFehler);
+  useEffect(() => { if (fokus) feld.current?.focus(); }, [fokus]);
+  const eintraege: Eintrag[] = [
+    ...spuren.map((s): Eintrag => ({ art: 'spur', s })),
+    ...chat.verlauf.map((z): Eintrag => ({ art: 'zeile', z })),
+  ].sort((a, b) => ((a.art === 'zeile' ? a.z.zeit : a.s.zeit) || '99:99').localeCompare((b.art === 'zeile' ? b.z.zeit : b.s.zeit) || '99:99'));
+  const zahl = eintraege.length;
+  useEffect(() => { ende.current?.scrollIntoView({ block: 'nearest' }); }, [zahl, chat.denkt]);
+  const sichtbar = alles ? eintraege : eintraege.slice(-4);
+
+  async function festhalten() {
+    const t = text.trim(); if (!t || busy) return;
+    sprache.stop(); setBusy(true);
+    try { if (await onFesthalten(t)) setText(''); } finally { setBusy(false); }
+  }
+  async function fragen(t: string) { sprache.stop(); if (await chat.fragen(t)) setText(''); }
+
+  const abends = stunde() >= 17 && !!c?.abend;
+  // Wochenstart und Standortbestimmung stehen schon als Knopf da, nicht noch einmal als Punkt
+  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Der Wochenstart')) && !(c?.standortEtappe && o.startsWith('Die Standortbestimmung')));
+  const k = c ? (abends ? c.abend : c.morgen) : null;
   return (
-    <section className="hero coach" aria-label="Coach">
+    <>
       <span className="hero-kopf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg>Coach · {abends ? 'Abend' : 'Morgen'}</span>
-      {c.warnungen.length ? <ul className="hero-warn">{c.warnungen.map((w) => <li key={w}>{w}</li>)}</ul> : null}
-      {c.offen?.length ? <ul className="hero-offen" aria-label="Noch offen">{c.offen.map((o) => <li key={o}>{o}</li>)}</ul> : null}
-      {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : !verlauf.length ? <p className="coach-text">Frag mich, was jetzt dran ist.</p> : null}
+      {c?.warnungen.length ? <ul className="hero-warn">{c.warnungen.map((w) => <li key={w}>{w}</li>)}</ul> : null}
+      {offen.length ? <ul className="hero-offen" aria-label="Noch offen">{offen.map((o) => <li key={o}>{o}</li>)}</ul> : null}
+      {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : null}
       {k?.geste ? <p className="coach-geste"><b>Kleine Geste</b>{k.geste}</p> : null}
-      {verlauf.length ? (
+      {zahl ? (
         <div className="chat" aria-live="polite">
-          {verlauf.map((z, i) => <p key={i} className={'chat-zeile ' + z.rolle}>{z.text}</p>)}
-          {denkt ? <p className="chat-zeile coach working">Der Coach denkt …</p> : null}
+          {!alles && zahl > sichtbar.length ? <button type="button" className="chat-mehr" onClick={() => setAlles(true)}>Ganzes Gespräch · {zahl - sichtbar.length} ältere</button> : null}
+          {sichtbar.map((e, i) => e.art === 'zeile'
+            ? <p key={'z' + i} className={'chat-zeile ' + e.z.rolle}>{e.z.text}</p>
+            : <Link key={e.s.id} href={`/eintrag/${e.s.id}`} className="chat-zeile fest">{e.s.text}<small>Festgehalten{e.s.titel ? ` · ${e.s.titel}` : e.s.laeuft ? ' · Claude ordnet ein …' : ''}</small></Link>)}
+          {chat.denkt ? <p className="chat-zeile coach working">Der Coach denkt …</p> : null}
           <div ref={ende} />
         </div>
       ) : null}
-      <div className="chat-vorschlaege">
-        {c.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standortbestimmung</Link> : null}
-        {c.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenstart</Link> : null}
-        {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={denkt} onClick={() => fragen(v)}>{v}</button>)}
+      <div className="coach-eingabe">
+        <div className="chat-vorschlaege">
+          {c?.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standortbestimmung</Link> : null}
+          {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenstart</Link> : null}
+          {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={chat.denkt} onClick={() => fragen(v)}>{v}</button>)}
+        </div>
+        <textarea ref={feld} value={text} onChange={(e) => setText(e.target.value)} placeholder="Was geht dir durch den Kopf?" aria-label="Was geht dir durch den Kopf?" maxLength={4000}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); festhalten(); } }} />
+        {sprache.hoert ? <p className="coach-hoert" aria-live="polite"><span className="rec" />Ich höre zu</p> : null}
+        <div className="coach-knoepfe">
+          {sprache.geht ? <button type="button" className={'coach-mic' + (sprache.hoert ? ' an' : '')} onClick={sprache.umschalten} aria-pressed={sprache.hoert} aria-label={sprache.hoert ? 'Aufnahme beenden' : 'Sprechen'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{sprache.hoert ? <rect x="7" y="7" width="10" height="10" rx="2" /> : <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></>}</svg>
+          </button> : null}
+          <button type="button" className="coach-fragen" disabled={!text.trim() || chat.denkt} onClick={() => fragen(text)}>Coach fragen</button>
+          <button type="button" className="coach-fest" disabled={!text.trim() || busy} onClick={festhalten}>{busy ? 'Speichert …' : 'Festhalten'}</button>
+        </div>
       </div>
-      <form className="chat-feld" onSubmit={(e) => { e.preventDefault(); fragen(text); }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Schreib dem Coach" aria-label="Nachricht an den Coach" enterKeyHint="send" maxLength={1000} />
-        <button type="submit" className="chat-senden" aria-label="Senden" disabled={!text.trim() || denkt}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg></button>
-      </form>
-    </section>
+    </>
   );
+}
+
+/** Leiste über der Tab-Leiste: ein Tippen öffnet den Coach mit dem Feld. Der Punkt zeigt, dass der Coach etwas hat. */
+export function CoachLeiste({ stand, onOeffnen }: { stand: ReturnType<typeof useCheckins>; onOeffnen: () => void }) {
+  const c = stand.coach;
+  const hat = !!(c && (c.warnungen.length || c.offen?.length));
+  return (
+    <button type="button" className="coach-leiste" aria-haspopup="dialog" onClick={onOeffnen}>
+      {hat ? <span className="cl-punkt" aria-label="Der Coach hat etwas für dich" role="img" /> : null}
+      <span className="cl-text">Was geht dir durch den Kopf?</span>
+      <span className="cl-stern" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg></span>
+    </button>
+  );
+}
+
+/** Der Coach als Blatt von unten (iPhone, iPad hochkant). Escape und Tippen daneben schließen. */
+export function CoachBlatt({ onZu, children }: { onZu: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => { if (e.key === 'Escape') onZu(); };
+    window.addEventListener('keydown', f);
+    const alt = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', f); document.body.style.overflow = alt; };
+  }, [onZu]);
+  return <>
+    <button type="button" className="blatt-scrim" aria-label="Schließen" onClick={onZu} />
+    <div className="coach-blatt hero coach" role="dialog" aria-modal="true" aria-label="Coach">
+      <div className="cb-kopf"><span className="blatt-griff" aria-hidden="true" /><button type="button" className="cb-zu" aria-label="Coach schließen" onClick={onZu}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+      {children}
+    </div>
+  </>;
 }
 
 /** Eine Sache, die jetzt passt. Life entscheidet nach festen Regeln, ein Tipp bringt dich hin. */

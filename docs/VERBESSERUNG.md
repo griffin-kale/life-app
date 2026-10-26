@@ -70,6 +70,8 @@ Die kritische Lücke ist behoben. Das Challenge-Cookie galt als Sitzung und ist 
 
 ## Phase 2 – Betrieb (Zweig `chore/betrieb`)
 
+**Stand 0.17.0:** Punkte 2, 4 (ohne Uptime-Dienst), 5 und 6 (ohne Digest) erledigt. Punkt 3 nach Peters Entscheidung ohne Storage Box und `age`: Hetzner-Server-Backup plus geprüfte Dumps. Offen: Punkt 1 (Lese-Token und `GHCR_IMAGE`), Uptime Kuma auf eigenem Server, Punkt 7 mit Tailscale, Deploy-Nutzer und fail2ban.
+
 1. **Zweige aufräumen.**
    - Den Stapel nach `main` bringen, am einfachsten über einen Pull Request vom neuesten Zweig. Peter gibt mit „Merge“ frei.
    - Dann `v0.x.y` taggen und `GHCR_IMAGE` in der `.env` setzen.
@@ -114,6 +116,8 @@ Die kritische Lücke ist behoben. Das Challenge-Cookie galt als Sitzung und ist 
 5. **Zeitzone.** `lib/kalender.ts` rechnet fest mit `+01:00`. Einen zentralen Baustein `lib/zeit.ts` bauen (`heuteBerlin`, `jetztBerlin`, Tagesgrenzen) und die rund 28 Stellen mit eigenem `Intl.DateTimeFormat` darauf umstellen. Mit Tests für Sommer- und Winterzeit.
 
 ## Phase 4 – UX und UI (Zweig `feature/ux`)
+
+**Stand 0.18.0:** Punkte 1, 3 und 4 sind mit dem Umbau von Heute erledigt (Mockups, Peters Wahl B mit Coach-Blatt wie A). Abweichungen: Festhalten liegt im Coach-Blatt statt als eigenes Feld, der Kalender zeigt auf Heute nur noch freie Zeit an der ersten Aufgabe. Punkt 2 hat sich damit erledigt: Die Coach-Leiste öffnet das Feld mit einem Tippen. Offen bleibt: Offen-Punkte im Coach als Links.
 
 Zeig Peter vor dem Bauen zwei bis drei Mockups für Heute, mit iPhone, iPad und Mac nebeneinander. Er entscheidet, erst dann bauen.
 

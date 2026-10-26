@@ -64,9 +64,8 @@ ICLOUD_APP_PASSWORT=
 EOT
 fi
 
-# Tägliche Datenbanksicherung um 3:15 Uhr, 30 Tage aufbewahren
-cat > /etc/cron.d/life-backup <<'EOT'
-15 3 * * * root cd /opt/life/deploy && docker compose exec -T db pg_dump -U life life | gzip > backups/life-$(date +\%F).sql.gz && find backups -name 'life-*.sql.gz' -mtime +30 -delete
-EOT
+# Sicherung (nachts) und Wiederherstellungstest (monatlich) richtet deploy/aufspielen.sh beim ersten Update ein.
+# Den Ordner backups/ nimmt das Hetzner-Server-Backup mit.
+
 echo "Fertig. Jetzt ANTHROPIC_API_KEY in $ENV eintragen und deploy.sh vom Mac aus starten."
 echo "Für fertige Pakete von GitHub einmalig: docker login ghcr.io -u <github-name> (Token nur mit read:packages)."

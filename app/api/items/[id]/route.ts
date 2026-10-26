@@ -48,6 +48,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (letzte && letzte.zu === vorher.stapel && letzte.von === b.stapel) await sql`delete from korrekturen where id = ${letzte.id}`;
     else await sql`insert into korrekturen (item_id, von, zu) values (${id}, ${vorher.stapel}, ${b.stapel})`;
   }
+  // Zur einen Sache machen: Rang 1 in „jetzt“, die anderen rücken nach. Zählt als Korrektur, aus der Claude lernt.
+  if (b.eineSache === true && (vorher.stapel === 'jetzt' || set.stapel === 'jetzt') && ['sortiert', 'erledigt'].includes(vorher.status)) {
+    await sql`update items set rang = coalesce(rang, 1) + 1 where stapel = 'jetzt' and status = 'sortiert' and id <> ${id}`;
+    set.rang = 1; set.manuell_tag = tag; set.manuell_stapel = 'jetzt';
+    await sql`insert into korrekturen (item_id, von, zu) values (${id}, 'jetzt', 'eine-sache')`;
+  }
   if (b.erledigt === true && vorher.status !== 'erledigt') { set.status = 'erledigt'; set.erledigt_at = new Date(); }
   if (b.erledigt === false && vorher.status === 'erledigt') { set.status = 'sortiert'; set.erledigt_at = null; }
   if (typeof b.zeit === 'string' && (b.zeit === '' || /^\d{2}:\d{2}$/.test(b.zeit))) { set.zeit = b.zeit || null; set.zeit_tag = b.zeit ? tag : null; }

@@ -69,7 +69,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
 
   const liste = (<>
       {st === null ? <div className="loading">Lädt …</div> : null}
-      {!teil && st && !items.length ? <div className="empty"><b>Alles erledigt.</b>Was du festhältst und zu tun ist, sortiert Claude hier ein.</div> : null}
+      {!teil && st && !items.length ? <div className="empty"><b>Alles erledigt.</b></div> : null}
 
       {REIHE.map((s) => {
         const liste = nach(s);
@@ -96,8 +96,6 @@ export function WocheSeite({ teil }: { teil?: string }) {
                 </TaskRow>
               ))}
             </ul>
-            {s === 'geparkt' ? <p className="gnote">Der Parkplatz für Ideen ohne Bezug zum Engpass. Entscheide montags in der Wochenrunde, was davon in die Woche kommt.</p> : null}
-            {s === 'streichen' ? <p className="gnote">Claude schlägt vor, das zu streichen. Gestrichenes liegt im Logbuch unter Archiviert.</p> : null}
           </section>
         );
       })}
@@ -110,17 +108,16 @@ export function WocheSeite({ teil }: { teil?: string }) {
       <header className="head">
         <span className="eyebrow">KW {kw()}{st && !teil ? ` · ${st.erledigtWoche} erledigt` : ''}</span>
         <h1 className="title">{teil ? TEILE[teil] : 'Woche'}<i>.</i></h1>
-        {st?.engpass && !teil ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p> : null}
       </header>
       {teil ? null : ci.zeige === 'woche' ? (
         <section className="gsec" aria-label="Wochenbogen">
           <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
         </section>
-      ) : ci.who5 !== null ? <p className="gnote">Wohlbefinden (WHO-5) diese Woche: {ci.who5} von 100{ci.who5 < 51 ? '. Unter 51 lohnt ein genauerer Blick, gern auch mit ärztlichem Rat.' : ''}</p> : null}
+      ) : ci.who5 !== null && ci.who5 < 51 ? <p className="gnote">Wohlbefinden diese Woche {ci.who5} von 100. Unter 51 lohnt ein genauerer Blick, gern auch mit ärztlichem Rat.</p> : null}
 
       {!teil && ws?.offen ? (
         <Link href="/wochenstart" className="ws-banner">
-          <span><b>Wochenstart</b><small>Rückblick, Engpass, drei Dinge, Parkplatz. Etwa zehn Minuten.</small></span>
+          <span><b>Wochenstart</b><small>Zehn Minuten</small></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
         </Link>
       ) : null}
@@ -131,16 +128,16 @@ export function WocheSeite({ teil }: { teil?: string }) {
           <div className="group fokus-liste">
             {fokus.map((k, i) => <div key={k.id} className="cell static"><span className="fokus-nr">{i + 1}</span><span className="lbl" style={{ flex: 1 }}>{k.titel}</span></div>)}
           </div>
-          <p className="gnote">Claude zieht sie beim Sortieren nach vorn. <Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p>
+          <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p>
         </section>
       ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p> : null}
 
       {!teil && st ? (
         <section className="ueber" aria-label="Bereiche">
-          <UeberKarte c={{ href: '/woche/ziele', titel: 'Ziele', farbe: 'var(--k-zeit)', zahl: `${st.ziele.reduce((a, z) => a + z.offen, 0)} offen`, sub: `${st.ziele.reduce((a, z) => a + z.erledigt, 0)} erledigt in ${st.ziele.length} ${st.ziele.length === 1 ? 'Ziel' : 'Zielen'}` }} />
-          <UeberKarte c={{ href: '/woche/energie', titel: 'Energie', farbe: 'var(--k-koerper)', zahl: st.kraft ? `${st.kraft.gab.length} : ${st.kraft.kostete.length}` : '–', sub: 'gab Kraft zu kostete Kraft' }} />
-          <UeberKarte c={{ href: '/woche/zeit-kaufen', titel: 'Zeit kaufen', farbe: 'var(--k-geld)', zahl: zk === null ? '–' : `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}`, sub: 'Was du abgeben könntest', aktion: { href: '/woche/zeit-kaufen', text: '+ Idee' } }} />
-          <UeberKarte c={{ href: '/woche/parkplatz', titel: 'Parkplatz', farbe: 'var(--k-mental)', zahl: `${nach('geparkt').length}`, sub: 'Ideen ohne Bezug zum Engpass' }} />
+          <UeberKarte c={{ href: '/woche/ziele', titel: 'Ziele', farbe: 'var(--k-zeit)', zahl: `${st.ziele.reduce((a, z) => a + z.offen, 0)} offen` }} />
+          <UeberKarte c={{ href: '/woche/energie', titel: 'Energie', farbe: 'var(--k-koerper)', zahl: st.kraft ? `+${st.kraft.gab.length} / −${st.kraft.kostete.length}` : '–' }} />
+          <UeberKarte c={{ href: '/woche/zeit-kaufen', titel: 'Zeit kaufen', farbe: 'var(--k-geld)', zahl: zk === null ? '–' : `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` }} />
+          <UeberKarte c={{ href: '/woche/parkplatz', titel: 'Parkplatz', farbe: 'var(--k-mental)', zahl: `${nach('geparkt').length}` }} />
         </section>
       ) : null}
 
@@ -155,8 +152,8 @@ export function WocheSeite({ teil }: { teil?: string }) {
         </section>
       ) : null}
 
-      {teil ? liste : <MitInspektor back={{ label: 'Woche', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={<div className="empty"><b>Wähl links eine Aufgabe.</b>Hier stehen dann Schritt, Ziel, Hebel, Frist und Einordnung.</div>}>{liste}</MitInspektor>}
-      {teil === 'energie' && st?.kraft && !(st.kraft.gab.length || st.kraft.kostete.length) ? <div className="empty"><b>Noch keine Bilanz.</b>Tipp nach dem Abhaken auf „gab Kraft“ oder „kostete Kraft“, dann füllt sich die Woche.</div> : null}
+      {teil ? liste : <MitInspektor back={{ label: 'Woche', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={<div className="empty"><b>Wähl links eine Aufgabe.</b></div>}>{liste}</MitInspektor>}
+      {teil === 'energie' && st?.kraft && !(st.kraft.gab.length || st.kraft.kostete.length) ? <div className="empty"><b>Noch keine Bilanz.</b></div> : null}
       {teil === 'energie' && st?.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? (
         <section className="gsec" aria-label="Energie-Bilanz">
           <h2 className="glabel">Energie-Bilanz der Woche</h2>
@@ -168,7 +165,6 @@ export function WocheSeite({ teil }: { teil?: string }) {
             {st.kraft.gab.length ? <div className="fb-q"><span className="fb-frage okc">Gab dir Kraft</span>{st.kraft.gab.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
             {st.kraft.kostete.length ? <div className="fb-q"><span className="fb-frage warn">Kostete Kraft</span>{st.kraft.kostete.map((t) => <span key={t} className="small">{t}</span>)}</div> : null}
           </div>
-          <p className="gnote">Aus deinen Tipps nach dem Abhaken. Was oft Kraft kostet, ist ein Kandidat zum Delegieren oder für „Zeit kaufen“.</p>
         </section>
       ) : null}
 

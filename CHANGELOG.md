@@ -2,6 +2,85 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.19.0] – 2026-10-26
+
+Heute nach The ONE Thing von Gary Keller, dazu ein Sweep durch die ganze App: so wenig wie möglich, nur so viel wie nötig (Peter, 26.10.2026). Grundlage: drei Mockups (Peters Wahl O1), Recherche zu Kellers Leitfrage, Aufmerksamkeitsrest (Leroy 2009), offenen Zielen mit Plan (Masicampo und Baumeister 2011), Hick-Gesetz und Progressive Disclosure.
+
+### Neu
+- **Die eine Sache.** Heute zeigt eine große Karte mit der einen Sache des Tages, „Erledigt“ und „⋯“. Im Menü liegen Uhrzeit, „Nicht heute“, Wenn-dann-Plan und „Neu sortieren“. Freie Zeit aus dem Kalender steht als Chip auf der Karte.
+- **Claude wählt mit der Leitfrage.** Beim Sortieren ist Rang 1 in „Jetzt“ die Sache, durch die alles andere leichter oder unnötig wird. Die anderen sind die Dominosteine danach.
+- **Zur einen Sache.** Unter „Danach“ holt ein Tipp eine andere Aufgabe nach vorn. Claude lernt daraus wie aus jeder Korrektur.
+- **Danach und Heute erledigt** sind zugeklappt und zeigen nur eine Zahl.
+- **Wochenringe klein neben dem Titel.** Tippen öffnet den Kompass.
+
+### Geändert
+- **Engpass:** eine Zeile mit Zielscheibe über der Karte, ohne Erklärsatz. Auf Woche steht er nicht mehr doppelt.
+- **Aufgabenzeilen überall:** nur Titel, Frist und Übergabe. Begründung, Ziel, Aufwand und Engpass-Marke stehen im Eintrag.
+- **Heute standardmäßig:** Ringe, die eine Sache, Fragebogen (wenn fällig), Danach, Heute erledigt. Empfohlen und Schnellzugriffe sind nicht mehr Standard (der Coach formuliert die Empfehlung), die Tagespunkte fallen weg. Gespeicherte Listen stellt Life einmal um (`STAND = 6`).
+- **Coach:** zwei Vorschläge statt vier. Wochenstart und Standortbestimmung stehen nur noch als Knopf, nicht zusätzlich als offener Punkt.
+- **Woche:** Karten nur mit Zahl, Erklärsätze unter Parkplatz, Streichen und Energie weg, WHO-5 nur noch, wenn der Wert unter 51 liegt.
+- **Eintrag:** eine Begründung statt zwei. Kategorie, Art, Typ, Hebel und Aufwand liegen unter „Einordnung“ zum Aufklappen.
+- **Kompass:** Konten als Zeilen mit Ring, Prozent und Level, Details zum Aufklappen. Wohlbefinden und Meilensteine sind zugeklappt, der Punkte-Erklärsatz ist weg.
+- **Körper:** drei Karten statt vier (Training und Ausdauer sind „Bewegung“), Erholung nur mit Zahl und Satz, Abgleich auf der Seite Nacht.
+- **Geld:** Karten nur mit Zahl („Frei pro Monat“ statt „Monatlich“), Topf-Kacheln ohne Rahmen und Übertrag, kurzer Text beim Einrichten.
+- **Mehr:** Zeilen ohne Unterzeile.
+
+### Tests
+- Ende-zu-Ende: die eine Sache mit Menü, Rückgängig nach „Nicht heute“, „Zur einen Sache“, zugeklappte Listen, Kompass-Konten, Körper-Abgleich auf Nacht. Unit: Umbau der gespeicherten Listen auf Stand 6.
+
+## [0.18.0] – 2026-10-26
+
+Heute aufgeräumt (Peter, 26.10.2026): Richtung B aus drei Mockups, der Coach geht wie in Richtung A als Blatt auf. Zieht Teile von Phase 4 aus `docs/VERBESSERUNG.md` vor.
+
+### Neu
+- **Wochenringe ganz oben.** Fünf Ringe ineinander wie bei Apple Fitness, daneben die Werte pro Konto und das Level. Tippen öffnet den Kompass.
+- **Coach-Leiste unten.** Über der Tab-Leiste sitzt „Was geht dir durch den Kopf?“. Ein Tippen öffnet den Coach als Blatt von unten, die Tastatur ist sofort da. Ein gelber Punkt zeigt, dass der Coach Warnsignale oder Offenes hat.
+- **Ein Feld für beides.** Im Coach entscheidest du mit zwei Knöpfen: „Festhalten“ legt einen Eintrag an, „Coach fragen“ schickt die Nachricht an den Coach. Mikrofon und Vorschläge liegen direkt darüber.
+- **Spur im Gespräch.** Was du heute festhältst, steht als goldene Blase im Coach-Verlauf, mit dem Titel von Claude. Tippen öffnet den Eintrag. Die Spur kommt aus der Datenbank von Life und geht nie an Claude.
+- **Gespräch kompakt.** Der Coach zeigt die letzten vier Blasen, „Ganzes Gespräch“ klappt den Rest auf. Das Blatt hat nur noch eine Scrollfläche.
+- **Freie Zeit an der ersten Aufgabe.** Findet Life im Kalender Platz fürs Wichtigste, steht an der ersten Aufgabe in „Jetzt dran“ ein Chip wie „14:00–15:30 frei“. Tippen setzt die Uhrzeit.
+- **Engpass bei den Aufgaben.** Der Engpass steht nicht mehr als Kasten im Kopf, sondern als getönte Zeile oben in „Jetzt dran“: „Zahlt ein auf deinen Engpass: …“. Tippen führt in die Einstellungen. Ohne Engpass steht dort „Engpass festlegen“ (Variante E3 aus vier Mockups).
+- **Mac und iPad quer:** Der Coach steht fest in der rechten Spalte. N und „Festhalten“ oben rechts springen auf Heute direkt ins Feld.
+
+### Geändert
+- Heute zeigt standardmäßig: Wochenringe, Fragebogen (wenn fällig), Jetzt dran, Empfohlen, Schnellzugriffe, Als Nächstes, Heute erledigt.
+- Der Kalender-Block, das Festhalten-Feld und die Tagespunkte sind nicht mehr Standard. Unter „Heute anpassen“ lassen sie sich wieder dazuschalten.
+- „Zuletzt festgehalten“ ist weg von Heute. Alles steht im Logbuch.
+- Gespeicherte Listen stellt Life einmal um (`STAND = 5` in `lib/heute-bausteine.ts`): Ringe nach oben, Jetzt dran früh, eigene Bausteine wie Körper kurz bleiben.
+- Der Baustein „coach“ fällt weg, der Coach ist immer da.
+- Das Plus oben rechts auf Heute fällt weg, die Coach-Leiste übernimmt.
+
+### Technik
+- `/api/heute` liefert in `zuletzt` alle Einträge von heute (höchstens 50) statt der letzten drei.
+- Spracheingabe als eigener Hook (`app/sprache.ts`) für Coach und Festhalten-Feld.
+
+### Tests
+- Ende-zu-Ende: Festhalten über das Coach-Blatt mit Spur, Coach fragen im Blatt, Coach fest rechts auf dem Mac mit Taste N, Kalender als zuschaltbarer Baustein. Unit: Umbau der gespeicherten Listen.
+
+## [0.17.0] – 2026-10-26
+
+Phase 2 aus `docs/VERBESSERUNG.md`: Betrieb. Teil 1 ohne SSH, Uptime Kuma und fertige Images, die brauchen erst Schritte von Peter.
+
+### Neu
+- **`/api/health` meldet mehr.** Neben der Datenbank auch den Zeitplan (503 ab fünf Minuten Verzug, direkt nach dem Start „startet“), das Alter der letzten Sicherung (503 ab 26 Stunden) und den letzten Wiederherstellungstest (503 bei Fehler oder nach 40 Tagen). Die Antwort enthält nur Wörter wie „ok“ oder „alt“, keine Zeiten.
+- **Sicherung mit Prüfung** (`deploy/backup.sh`, nachts 3:15 Uhr): bricht ab, wenn `pg_dump` scheitert, das gzip kaputt ist, das Endzeichen des Dumps fehlt oder die Datei zu klein ist. Ein halber Dump ersetzt nie mehr einen guten. Bewahrt 30 Tage auf, das Hetzner-Server-Backup nimmt den Ordner mit.
+- **Wiederherstellungstest** (`deploy/restore-test.sh`, am 1. jedes Monats): spielt die neueste Sicherung in eine Wegwerf-Datenbank ohne Netz ein und zählt Tabellen und Einträge.
+- **Aufspielen in einer Verbindung** (`deploy/aufspielen.sh`): sichert vorher, aktualisiert auch Postgres und Caddy, wartet auf `/api/health`. Touch ID kommt zweimal (Version) oder dreimal (`--build`), vorher bis zu 32-mal, weil jeder Gesundheits-Check eine eigene Verbindung war. Bei `--build` bleibt das alte Image als `life-app:prev` stehen.
+- **Healthchecks** im Compose für App, Datenbank und Caddy, Logs aller Dienste höchstens 3 × 10 MB.
+- **Zugriffslog in Caddy**, 14 Tage, ohne Query-Strings, Kopfzeilen und Cookies.
+
+### Behoben
+- **Zeitplan überlappt nicht mehr.** Ein Merker im Prozess plus eine Postgres-Sperre (`pg_try_advisory_lock`) verhindern, dass ein langsamer Lauf und der nächste gleichzeitig senden.
+- **Mitteilungen kommen nur einmal.** `einmal()` setzt „gesendet“ in einer einzigen Anweisung vor dem Senden. Klappt das Senden nicht, wird der Merker zurückgesetzt und der nächste Lauf versucht es wieder.
+- Fehler im Zeitplan schreiben nur noch den Fehlernamen ins Log, keine Texte.
+
+### CI
+- Die CI läuft für jeden Pull Request, egal auf welchen Zweig. Actions sind auf Commit-SHA festgelegt.
+- Ein Release baut nur, wenn der Tag auf `main` steht, zur Version in `package.json` passt und dieselben Prüfungen grün sind. Der Digest des Pakets steht in der Zusammenfassung.
+
+### Tests
+- Neu: `tests/unit/zeitplan-schutz.test.ts` (Überlappung, einmal senden, Zurücksetzen, Gesundheit) und `tests/unit/betrieb.test.ts` (Alter von Sicherung und Test). Beide Skripte sind gegen eine Attrappe für `docker` geprüft: guter Dump, abgebrochener Dump, kaputte Datei.
+
 ## [0.16.1] – 2026-10-26
 
 ### Behoben

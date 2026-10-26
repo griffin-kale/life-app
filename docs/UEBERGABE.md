@@ -2,9 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.16.1.
+Stand: 26. Oktober 2026, Version 0.19.0.
 
-Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt, als Nächstes kommt Phase 2 Betrieb.
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist noch offen.
 
 ## Worum es geht
 
@@ -14,6 +14,8 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 
 | Bereich | Stand | Wo im Code |
 |---|---|---|
+| The ONE Thing auf Heute (eine Sache, Danach, Heute erledigt), Claude wählt Rang 1 mit Kellers Leitfrage, Sweep „so wenig wie nötig“ durch alle Seiten | 0.19 | `app/eine-sache.tsx`, `app/page.tsx`, `lib/priorisieren.ts` (Regel 8), `app/api/items/[id]` (`eineSache`), `app/ui.tsx` (`TaskRow`), `app/ringe.tsx` (`MiniRinge`) |
+| Heute aufgeräumt: Wochenringe oben, Coach-Leiste und Coach-Blatt mit einem Feld für Festhalten und Fragen, Spur im Gespräch, freie Zeit an der ersten Aufgabe, Coach fest rechts auf dem Mac | 0.18 | `app/page.tsx`, `app/coach.tsx` (`CoachInhalt`, `CoachLeiste`, `CoachBlatt`, `useCoachChat`), `app/ringe.tsx` (`Wochenringe`), `app/sprache.ts`, `lib/heute-bausteine.ts` |
 | Erfassen per Text, Mikrofon, Kurzbefehl, Teilen-Menü | läuft seit 0.1 | `app/page.tsx`, `app/api/capture`, `lib/enrich.ts` |
 | Einordnen und Priorisieren mit Engpass, „Jetzt dran“ (3), Stapel, Lernen aus Korrekturen | läuft seit 0.3 | `lib/priorisieren.ts`, `app/woche` |
 | Anmeldung per Passkey, ersatzweise Passwort und Einmal-Code | 0.5 | `lib/webauthn.ts`, `lib/zweifaktor.ts`, `lib/totp-core.ts` |
@@ -43,7 +45,9 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 1. **Anthropic-Schlüssel** in der Console der Griffin & Kale GmbH anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen, Schlüssel in `/opt/life/deploy/.env` als `ANTHROPIC_API_KEY=` eintragen, dann `docker compose up -d --force-recreate app`. Ohne Schlüssel sortiert nichts und der Coach schweigt.
 2. **WHOOP-App** auf developer.whoop.com registrieren. Weiterleitung `https://life.gneuss.xyz/api/whoop/callback`, Scopes: offline, read:recovery, read:cycles, read:sleep, read:workout, read:body_measurement. `WHOOP_CLIENT_ID` und `WHOOP_CLIENT_SECRET` in die `.env`, App neu starten, in Life unter Körper „WHOOP verbinden“.
 3. **`ENCRYPTION_KEY` eintragen, vor dem Aufspielen von 0.16.0:** auf dem Server `cd /opt/life/deploy && (grep -q '^ENCRYPTION_KEY=' .env || echo "ENCRYPTION_KEY=$(openssl rand -base64 48)" >> .env)`. Der Wert erscheint dabei nirgends, und ein vorhandener Schlüssel bleibt stehen. Danach nie wieder ändern oder löschen, sonst sind Einmal-Code, WHOOP und Push-Schlüssel unlesbar. Eine Kopie gehört in 1Password.
-4. **Fertige Images (Phase 2):** `main` steht seit 26.10. auf dem Live-Stand, Tag `v0.15.3` ist gesetzt. Offen: Lese-Token für GitHub-Pakete auf dem Server und `GHCR_IMAGE` in der `.env`. Bis dahin Aufspielen mit `deploy.sh --build`.
+4. **Fertige Images (Phase 2):** Lese-Token für GitHub-Pakete (classic, nur `read:packages`) auf dem Server mit `docker login ghcr.io` hinterlegen und `GHCR_IMAGE=ghcr.io/griffin-kale/life-app` in die `.env`. Bis dahin Aufspielen mit `deploy.sh --build`.
+4a. **Hetzner-Server-Backup** ist gebucht (Peter, 26.10.2026). Es sichert den ganzen Server täglich, dazu kommen die geprüften Datenbank-Dumps unter `/opt/life/deploy/backups`.
+4b. **Für den Rest von Phase 2:** einen zweiten kleinen Hetzner-Server für Uptime Kuma anlegen, ein Tailscale-Konto anlegen und die App auf dem Mac installieren.
 5. **Mitteilungen einschalten:** Life vom Home-Bildschirm öffnen, Einstellungen, „Mitteilungen einschalten“, „Probe schicken“.
 6. **GitHub-Schlüssel für Rückmeldungen** (optional): Fine-grained Token nur für `griffin-kale/life-app`, nur „Issues: Read and write“, als `GITHUB_ISSUES_TOKEN=` in die `.env`. Ohne Schlüssel bleiben Meldungen nur in Life.
 7. **Kalender verbinden:** auf account.apple.com unter „Anmelden und Sicherheit“ → „App-spezifische Passwörter“ eines mit dem Namen „Life“ anlegen. In die `.env` `ICLOUD_USER=` (deine Apple-ID) und `ICLOUD_APP_PASSWORT=` eintragen, `docker compose up -d --force-recreate app`, dann in Life Einstellungen → Kalender → „Kalender suchen“. Widerrufen geht jederzeit an derselben Stelle.
@@ -51,6 +55,12 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **The ONE Thing 0.19 (Peter, 26.10.2026):** Heute folgt Gary Kellers Buch: eine Sache groß, der Rest eine Ebene tiefer (Mockup O1). Gründe aus der Recherche: Wer zwischen Aufgaben springt, nimmt einen Aufmerksamkeitsrest mit (Leroy 2009). Offene Aufgaben mit Plan belasten nicht mehr, auch wenn man sie nicht sieht (Masicampo und Baumeister 2011). Jede zusätzliche Wahl verlängert die Entscheidung (Hick). Claude wählt Rang 1 mit der Leitfrage, Peter tauscht über „Zur einen Sache“ (Korrektur `eine-sache`). Der Engpass steht ohne Erklärsatz über der Karte. Sweep über alle Seiten: Aufgabenzeilen ohne Begründung und Metadaten, Karten nur mit Zahl, Erklärsätze raus, Doppeltes an genau eine Stelle. Sicherheits- und Datenschutzhinweise (Wim Hof, Open Food Facts, Löschen) bleiben.
+
+- **Heute 0.18 (Peter, 26.10.2026):** Aus drei Mockups (Artefakt „Life Heute aufräumen“) Richtung B gewählt: große Wochenringe oben, Coach als Leiste über der Tab-Leiste. Geöffnet sieht der Coach aus wie in Richtung A, als Blatt von unten. Festhalten wandert in den Coach, mit zwei Knöpfen „Festhalten“ und „Coach fragen“ (Peters Wahl, statt dass Claude rät). Einwand dazu: Festhalten ist die häufigste Handlung, deshalb öffnet die Leiste das Blatt mit Tastatur, ein Tippen wie vorher. Kalender auf Heute nur noch als Chip mit freier Zeit an der ersten Aufgabe. „Zuletzt festgehalten“ ersetzt die Spur im Gespräch (Peters Wahl). Die Spur kommt aus `items`, nicht aus `coach_chat`, damit sie nie an Claude geht. Der Coach ist kein Baustein mehr, Kalender, Festhalten-Feld und Tagespunkte lassen sich weiter zuschalten. Der Engpass wandert aus dem Kopf in eine Zeile oben in „Jetzt dran“ (Variante E3 aus vier Mockups, Peters Wahl), weil er dort erklärt, warum diese Aufgaben oben stehen. Auf der Seite Woche steht er noch im alten Stil.
+
+- **Betrieb 0.17 (Peter, 26.10.2026):** Sicherung bleibt auf dem Server, das Hetzner-Server-Backup ersetzt Storage Box und `age` (Peters Wahl). Restrisiko: Das Hetzner-Backup hängt am selben Konto und verschwindet mit dem Server, und es dreht nur den ganzen Server zurück. Deshalb liegen daneben geprüfte Dumps pro Tag. Ausfall-Meldung über Uptime Kuma auf einem eigenen kleinen Hetzner-Server (kein Fremddienst), SSH über Tailscale mit eigenem Deploy-Nutzer und fail2ban. `/api/health` ist die eine Stelle, die alles meldet: Datenbank, Zeitplan, Sicherung, Wiederherstellungstest. Die App liest dafür nur zwei Statusdateien aus `backups/` (Ordner 711, Dumps 600). Abweichung vom Plan: Caddy und Postgres laufen weiter auf `16-alpine` und `2-alpine` statt per Digest, weil die Cloud-Sitzung Docker Hub nicht erreicht. Das Release hält den Digest des App-Pakets fest, aufgespielt wird weiter per Tag.
 
 - **Claude-Werkzeug 0.16.1 (26.10.2026):** Manche Modelle lehnen `tool_choice` „tool“ mit Fehler 400 ab. `lib/claude.ts` (`senden`) versucht das erzwungene Werkzeug, erkennt die Ablehnung (`zwangAbgelehnt` in `lib/fehler.ts`), merkt sich das Modell im Speicher und fragt mit „auto“ nach. Die Systemanweisung bittet um genau einen Aufruf von „ergebnis“, notfalls holt Life das JSON aus dem Text. Antworten prüft Life weiter gegen feste Listen. Strukturierte Ausgaben (`output_config.format`) wären die sauberere Lösung, brauchen aber pro Aufruf ein festes Schema. Das ist ein Kandidat für Phase 5 Technik.
 - **Sicherheit 0.16 (Peter, 26.10.2026):** Phase 1 aus `docs/VERBESSERUNG.md`. `ENCRYPTION_KEY` kommt mit diesem Release (Peters Wahl), alte Geheimnisse bleiben lesbar und werden beim Start umgeschlüsselt. Abweichung vom Plan: statt eines Zählers `sitzung_version` eine Tabelle `sitzungen`. Mit dem Zähler hätte Abmelden auf dem iPhone auch den Mac abgemeldet, mit der Tabelle widerruft Abmelden genau eine Sitzung und „Auf allen Geräten abmelden“ alle. Die Middleware läuft im Edge-Runtime ohne Datenbank, deshalb prüft sie nur die Signatur, jede API-Route prüft zusätzlich die Tabelle. Seiten laden ihre Daten nur über die API.
@@ -110,14 +120,27 @@ Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, F
 
 - Zweig pro Stufe, Pull Request mit CHANGELOG, Peter mergt. Tests: `npm run typecheck`, `npm run test:unit`, `npm run build && npm run test:e2e` (braucht Postgres auf Port 5433, siehe `playwright.config.ts`). Die Attrappe `tests/e2e/mock-claude.mjs` spielt Claude, WHOOP und Open Food Facts.
 - Auf Peters Mac ist `NODE_ENV=production` gesetzt. Deshalb dort `NODE_ENV=development npm ci --include=dev`, sonst fehlen TypeScript und Playwright.
-- Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` oder im Notfall `--build`. Jede SSH-Verbindung fragt Touch ID ab.
+- Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` (2× Touch ID) oder im Notfall `--build` (3× Touch ID). Die Arbeit macht `deploy/aufspielen.sh` auf dem Server: Sicherung vorher, Update, Warten auf `/api/health`. Zurück nach `--build`: auf dem Server `docker tag life-app:prev life-app:local && docker compose up -d app`.
 - Geheimnisse trägt nur Peter auf dem Server ein. Claude liest die `.env` nicht.
 - Arbeitet Claude aus einer Cloud-Sitzung, kommt der Code per `git bundle` auf den Mac und von dort zu GitHub, weil die Cloud nicht auf das Repo schreiben darf. Die e2e-Tests laufen in der Cloud mit eigenem Postgres auf Port 5433, auf dem Mac gibt es kein Postgres.
+
+## Sicherung und Wiederherstellung
+
+- Jede Nacht um 3:15 Uhr schreibt `deploy/backup.sh` einen geprüften Dump nach `/opt/life/deploy/backups/life-JJJJ-MM-TT.sql.gz` (30 Tage). Vor jedem Update läuft dieselbe Sicherung.
+- Am 1. jedes Monats spielt `deploy/restore-test.sh` den neuesten Dump in eine Wegwerf-Datenbank ein. Von Hand: `bash /opt/life/deploy/restore-test.sh`. Protokoll in `backups/backup.log`.
+- `/api/health` liefert 503, wenn die Sicherung älter als 26 Stunden ist oder der Test gescheitert ist.
+- **Ernstfall, Datenbank zurückholen** (auf dem Server, ersetzt alle Daten seit dem Dump, deshalb nur nach Rückfrage):
+  1. `cd /opt/life/deploy && docker compose stop app`
+  2. `bash backup.sh` (Sicherung des kaputten Stands, falls noch etwas zu retten ist)
+  3. `docker compose exec -T db psql -U life -d postgres -c 'drop database life' -c 'create database life owner life'`
+  4. `gunzip -c backups/life-JJJJ-MM-TT.sql.gz | docker compose exec -T db psql -U life -d life -v ON_ERROR_STOP=1`
+  5. `docker compose start app`, dann `/api/health` prüfen.
+- Ist der ganze Server weg: in der Hetzner-Konsole aus dem Server-Backup wiederherstellen.
 
 ## Bekannte Grenzen
 
 - Neue Namen erreichen Claude beim ersten Mal im Klartext. Abhilfe: Namen vorab unter Einstellungen eintragen.
 - WHOOP-Zonen sind eine Näherung für Zone 2 nach Attia.
-- Der Zeitplan läuft im App-Prozess. Startet der Container neu, holt Life verpasste Mitteilungen bis zu zwei Stunden später nach.
+- Der Zeitplan läuft im App-Prozess. Startet der Container neu, holt Life verpasste Mitteilungen bis zu zwei Stunden später nach. Hängt er länger als fünf Minuten, meldet `/api/health` 503.
 - Mitteilungen auf dem iPhone nur für die App vom Home-Bildschirm, ab iOS 16.4.
 - Kamera und Wake Lock hängen von der iOS-Version ab. Barcode geht immer auch per Nummer.

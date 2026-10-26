@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 /** Ein Ring wie bei Apple Fitness: füllt sich im Uhrzeigersinn, ab 100 % geschlossen. */
 export function Ring({ wert, farbe, groesse = 64, dicke = 7, label }: { wert: number | null; farbe: string; groesse?: number; dicke?: number; label?: string }) {
   const r = (groesse - dicke) / 2; const u = 2 * Math.PI * r; const v = wert === null ? 0 : Math.min(1, wert);
@@ -48,5 +49,27 @@ export function Tagespunkte({ tage, heute }: { tage: { tag: string; wert: number
       </ol>
       <span className="tp-zahl">{gut === 1 ? '1 guter Tag' : `${gut} gute Tage`}</span>
     </div>
+  );
+}
+
+/** Die Woche als fünf kleine Ringe ineinander neben dem Titel. Tippen öffnet den Kompass mit allen Zahlen. */
+export function MiniRinge({ ringe, level }: { ringe: Record<string, number | null>; level: number }) {
+  const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
+  const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : 0;
+  const g = 48; const dicke = 4; const abstand = 4.6; const aussen = g / 2 - dicke / 2 - 1;
+  return (
+    <Link href="/kompass" className="mini-ringe" aria-label={`Kompass: diese Woche ${schnitt} Prozent, Level ${level}`}>
+      <svg width={g} height={g} viewBox={`0 0 ${g} ${g}`} aria-hidden="true">
+        {KONTEN.map((x, i) => {
+          const r = aussen - i * abstand; const u = 2 * Math.PI * r; const v = ringe[x] === null ? 0 : Math.min(1, ringe[x]!);
+          return (
+            <g key={x}>
+              <circle cx={g / 2} cy={g / 2} r={r} fill="none" stroke={FARBE[x]} strokeOpacity={0.2} strokeWidth={dicke} />
+              {v > 0 ? <circle cx={g / 2} cy={g / 2} r={r} fill="none" stroke={FARBE[x]} strokeWidth={dicke} strokeLinecap="round" strokeDasharray={`${u * v} ${u}`} transform={`rotate(-90 ${g / 2} ${g / 2})`} /> : null}
+            </g>
+          );
+        })}
+      </svg>
+    </Link>
   );
 }

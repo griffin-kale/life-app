@@ -994,3 +994,97 @@ a.chat-chip { background: #F2CC5B; color: #001D51; }
 .kal-zeile { gap: 10px; }
 .kal-zeile .lbl { flex: 1; }
 .kal-punkt { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; }
+
+/* ---------- 0.18: Heute aufgeräumt – Wochenringe oben, Coach als Leiste und Blatt ---------- */
+/* Coach-Leiste über der Tab-Leiste (iPhone, iPad hochkant schmal). Verlaufskarte, bleibt in beiden Modi dunkel. */
+.coach-leiste { position: fixed; z-index: 11; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(66px + env(safe-area-inset-bottom, 0px)); max-width: 616px; margin: 0 auto; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 16px; border: 0; border-radius: 20px; background: var(--hero); color: var(--hero-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 14px 30px -12px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .12); }
+.coach-leiste:active { opacity: .85; }
+.cl-text { flex: 1; min-width: 0; color: var(--hero-muted); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-punkt { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #F2CC5B; }
+.cl-stern { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--hero-ink); color: #001D51; }
+.cl-stern svg { width: 18px; height: 18px; }
+.wrap:has(.coach-leiste) { padding-bottom: 66px; }
+body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom, 0px)); }
+
+/* Coach als Blatt von unten: eine Scrollfläche, das Feld klebt unten */
+.coach-blatt.hero { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top, 0px) + 36px); max-width: 640px; margin: 0 auto; display: grid; align-content: start; gap: 12px; padding: 8px 16px 0; border-radius: 28px 28px 0 0; overflow-y: auto; overscroll-behavior: contain; }
+.coach-blatt .chat { max-height: none; overflow: visible; }
+.cb-kopf { position: relative; display: grid; justify-items: center; min-height: 30px; }
+.cb-kopf .blatt-griff { background: rgb(255 255 255 / .35); margin-top: 2px; }
+.cb-zu { position: absolute; right: -6px; top: -2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgb(255 255 255 / .12); color: var(--hero-ink); cursor: pointer; }
+.cb-zu svg { width: 18px; height: 18px; }
+@media (prefers-reduced-motion: no-preference) { .coach-blatt { animation: blatt-hoch 320ms var(--ease-out) both; } @keyframes blatt-hoch { from { transform: translateY(48px); opacity: 0; } } }
+
+/* Ein Feld für Festhalten und Fragen */
+.coach-eingabe { position: sticky; bottom: 0; display: grid; gap: 8px; margin: 2px -16px 0; padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: #04112E; box-shadow: 0 -1px 0 rgb(255 255 255 / .1); z-index: 2; }
+.coach-eingabe textarea { min-height: 64px; max-height: 40vh; resize: none; border: 0; border-radius: 14px; padding: 11px 12px; background: rgb(255 255 255 / .1); color: var(--hero-ink); font-size: 1rem; line-height: 1.4; }
+.coach-eingabe textarea::placeholder { color: var(--hero-muted); }
+.coach-eingabe textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .4); }
+.coach-hoert { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .8125rem; color: var(--hero-muted); }
+.coach-knoepfe { display: flex; gap: 8px; }
+.coach-knoepfe button { min-height: 46px; border: 0; border-radius: 14px; font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; }
+.coach-knoepfe button:disabled { cursor: default; }
+.coach-fest:disabled { background: #5B6478; color: #1A2440; }
+.coach-fragen:disabled { color: var(--hero-muted); }
+.coach-fest { flex: 1; background: var(--hero-ink); color: #001D51; }
+.coach-fragen { flex: 1; background: rgb(255 255 255 / .12); color: var(--hero-ink); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18); }
+.coach-mic { width: 46px; flex: 0 0 auto; display: grid; place-items: center; background: rgb(255 255 255 / .12); color: var(--hero-ink); }
+.coach-mic.an { background: #FF8A80; color: #001D51; }
+.coach-mic svg { width: 20px; height: 20px; }
+
+/* Spur im Gespräch: was heute festgehalten wurde */
+.chat-zeile.fest { justify-self: end; display: grid; gap: 3px; background: none; box-shadow: inset 0 0 0 1px rgb(242 204 91 / .55); color: var(--hero-ink); text-decoration: none; border-bottom-right-radius: 6px; }
+.chat-zeile.fest small { font-size: .6875rem; font-weight: 600; color: #F2CC5B; white-space: normal; }
+.chat-mehr { justify-self: center; min-height: 36px; padding: 0 12px; border: 0; background: none; color: var(--hero-muted); font: inherit; font-size: .8125rem; cursor: pointer; }
+
+/* iPad quer und Mac: Coach fest in der rechten Spalte */
+.coach-panel { position: sticky; top: 64px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; }
+.coach-panel .chat { max-height: none; overflow: visible; }
+.coach-panel .coach-eingabe { margin: 2px -16px -18px; padding-bottom: 16px; }
+
+/* ---------- 0.19: The ONE Thing – eine Sache, der Rest eine Ebene tiefer ---------- */
+.titel-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.mini-ringe { flex: 0 0 auto; min-width: 48px; min-height: 48px; display: grid; place-items: center; border-radius: 50%; }
+.mini-ringe:active { opacity: .6; }
+.eins-bereich { display: grid; gap: 10px; }
+.engpass-zeile { display: flex; align-items: flex-start; gap: 8px; padding: 0 2px; color: var(--sand); font-size: .875rem; line-height: 1.38; text-decoration: none; }
+.engpass-zeile svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+.engpass-zeile span { min-width: 0; overflow-wrap: anywhere; }
+.engpass-zeile.leer { align-items: center; color: var(--sky); }
+.engpass-zeile:active { opacity: .6; }
+.eine-sache { display: grid; gap: 14px; padding: 20px 18px 18px; border-radius: 24px; background: var(--panel); box-shadow: var(--card-shadow); transition: opacity 280ms ease-out, transform 280ms var(--ease-out); }
+.eine-sache.leaving { opacity: 0; transform: scale(.98); }
+.eine-sache.leer { gap: 8px; padding: 16px 18px; }
+.eine-sache.leer p { margin: 0; }
+.es-kopf { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.es-titel { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.875rem; line-height: 1.12; letter-spacing: -.012em; color: var(--ink); text-decoration: none; text-wrap: pretty; overflow-wrap: anywhere; }
+.es-titel:active { opacity: .6; }
+.es-frei, .es-zeit { justify-self: start; display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(var(--sand-rgb) / .14); color: var(--sand); font: inherit; font-size: .8125rem; font-weight: 600; }
+.es-frei { cursor: pointer; }
+.es-wenn { margin: 0; font-size: .875rem; line-height: 1.38; color: var(--muted); }
+.es-knoepfe { display: flex; gap: 8px; }
+.es-ok { flex: 1; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 15px; background: var(--ink); color: var(--on-ink); font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
+.es-ok svg { width: 18px; height: 18px; }
+.es-ok:active { opacity: .7; }
+.es-mehr { width: 50px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 15px; background: rgb(var(--tint-rgb) / .12); color: var(--ink); cursor: pointer; }
+.es-mehr svg { width: 20px; height: 20px; }
+.es-blatt .blatt-titel { font-size: 1.2rem; line-height: 1.2; }
+.es-aktionen { display: flex; flex-wrap: wrap; gap: 8px; }
+.aufklapp { display: grid; gap: 8px; }
+.ak-zeile { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 6px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: 1rem; text-align: left; cursor: pointer; }
+.ak-zeile span { flex: 1; }
+.ak-zeile b { color: var(--ink); font-weight: 500; }
+.ak-zeile .chev { width: 16px; height: 16px; transition: transform 200ms var(--ease-out); }
+.ak-zeile[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.aufklapp + .aufklapp .ak-zeile { border-top: 0; }
+/* Kompass: Konten als aufklappbare Zeilen */
+.konto + .konto { border-top: 1px solid var(--line); }
+.konto-zeile { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; list-style: none; cursor: pointer; }
+.konto-zeile::-webkit-details-marker { display: none; }
+.konto-zeile b { flex: 1; font-weight: 600; }
+.konto-zeile .num { color: var(--ink); }
+.konto-level { font-size: .8125rem; color: var(--muted); min-width: 4.6em; text-align: right; }
+.konto-zeile .chev { width: 14px; height: 14px; color: var(--faint); transition: transform 200ms var(--ease-out); }
+.konto[open] .konto-zeile .chev { transform: rotate(90deg); }
+.konto-mehr { display: grid; gap: 8px; padding: 2px 14px 14px 58px; }
+.einordnung > .group { margin-top: 10px; }

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { TabBar, TopBar, api } from '../ui';
+import { Icon, TabBar, TopBar, api } from '../ui';
 import { FARBE, KONTEN, NAME, Ring, Weg } from '../ringe';
 
 type Teil = { name: string; ist: number; ziel: number; einheit?: string };
@@ -42,41 +42,39 @@ export default function Kompass() {
             {k.neu.length ? <p className="meilen-neu">Neu freigeschaltet: {k.neu.join(', ')}</p> : null}
             {j!.alleZu ? <p className="meilen-neu">Alle fünf Ringe zu. Perfekte Woche.</p> : null}
           </div>
-          <p className="gnote">Ein voller Ring bringt 100 Punkte pro Woche. Tage zählen nicht einzeln, eine verpasste Einheit kostet nichts.</p>
         </section>
 
-        {KONTEN.map((x) => (
-          <section key={x} id={x} className="gsec konto-sec" aria-label={NAME[x]}>
-            <h2 className="glabel">{NAME[x]} · Level {k.level[x].level}</h2>
-            <div className="group pad">
-              <div className="konto-kopf">
-                <Ring wert={j!.ringe[x]} farbe={FARBE[x]} groesse={54} dicke={6} />
-                <div className="kb-row grow">
-                  <div className="kb-top"><span>{pz(j!.ringe[x])} diese Woche</span><span className="num">{k.level[x].naechstes} bis Level {k.level[x].level + 1}</span></div>
-                  <div className="kb-bar"><i style={{ width: `${Math.round(k.level[x].anteil * 100)}%`, background: FARBE[x] }} /></div>
+        {/* So wenig wie nötig (0.19): jedes Konto zeigt Ring, Prozent und Level, der Rest klappt auf */}
+        <section className="gsec" aria-label="Konten">
+          <div className="group">
+            {KONTEN.map((x) => (
+              <details key={x} id={x} className="konto" aria-label={NAME[x]}>
+                <summary className="konto-zeile">
+                  <Ring wert={j!.ringe[x]} farbe={FARBE[x]} groesse={34} dicke={5} />
+                  <b>{NAME[x]}</b><span className="num">{pz(j!.ringe[x])}</span><span className="konto-level">Level {k.level[x].level}</span>{Icon.chevronRight}
+                </summary>
+                <div className="konto-mehr">
+                  {j!.teile[x].length ? j!.teile[x].map((t) => (
+                    <div key={t.name} className="geld-zeile"><span>{t.name}</span><span className="num">{Math.round(t.ist)} / {t.ziel}{t.einheit ? ` ${t.einheit}` : ''}</span></div>
+                  )) : <p className="muted small">Noch keine Daten.</p>}
+                  <Verlauf werte={k.verlauf.map((v) => v.ringe[x])} farbe={FARBE[x]} label={`${NAME[x]} über acht Wochen`} />
+                  <div className="verlauf-achse"><span>{kurz(k.wochen[0])}</span><span>{k.level[x].naechstes} bis Level {k.level[x].level + 1}</span></div>
                 </div>
-              </div>
-              {j!.teile[x].length ? j!.teile[x].map((t) => (
-                <div key={t.name} className="geld-zeile"><span>{t.name}</span><span className="num">{Math.round(t.ist)} / {t.ziel}{t.einheit ? ` ${t.einheit}` : ''}</span></div>
-              )) : <p className="muted small">{x === 'geld' ? 'Lege unter Geld Wochentöpfe an, dann füllt sich der Ring.' : 'Noch keine Daten.'}</p>}
-              <Verlauf werte={k.verlauf.map((v) => v.ringe[x])} farbe={FARBE[x]} label={`${NAME[x]} über acht Wochen`} />
-              <div className="verlauf-achse"><span>{kurz(k.wochen[0])}</span><span>diese Woche</span></div>
-              {j!.gefuehl[x] !== null ? <p className="small muted">Dein Gefühl im Wochenbogen: {j!.gefuehl[x]} von 4</p> : null}
-            </div>
-          </section>
-        ))}
-
-        <section className="gsec" aria-label="Wohlbefinden">
-          <h2 className="glabel">Wohlbefinden (WHO-5)</h2>
-          <div className="group pad">
-            <Verlauf werte={k.verlauf.map((v) => (v.who5 === null ? null : v.who5 / 100))} farbe="var(--sand)" label="WHO-5 über acht Wochen" />
-            <div className="verlauf-achse"><span>{kurz(k.wochen[0])}</span><span>{k.verlauf.filter((v) => v.who5 !== null).slice(-1)[0]?.who5 ?? '–'} von 100 zuletzt</span></div>
-            <p className="small muted">Aus dem Wochenbogen. Unter 51 lohnt ein genauerer Blick, gern mit ärztlichem Rat.</p>
+              </details>
+            ))}
           </div>
         </section>
 
-        <section className="gsec" aria-label="Meilensteine">
-          <h2 className="glabel">Meilensteine · {k.meilensteine.filter((m) => m.am).length} von {k.meilensteine.length}</h2>
+        <details className="disclose" aria-label="Wohlbefinden">
+          <summary>{Icon.chevronRight}Wohlbefinden</summary>
+          <div className="group pad">
+            <Verlauf werte={k.verlauf.map((v) => (v.who5 === null ? null : v.who5 / 100))} farbe="var(--sand)" label="WHO-5 über acht Wochen" />
+            <div className="verlauf-achse"><span>{kurz(k.wochen[0])}</span><span>{k.verlauf.filter((v) => v.who5 !== null).slice(-1)[0]?.who5 ?? '–'} von 100 zuletzt</span></div>
+          </div>
+        </details>
+
+        <details className="disclose" aria-label="Meilensteine">
+          <summary>{Icon.chevronRight}Meilensteine · {k.meilensteine.filter((m) => m.am).length} von {k.meilensteine.length}</summary>
           <div className="meilen">
             {k.meilensteine.map((m) => (
               <div key={m.id} className={'meilenstein' + (m.am ? ' an' : '')} style={{ ['--c' as string]: m.konto === 'alle' ? 'var(--sand)' : FARBE[m.konto] }}>
@@ -84,7 +82,7 @@ export default function Kompass() {
               </div>
             ))}
           </div>
-        </section>
+        </details>
       </> : <p className="muted small">Lädt …</p>}
       <TabBar />
     </main>
