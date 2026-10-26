@@ -30,7 +30,7 @@ export async function offene(): Promise<Item[]> {
 type Plan = { liste?: { n: number; stapel: string; rang: number; grund: string }[]; doppelt?: { behalten: number; weg: number[] }[] };
 
 const AUFWAND = (m: number | null) => (m ? (m <= 20 ? '15 Min' : m <= 90 ? '1 Std' : 'halber Tag') : '-');
-const VERB: Record<string, string> = { jetzt: 'nach Jetzt geholt', woche: 'in die Woche geschoben', delegieren: 'zum Delegieren gelegt', geparkt: 'geparkt', streichen: 'zum Streichen gelegt', archiv: 'gestrichen' };
+const VERB: Record<string, string> = { jetzt: 'nach Jetzt geholt', woche: 'in die Woche geschoben', delegieren: 'zum Delegieren gelegt', geparkt: 'geparkt', streichen: 'zum Streichen gelegt', archiv: 'gestrichen', 'eine-sache': 'zur einen Sache des Tages gemacht' };
 
 /** Ein Sortierlauf. "tag" denkt den Tag neu, "nachtrag" ordnet Neues ein und hält die Jetzt-Liste stabil. */
 async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
@@ -73,6 +73,7 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
         : '5. Neuer Tag: Denk die Jetzt-Liste neu. Was gestern liegen blieb, prüfst du ehrlich: noch wichtig oder in die Woche.',
       '6. Gleiche Sache doppelt festgehalten: in "doppelt" zusammenführen, den klareren Eintrag behalten.',
       '7. "grund": höchstens 10 Wörter, konkret mit Hebel, Frist oder Aufwand. Kein Lob, keine Floskel.',
+      '8. Rang 1 in "jetzt" ist die eine Sache des Tages nach Gary Keller (The ONE Thing). Wähle sie mit der Leitfrage: Was ist die eine Sache, durch die alles andere leichter oder unnötig wird? Die anderen in "jetzt" sind die Dominosteine danach. Hat Peter heute selbst eine Sache nach vorn geholt, bleibt sie Rang 1.',
     ].join('\n'),
     gestern ? `Gestern Abend hat Peter als Wichtigstes für heute festgelegt: „${gestern}“${abend?.p?.zeit ? `, ${abend.p.zeit}` : ''}. Setz den passenden offenen Eintrag auf "jetzt", Rang 1.` : '',
     korr.length ? 'So hat Peter zuletzt korrigiert. Lerne daraus, was ihm wichtiger ist als dir:\n' + korr.map((k) => `- „${(k.schritt || k.titel || k.text).slice(0, 90)}“ ${VERB[k.zu] ?? k.zu}${k.von ? ` (war: ${k.von})` : ''}`).join('\n') : '',
