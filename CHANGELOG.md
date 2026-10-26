@@ -2,6 +2,21 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.22.0] – 2026-10-26
+
+Ein Feld für alles (Peter, 26.10.2026): Mockup K1, ohne Umschalter.
+
+### Neu
+- **Die Leiste wächst zum Feld.** Ein Tippen auf „Was geht dir durch den Kopf?“ öffnet ein großes Eingabefeld mit Tastatur, darüber nur der letzte Satz vom Coach. „Gespräch öffnen“ oder ein Tipp auf den Satz zeigt das ganze Blatt.
+- **Ein Knopf statt zwei.** Life hält jeden Text fest. Claude erkennt beim Einordnen, ob er sich an den Coach richtet (`anCoach`). Dann antwortet der Coach im Gespräch, das Blatt geht auf, und der Eintrag landet unter Archiviert statt in den Stapeln. Sonst schließt das Feld mit „Festgehalten“.
+- Die Vorschläge im Gespräch („Was jetzt?“, „Ich bin müde“) gehen wie bisher direkt an den Coach.
+
+### Technik
+- Neue Spalte `items.an_coach` (additiv). Der Coach antwortet über `coachChat` direkt nach dem Einordnen, auf demselben pseudonymisierten Weg.
+
+### Tests
+- Ende-zu-Ende: Gedanke im Feld wird festgehalten und das Feld schließt, eine Frage öffnet das Gespräch mit Antwort und landet nicht in den Stapeln, kein „Coach fragen“-Knopf mehr.
+
 ## [0.21.0] – 2026-10-26
 
 Phase 3 aus `docs/VERBESSERUNG.md`: Datenschutz (Peters Wahl, 26.10.2026).

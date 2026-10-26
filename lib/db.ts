@@ -45,6 +45,7 @@ export type Item = {
   manuell_tag: string | null;
   manuell_stapel: string | null;
   wenn?: string | null;
+  an_coach?: boolean;
   energie?: number | null;
 };
 
@@ -278,6 +279,8 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now()
         )`;
       await sql`alter table items add column if not exists wenn text, add column if not exists energie smallint`;
+      // Version 0.22: ein Feld für alles. Richtet sich ein Eintrag an den Coach, antwortet er, und der Eintrag kommt nicht in die Stapel.
+      await sql`alter table items add column if not exists an_coach boolean not null default false`;
       // Version 0.14: Gespräch mit dem Coach, gilt pro Tag
       await sql`
         create table if not exists coach_chat (

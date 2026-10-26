@@ -119,13 +119,18 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     // Heute zeigt kein Feld mehr: die Leiste unten öffnet den Coach mit dem Feld
     await expect(page.locator('section[aria-label="Festhalten"]')).toHaveCount(0);
     await expect(page.locator('section[aria-label="Heute im Kalender"]')).toHaveCount(0);
+    // Die Leiste wächst zum Feld (K1), „Gespräch öffnen“ zeigt das ganze Blatt
     await page.locator('.coach-leiste').click();
+    const kurzFeld = page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' });
+    await expect(kurzFeld.getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
+    await kurzFeld.getByRole('button', { name: 'Gespräch öffnen' }).click();
     const blatt = page.getByRole('dialog', { name: 'Coach' });
     const feld = blatt.getByLabel('Was geht dir durch den Kopf?');
-    await expect(feld).toBeFocused();
+    // Ein Feld, ein Knopf: Life hält fest, Claude erkennt Fragen an den Coach
+    await expect(blatt.getByRole('button', { name: 'Coach fragen' })).toHaveCount(0);
     for (const t of EINTRAEGE) {
       await feld.fill(t);
-      await blatt.getByRole('button', { name: 'Festhalten' }).click();
+      await blatt.getByRole('button', { name: 'Senden' }).click();
       await expect(feld).toHaveValue('');
     }
     // Spur im Gespräch: das Letzte steht unten, Ältere hinter „Ganzes Gespräch“
@@ -247,12 +252,26 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(em).toBeVisible();
     expect(await em.getAttribute('href')).toMatch(/^\//);
     await expect(page.locator('section[aria-label="Schnellzugriffe"]')).toHaveCount(0);
+    // Ein normaler Gedanke im kurzen Feld: festgehalten, das Feld geht zu
     await page.locator('.coach-leiste').click();
+    const kurz = page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' });
+    await kurz.getByLabel('Was geht dir durch den Kopf?').fill('Erfundene Idee für den Herbst');
+    await kurz.getByRole('button', { name: 'Senden' }).click();
+    await expect(page.locator('.toast')).toContainText('Festgehalten');
+    await expect(kurz).toHaveCount(0);
+    // Eine Frage im kurzen Feld: Claude erkennt sie, der Coach antwortet im Gespräch
+    await page.locator('.coach-leiste').click();
+    await kurz.getByLabel('Was geht dir durch den Kopf?').fill('Ich bin müde, was jetzt?');
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/coach-feld.png' });
+    await kurz.getByRole('button', { name: 'Senden' }).click();
     const coach = page.getByRole('dialog', { name: 'Coach' });
-    await coach.getByRole('button', { name: 'Ich bin müde' }).click();
     await expect(coach.locator('.chat-zeile.coach').last()).toContainText('NSDR');
-    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Soll Carlotta das Angebot übernehmen?');
-    await coach.getByRole('button', { name: 'Coach fragen' }).click();
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/coach-antwort.png' });
+    // Die Frage landet nicht in den Stapeln
+    const offen: { text: string }[] = (await (await page.request.get('/api/heute')).json()).items;
+    expect(offen.some((i) => i.text.includes('Ich bin müde'))).toBe(false);
+    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Soll Carlotta das Angebot übernehmen, was jetzt?');
+    await coach.getByRole('button', { name: 'Senden' }).click();
     await expect(coach.locator('.chat-zeile.coach:not(.working)')).toHaveCount(2);
     await expect(coach.locator('.chat-zeile.ich').last()).toContainText('Carlotta');
     const v = await (await page.request.get('/api/coach/chat')).json();
@@ -476,7 +495,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(schnell).toHaveCount(0);
     await plus.click();
     await schnell.getByRole('button', { name: 'Gedanke' }).click();
-    await expect(page.getByRole('dialog', { name: 'Coach' }).getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
+    await expect(page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' }).getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
     await page.keyboard.press('Escape');
     await plus.click();
     await schnell.getByRole('button', { name: 'Ausgabe' }).click();
@@ -607,9 +626,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(heute).toContainText('Laternenumzug');
     await expect(heute).toContainText('08:00');
     await page.locator('.coach-leiste').click();
+    await page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' }).getByRole('button', { name: 'Gespräch öffnen' }).click();
     const coach = page.getByRole('dialog', { name: 'Coach' });
-    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Wann passt das Angebot heute?');
-    await coach.getByRole('button', { name: 'Coach fragen' }).click();
+    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Wann passt das Angebot heute, was jetzt?');
+    await coach.getByRole('button', { name: 'Senden' }).click();
     await expect(coach.locator('.chat-zeile.working')).toHaveCount(0);
     await expect.poll(async () => (await (await page.request.get('/api/coach/chat')).json()).verlauf.length).toBe(6);
     const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
@@ -636,6 +656,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect((await (await page.request.get('/api/coach')).json()).standortEtappe).toBe(1);
     await page.goto('/');
     await page.locator('.coach-leiste').click();
+    await page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' }).getByRole('button', { name: 'Gespräch öffnen' }).click();
     await page.getByRole('dialog', { name: 'Coach' }).getByRole('link', { name: 'Standortbestimmung' }).click();
     await page.waitForURL('/stand/1');
     const seiten = page.locator('.bl-seite');

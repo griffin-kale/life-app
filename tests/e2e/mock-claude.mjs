@@ -5,6 +5,7 @@ import http from 'node:http';
 const E = (o) => ({ typ: 'gedanke', kategorie: 'aufgabe', art: 'geld', titel: '', bereinigt: '', schritt: '', begruendung: '', kern: '', frage: '', ziel: '', hebel: 0, aufwand_min: 60, frist: '', wer: 'ich', delegieren_an: '', ...o });
 function einordnen(entry) {
   const t = entry.trim().split('\n\n')[0].trim();
+  if (/was jetzt\?$/i.test(t)) return E({ kategorie: 'notiz', titel: 'Frage an den Coach', bereinigt: t, aufwand_min: 0, anCoach: true });
   if (/youtu/.test(t)) return E({ typ: 'video', kategorie: 'wissen', art: 'mental', titel: 'Fokus und Engpass', bereinigt: t.split('\n')[1] || 'Video', kern: 'Wer den Engpass kennt, spart Kraft.', frage: 'Wo verzettelst du dich diese Woche?', aufwand_min: 0 });
   if (/Seneca/.test(t)) return E({ typ: 'zitat', kategorie: 'wissen', art: 'zeit', titel: 'Seneca über Zeit', bereinigt: 'Nicht wenig Zeit haben wir, sondern viel verschwenden wir.', kern: 'Zeit fehlt selten, Fokus schon.', frage: 'Welche Stunde verschwendest du täglich?', aufwand_min: 0 });
   if (/Podcast mit/.test(t)) return E({ kategorie: 'idee', titel: 'Podcast mit der Feuerwehr', bereinigt: t, aufwand_min: 0 });
