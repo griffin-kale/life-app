@@ -115,7 +115,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
 
   await test.step('Festhalten und von Claude sortieren lassen', async () => {
     await page.goto('/');
-    await expect(page.locator('.engpass')).toContainText('Content hochfahren');
+    await expect(page.locator('section[aria-label="Jetzt dran"] .jd-engpass.leer')).toHaveCount(0);
     // Heute zeigt kein Feld mehr: die Leiste unten öffnet den Coach mit dem Feld
     await expect(page.locator('section[aria-label="Festhalten"]')).toHaveCount(0);
     await expect(page.locator('section[aria-label="Heute im Kalender"]')).toHaveCount(0);
@@ -142,6 +142,9 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const jetzt = page.locator('section[aria-label="Jetzt dran"] .ttitle');
     await expect(jetzt).toHaveCount(3);
     await expect(jetzt.first()).toContainText(/Newsletter|Behörden-Geschichten/);
+    // Der Engpass steht oben in Jetzt dran, nicht mehr im Kopf
+    await expect(page.locator('section[aria-label="Jetzt dran"] .jd-engpass')).toContainText('Content hochfahren');
+    await expect(page.locator('header.head .engpass')).toHaveCount(0);
     if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/heute-iphone.png' });
   });
 

@@ -124,6 +124,11 @@ export default function Heute() {
     .map((it) => ({ id: it.id, text: it.roh || it.text, zeit: uhrBerlin(it.created_at), titel: it.titel, laeuft: isPending(it) }));
   const coachInhalt = <CoachInhalt stand={ci} chat={chat} spuren={spuren} onFesthalten={festhalten} fokus={coachFokus > 0} key={coachFokus} kompakt onFehler={(m) => setToast(m, 'err')} />;
 
+  // Der Engpass steht dort, wo die Aufgaben auf ihn einzahlen (Peter, 26.10.2026: Variante E3)
+  const zielscheibe = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></svg>;
+  const engpassZeile = st?.engpass
+    ? <Link href="/einstellungen" className="jd-engpass" aria-label={`Engpass: ${st.engpass}. Ändern in den Einstellungen`}>{zielscheibe}<span>Zahlt ein auf deinen Engpass: <b>{st.engpass}</b></span></Link>
+    : <Link href="/einstellungen" className="jd-engpass leer">{zielscheibe}<span>Engpass festlegen, dann sortiert Claude danach</span>{Icon.chevronRight}</Link>;
   const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
     kompass: kompass && ringe ? <Wochenringe ringe={ringe} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} anteil={kompass.gesamt.anteil} /> : null,
     fragebogen: (
@@ -157,7 +162,9 @@ ci.zeige ? (
         <h2 className="glabel">Jetzt dran</h2>
         {st === null ? <div className="loading">Lädt …</div>
           : jetzt.length ? (
-            <ul className="tasks group">
+            <div className="group">
+            {engpassZeile}
+            <ul className="tasks">
               {jetzt.map((it, n) => (
                 <TaskRow key={it.id} it={it} big={n === 0} onToggle={() => toggle(it)} leaving={leaving === it.id}>
                   {n === 0 && vorschlag && !it.zeit ? <button type="button" className="chipbtn frei" aria-label={`Im Kalender frei von ${hhmm(vorschlag.von)} bis ${hhmm(vorschlag.bis)}, als Uhrzeit setzen`} onClick={() => zeit(it, hhmm(vorschlag.von))}>{hhmm(vorschlag.von)}–{hhmm(vorschlag.bis)} frei</button> : null}
@@ -168,6 +175,7 @@ ci.zeige ? (
                 </TaskRow>
               ))}
             </ul>
+            </div>
           )
           : st.laeuft ? <div className="group pad"><p className="note working">Claude sortiert deinen Tag …</p></div>
           : <div className="group pad"><p className="muted small">{items.length ? 'Für heute ist nichts gesetzt.' : 'Nichts offen. Halte unten fest, was ansteht. Claude sortiert es ein.'}</p></div>}
@@ -219,9 +227,6 @@ st?.erledigtHeute.length ? (
       <header className="head">
         <span className="eyebrow">{today}</span>
         <h1 className="title">Heute<i>.</i></h1>
-        {st ? (st.engpass
-          ? <p className="engpass"><b>Engpass</b><span>{st.engpass}</span></p>
-          : <Link className="engpass leer" href="/einstellungen"><b>Engpass</b><span>festlegen</span>{Icon.chevronRight}</Link>) : null}
         {bausteine.includes('woche') && kompass?.tage ? <Tagespunkte tage={kompass.tage} heute={heuteTag} /> : null}
       </header>
 

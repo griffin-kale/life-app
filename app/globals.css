@@ -1059,3 +1059,12 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .coach-panel { position: sticky; top: 64px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; }
 .coach-panel .chat { max-height: none; overflow: visible; }
 .coach-panel .coach-eingabe { margin: 2px -16px -18px; padding-bottom: 16px; }
+
+/* Engpass als Zeile oben in „Jetzt dran“ (0.18, Variante E3) */
+.jd-engpass { display: flex; align-items: flex-start; gap: 9px; padding: 11px 16px; background: rgb(var(--sand-rgb) / .1); color: var(--sand); font-size: .8125rem; line-height: 1.38; text-decoration: none; }
+.jd-engpass svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+.jd-engpass span { min-width: 0; overflow-wrap: anywhere; }
+.jd-engpass b { color: var(--ink); font-weight: 500; }
+.jd-engpass.leer { align-items: center; color: var(--sky); background: rgb(var(--tint-rgb) / .06); }
+.jd-engpass.leer .chev { margin-left: auto; }
+.jd-engpass:active { background: var(--press); }
