@@ -10,3 +10,10 @@ export function oeffentlich(e: unknown, ersatz: string, bereich = 'api'): string
   console.warn(`[${bereich}] Fehler`, e instanceof Error ? e.name : typeof e);
   return ersatz;
 }
+
+/** Lehnt das Modell ein erzwungenes Werkzeug ab? Manche Modelle lassen nur tool_choice „auto“ und „none“ zu und antworten sonst mit 400. */
+export function zwangAbgelehnt(e: unknown): boolean {
+  const status = (e as { status?: unknown })?.status;
+  const text = e instanceof Error ? e.message : '';
+  return status === 400 && /tool_choice/.test(text) && /not supported/i.test(text);
+}

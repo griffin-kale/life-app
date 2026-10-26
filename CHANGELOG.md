@@ -2,6 +2,15 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.16.1] – 2026-10-26
+
+### Behoben
+- **Sortieren brach mit Fehler 400 ab.** Das große Modell lässt kein erzwungenes Werkzeug mehr zu (`tool_choice` „tool“). Life merkt das beim ersten Aufruf, fragt sofort mit „auto“ und einer Systemanweisung nach und bleibt bis zum Neustart dabei. Das schnelle Modell antwortet weiter über das erzwungene Werkzeug. Gilt für alle Claude-Aufrufe: Sortieren, Einordnen, Coach, Essen, Bon, Standort.
+- Ein Fehler beim Sortieren stand doppelt da („Sortieren hat nicht geklappt: Sortieren hat nicht geklappt.“). Jetzt steht dort, was passiert ist.
+
+### Tests
+- Die Claude-Attrappe lehnt für Modelle mit „ohne-zwang“ im Namen das erzwungene Werkzeug ab. Die Ende-zu-Ende-Tests laufen das große Modell so, das schnelle wie bisher. Neu: `tests/unit/claude-werkzeug.test.ts`.
+
 ## [0.16.0] – 2026-10-26
 
 Phase 1 aus `docs/VERBESSERUNG.md`: Sicherheit. Nach dem Aufspielen meldet sich jedes Gerät einmal neu an.

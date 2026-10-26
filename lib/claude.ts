@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ensureSchema, getSetting, setSetting, sql } from './db';
 import { maskieren, namenAus, zurueck, type Name } from './pseudonym';
-import { Hinweis } from './fehler';
+import { Hinweis, zwangAbgelehnt } from './fehler';
 
 /**
  * Claude über die Anthropic-API (Entscheidung Peter, 25.10.2026).
@@ -48,22 +48,40 @@ export async function namenLernen(neu: unknown): Promise<void> {
 
 type Inhalt = string | Anthropic.Messages.ContentBlockParam[];
 
+// Modelle, die tool_choice „tool“ abgelehnt haben. Gilt bis zum Neustart, danach fragt Life einmal neu.
+const ohneZwang = new Set<string>();
+
+/** Schickt die Anfrage. Lehnt das Modell das erzwungene Werkzeug ab, merkt Life sich das und fragt sofort mit „auto“ nach. */
+async function senden(content: Inhalt, model: string, tokens: number): Promise<Anthropic.Messages.Message> {
+  const zwang = !ohneZwang.has(model);
+  try {
+    return await getClient().messages.create({
+      model, max_tokens: tokens,
+      system: 'Antworte ausschließlich, indem du das Werkzeug „ergebnis“ genau einmal aufrufst. Schreib keinen Text davor oder danach.',
+      tools: [{ name: 'ergebnis', description: 'Gib das Ergebnis genau im verlangten JSON-Format zurück.', input_schema: { type: 'object', additionalProperties: true } }],
+      tool_choice: zwang ? { type: 'tool', name: 'ergebnis' } : { type: 'auto', disable_parallel_tool_use: true },
+      messages: [{ role: 'user', content }],
+    });
+  } catch (e) {
+    if (!zwang || !zwangAbgelehnt(e)) throw e;
+    ohneZwang.add(model);
+    console.warn('[claude] Werkzeug nicht erzwingbar, weiter mit auto', { model });
+    return senden(content, model, tokens);
+  }
+}
+
 /**
- * Claude antwortet über ein erzwungenes Werkzeug. So kommt immer ein JSON-Objekt zurück und nie Fließtext drumherum.
+ * Claude antwortet über das Werkzeug „ergebnis“. So kommt ein JSON-Objekt zurück und kein Fließtext drumherum.
+ * Wo das Modell es erlaubt, erzwingt Life das Werkzeug. Sonst bittet die Systemanweisung darum, und notfalls holt Life das JSON aus dem Text.
  * Wird die Antwort abgeschnitten, fragt Life einmal mit doppeltem Platz nach. Ins Log kommen nur Kennzahlen, nie Inhalte.
  */
 async function anfragen(content: Inhalt, model: string, maxTokens: number): Promise<unknown> {
   for (let versuch = 0, tokens = maxTokens; versuch < 2; versuch++, tokens = Math.min(tokens * 2, 8000)) {
-    const msg = await getClient().messages.create({
-      model, max_tokens: tokens,
-      tools: [{ name: 'ergebnis', description: 'Gib das Ergebnis genau im verlangten JSON-Format zurück.', input_schema: { type: 'object', additionalProperties: true } }],
-      tool_choice: { type: 'tool', name: 'ergebnis' },
-      messages: [{ role: 'user', content }],
-    });
+    const msg = await senden(content, model, tokens);
     const werkzeug = msg.content.find((b) => b.type === 'tool_use');
     if (msg.stop_reason === 'max_tokens' && versuch === 0) { console.warn('[claude] abgeschnitten, neuer Versuch', { model, tokens }); continue; }
     if (werkzeug && werkzeug.type === 'tool_use' && werkzeug.input && typeof werkzeug.input === 'object') return werkzeug.input;
-    // Ältere Antworten ohne Werkzeug: JSON aus dem Text holen
+    // Antwort ohne Werkzeug (bei „auto“ möglich): JSON aus dem Text holen
     const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
     const start = text.indexOf('{'); const end = text.lastIndexOf('}');
     if (start >= 0 && end > start) { try { return JSON.parse(text.slice(start, end + 1)); } catch { /* unten melden */ } }

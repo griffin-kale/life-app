@@ -131,7 +131,7 @@ export async function sortiere(modus: 'tag' | 'nachtrag'): Promise<void> {
       for (let i = 0; i < 3; i++) {
         await setSetting('sort_nochmal', '');
         try { await lauf(m); await setSetting('sort_fehler', ''); }
-        catch (e) { await setSetting('sort_fehler', oeffentlich(e, 'Sortieren hat nicht geklappt.', 'sortieren')); }
+        catch (e) { await setSetting('sort_fehler', oeffentlich(e, 'Claude hat einen Fehler gemeldet. Versuch es später noch einmal.', 'sortieren')); }
         if ((await getSetting('sort_nochmal')) !== '1') break;
         m = 'nachtrag';
       }
