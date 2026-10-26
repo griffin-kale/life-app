@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.19.0.
+Stand: 26. Oktober 2026, Version 0.20.0.
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist noch offen.
 
@@ -14,6 +14,7 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 
 | Bereich | Stand | Wo im Code |
 |---|---|---|
+| Schwebende Leiste mit Heute in der Mitte, Plus mit sechs Wegen auf Heute, Halten auf Körper und Geld | 0.20 | `app/tabbar.tsx` |
 | The ONE Thing auf Heute (eine Sache, Danach, Heute erledigt), Claude wählt Rang 1 mit Kellers Leitfrage, Sweep „so wenig wie nötig“ durch alle Seiten | 0.19 | `app/eine-sache.tsx`, `app/page.tsx`, `lib/priorisieren.ts` (Regel 8), `app/api/items/[id]` (`eineSache`), `app/ui.tsx` (`TaskRow`), `app/ringe.tsx` (`MiniRinge`) |
 | Heute aufgeräumt: Wochenringe oben, Coach-Leiste und Coach-Blatt mit einem Feld für Festhalten und Fragen, Spur im Gespräch, freie Zeit an der ersten Aufgabe, Coach fest rechts auf dem Mac | 0.18 | `app/page.tsx`, `app/coach.tsx` (`CoachInhalt`, `CoachLeiste`, `CoachBlatt`, `useCoachChat`), `app/ringe.tsx` (`Wochenringe`), `app/sprache.ts`, `lib/heute-bausteine.ts` |
 | Erfassen per Text, Mikrofon, Kurzbefehl, Teilen-Menü | läuft seit 0.1 | `app/page.tsx`, `app/api/capture`, `lib/enrich.ts` |
@@ -55,6 +56,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Leiste 0.20 (Peter, 26.10.2026):** Variante N2 mit Halten aus N1. Die Mitte ist Heute, auf Heute wird sie zum Plus. Halten ist nur Abkürzung, weil versteckte Gesten kaum gefunden werden. Jeder Weg im Haltemenü steht auch sichtbar auf der Seite. In der Web-App unterdrückt die Leiste Textauswahl und Kontextmenü, Vibration gibt es auf iOS im Browser nicht. Empfohlen ist wieder Standard unter der einen Sache.
 
 - **The ONE Thing 0.19 (Peter, 26.10.2026):** Heute folgt Gary Kellers Buch: eine Sache groß, der Rest eine Ebene tiefer (Mockup O1). Gründe aus der Recherche: Wer zwischen Aufgaben springt, nimmt einen Aufmerksamkeitsrest mit (Leroy 2009). Offene Aufgaben mit Plan belasten nicht mehr, auch wenn man sie nicht sieht (Masicampo und Baumeister 2011). Jede zusätzliche Wahl verlängert die Entscheidung (Hick). Claude wählt Rang 1 mit der Leitfrage, Peter tauscht über „Zur einen Sache“ (Korrektur `eine-sache`). Der Engpass steht ohne Erklärsatz über der Karte. Sweep über alle Seiten: Aufgabenzeilen ohne Begründung und Metadaten, Karten nur mit Zahl, Erklärsätze raus, Doppeltes an genau eine Stelle. Sicherheits- und Datenschutzhinweise (Wim Hof, Open Food Facts, Löschen) bleiben.
 

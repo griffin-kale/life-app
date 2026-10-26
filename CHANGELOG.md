@@ -2,6 +2,22 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.20.0] – 2026-10-26
+
+Neue Leiste unten (Peter, 26.10.2026): Variante N2 mit Halten aus N1. Grundlage: Apples schwebende Tab-Leiste aus iOS 26, Erfahrungen mit versteckten Gesten (3D Touch), Instagrams Umbau 2026 (die Mitte gehört dem Häufigsten), Daumenzone.
+
+### Neu
+- **Schwebende Pille:** Woche · Körper · **Heute** · Geld · Mehr, Heute groß in der Mitte. Von jeder Seite bringt die Mitte zu Heute.
+- **Plus auf Heute:** Bist du auf Heute, wird die Mitte zum Plus. Ein Tipp öffnet sechs Wege: Gedanke, Ausgabe, Essen, Training, Ruhe, Coach.
+- **Halten auf Körper und Geld** öffnet deren Schnellmenü: Krafteinheit, Ruhe, Mahlzeit, Nacht und Ausgabe, Pro Monat, Sparziele, Alle Buchungen. Alles darin ist auch auf der Seite selbst erreichbar.
+
+### Geändert
+- „Empfohlen für dich“ ist wieder Standard, direkt unter der einen Sache (`STAND = 7`). Die Schnellzugriffe auf Heute sind weiter zuschaltbar, das Plus in der Mitte ersetzt sie.
+- Die Coach-Leiste sitzt über der Pille, Meldungen weichen beiden aus.
+
+### Tests
+- Ende-zu-Ende: Mitte führt zu Heute, Plus mit sechs Wegen, Gedanke öffnet den Coach mit Tastatur, Halten auf Körper öffnet das Menü ohne zu navigieren.
+
 ## [0.19.0] – 2026-10-26
 
 Heute nach The ONE Thing von Gary Keller, dazu ein Sweep durch die ganze App: so wenig wie möglich, nur so viel wie nötig (Peter, 26.10.2026). Grundlage: drei Mockups (Peters Wahl O1), Recherche zu Kellers Leitfrage, Aufmerksamkeitsrest (Leroy 2009), offenen Zielen mit Plan (Masicampo und Baumeister 2011), Hick-Gesetz und Progressive Disclosure.
