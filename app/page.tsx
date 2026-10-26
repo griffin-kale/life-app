@@ -1,20 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { Icon, Log, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useBreit, useToast, type Item, type Stand } from './ui';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Icon, TabBar, TaskRow, TimeChip, TopBar, api, fTime, isPending, useBreit, useToast, type Item, type Stand } from './ui';
 import { Fragebogen } from './fragebogen';
-import { Coach, Empfohlen, useCheckins } from './coach';
-import { KalenderHeute } from './kalender';
-import { FARBE, KONTEN, NAME, Ring, Tagespunkte, Weg } from './ringe';
+import { CoachBlatt, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
+import { KalenderHeute, useKalender } from './kalender';
+import { Tagespunkte, Wochenringe } from './ringe';
+import { useSprache } from './sprache';
+import { hhmm } from '@/lib/kalender-regeln';
 import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
 import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
 import { EnergieChips, WennChip } from './wenn';
 
-type Rec = { start: () => void; stop: () => void; onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; lang: string; continuous: boolean; interimResults: boolean };
-
-/** Auf iPad und Mac stehen diese Bausteine rechts, alles zum Tun links. */
-const RECHTS: Baustein[] = ['empfohlen', 'kalender', 'coach', 'kompass', 'koerper', 'geld', 'menschen'];
+/** Auf iPad und Mac stehen diese Bausteine rechts unter dem Coach, alles zum Tun links. */
+const RECHTS: Baustein[] = ['empfohlen', 'kalender', 'koerper', 'geld', 'menschen'];
+const uhrBerlin = (iso: string) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
 const nachZeit = (a: Item, b: Item) => (a.zeit && b.zeit ? a.zeit.localeCompare(b.zeit) : a.zeit ? -1 : b.zeit ? 1 : (a.rang ?? 99) - (b.rang ?? 99));
@@ -24,28 +25,22 @@ export default function Heute() {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const [freshId, setFreshId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
-  const [listening, setListening] = useState(false);
-  const [canSpeak, setCanSpeak] = useState(false);
   const [toast, setToast] = useToast();
   const ci = useCheckins();
+  const chat = useCoachChat();
+  const [coachOffen, setCoachOffen] = useState(false);
+  const [coachFokus, setCoachFokus] = useState(0);
+  const { k: kal } = useKalender();
+  const vorschlag = kal?.heute?.bloecke.find((b) => b.art === 'vorschlag') ?? null;
   const [kompass, setKompass] = useState<KompassKurz | null>(null);
   useEffect(() => { api<KompassKurz>('/api/kompass').then(setKompass).catch(() => {}); }, []);
   const ringe = kompass?.jetzt.ringe ?? null;
   const [bausteine, setBausteine] = useState<Baustein[]>(() => bausteineAus(null));
-  const [feldOffen, setFeldOffen] = useState(false);
   const breit = useBreit(768);
   useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
   const kurz = useKurz(bausteine);
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('festhalten') !== '1') return;
-    window.history.replaceState(null, '', '/');
-    const t = setTimeout(() => { const f = document.querySelector<HTMLTextAreaElement>('section[aria-label="Festhalten"] textarea'); if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); } else setFeldOffen(true); }, 300);
-    return () => clearTimeout(t);
-  }, []);
-  const rec = useRef<Rec | null>(null);
-  const base = useRef('');
+  const sprache = useSprache(text, setText, (m) => setToast(m, 'err'));
 
   const load = useCallback(async () => { setSt(await api<Stand>('/api/heute')); }, []);
   useEffect(() => { load().catch((e) => setToast((e as Error).message, 'err')); }, [load, setToast]);
@@ -55,7 +50,6 @@ export default function Heute() {
     const t = setTimeout(() => load().catch(() => {}), 2500);
     return () => clearTimeout(t);
   }, [st, load]);
-  useEffect(() => { const W = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }; setCanSpeak(!!(W.SpeechRecognition || W.webkitSpeechRecognition)); }, []);
   useEffect(() => { if (!done) return; const t = setTimeout(() => setDone(false), 1400); return () => clearTimeout(t); }, [done]);
 
   function patch(id: string, body: Record<string, unknown>) {
@@ -97,32 +91,17 @@ export default function Heute() {
     act(() => api('/api/heute', { method: 'POST' }));
   }
 
-  async function save() {
-    const t = text.trim(); if (!t || busy) return;
-    rec.current?.stop();
-    setBusy(true);
+  /** Hält einen Gedanken fest. Claude ordnet ihn im Hintergrund ein. */
+  async function festhalten(t: string) {
     try {
       const r = await api<{ id: string }>('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) });
-      setText(''); setFreshId(r.id); setDone(true); setFeldOffen(false);
-      await load();
-    } catch (e) { setToast('Nicht gespeichert. ' + (e as Error).message, 'err'); }
-    finally { setBusy(false); }
+      await load(); return !!r.id;
+    } catch (e) { setToast('Nicht gespeichert. ' + (e as Error).message, 'err'); return false; }
   }
-
-  function toggleMic() {
-    if (listening) { rec.current?.stop(); return; }
-    const W = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
-    const R = W.SpeechRecognition || W.webkitSpeechRecognition; if (!R) return;
-    const r = new R(); r.lang = 'de-DE'; r.continuous = true; r.interimResults = true;
-    base.current = text ? text.replace(/\s*$/, ' ') : '';
-    r.onresult = (e) => {
-      let finalT = ''; let interim = '';
-      for (let i = 0; i < e.results.length; i++) { const res = e.results[i]; if (res.isFinal) finalT += res[0].transcript; else interim += res[0].transcript; }
-      setText(base.current + finalT + interim);
-    };
-    r.onend = () => setListening(false);
-    r.onerror = () => { setListening(false); setToast('Spracheingabe geht hier nicht. Nimm das Mikrofon der Tastatur.', 'err'); };
-    rec.current = r; r.start(); setListening(true);
+  async function save() {
+    const t = text.trim(); if (!t || busy) return;
+    sprache.stop(); setBusy(true);
+    try { if (await festhalten(t)) { setText(''); setDone(true); } } finally { setBusy(false); }
   }
 
   const heuteTag = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
@@ -132,27 +111,21 @@ export default function Heute() {
   const naechste = items.filter((i) => i.stapel === 'woche').sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99)).slice(0, 3);
   const neu = items.filter((i) => !i.stapel).length;
 
-  // Gedanke aus dem Plus, ⌘N oder ?festhalten=1: Feld öffnen und hineinspringen
-  function gedanke() {
-    if (bausteine.includes('festhalten')) { const t = document.querySelector<HTMLTextAreaElement>('section[aria-label="Festhalten"] textarea'); t?.focus(); t?.scrollIntoView({ block: 'center' }); }
-    else setFeldOffen(true);
-  }
+  // Gedanke aus Schnellzugriff, Taste N oder ?festhalten=1: Coach mit Feld öffnen
+  const gedanke = useCallback(() => { setCoachOffen(true); setCoachFokus((n) => n + 1); }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('festhalten') !== '1') return;
+    window.history.replaceState(null, '', '/');
+    const t = setTimeout(gedanke, 300);
+    return () => clearTimeout(t);
+  }, [gedanke]);
+  useEffect(() => { window.addEventListener('life-festhalten', gedanke); return () => window.removeEventListener('life-festhalten', gedanke); }, [gedanke]);
+  const spuren: Spur[] = [...(st?.zuletzt ?? [])].reverse()
+    .map((it) => ({ id: it.id, text: it.roh || it.text, zeit: uhrBerlin(it.created_at), titel: it.titel, laeuft: isPending(it) }));
+  const coachInhalt = <CoachInhalt stand={ci} chat={chat} spuren={spuren} onFesthalten={festhalten} fokus={coachFokus > 0} key={coachFokus} kompakt onFehler={(m) => setToast(m, 'err')} />;
+
   const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
-    kompass: (
-ringe ? (() => {
-        const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
-        const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : null;
-        return (
-          <Link href="/kompass" className="group kompass-karte" aria-label={`Kompass: diese Woche ${schnitt ?? 0} Prozent`}>
-            <span className="kk-kopf"><b>Diese Woche</b><span>{schnitt !== null ? <><em className="num">{schnitt} %</em> · </> : null}Kompass{Icon.chevronRight}</span></span>
-            <span className="ringreihe">{KONTEN.map((x) => (
-              <span key={x} className="ringzelle"><Ring wert={ringe[x]} farbe={FARBE[x]} groesse={50} dicke={6} label={`${NAME[x]}: ${ringe[x] === null ? 'noch keine Daten' : Math.round(Math.min(1, ringe[x]!) * 100) + ' Prozent'}`} /><b>{NAME[x]}</b></span>
-            ))}</span>
-            {kompass ? <Weg anteil={kompass.gesamt.anteil} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} /> : null}
-          </Link>
-        );
-      })() : null
-    ),
+    kompass: kompass && ringe ? <Wochenringe ringe={ringe} level={kompass.gesamt.level} naechstes={kompass.gesamt.naechstes} anteil={kompass.gesamt.anteil} /> : null,
     fragebogen: (
 ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
@@ -162,14 +135,14 @@ ci.zeige ? (
     ),
     festhalten: (
 <><section className="capture compact" aria-label="Festhalten">
-        <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link" autoFocus={feldOffen}
+        <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link"
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }} />
         <div className="row">
-          <span className={'hint' + (listening ? ' live' : '')} aria-live="polite">{listening ? <><span className="rec" />Ich höre zu</> : null}</span>
+          <span className={'hint' + (sprache.hoert ? ' live' : '')} aria-live="polite">{sprache.hoert ? <><span className="rec" />Ich höre zu</> : null}</span>
           <span className="tools">
-            {canSpeak ? (
-              <button type="button" className={'btn mic' + (listening ? ' on' : '')} onClick={toggleMic} aria-pressed={listening} aria-label={listening ? 'Aufnahme beenden' : 'Sprechen'}>
-                {listening ? Icon.stop : Icon.mic}
+            {sprache.geht ? (
+              <button type="button" className={'btn mic' + (sprache.hoert ? ' on' : '')} onClick={sprache.umschalten} aria-pressed={sprache.hoert} aria-label={sprache.hoert ? 'Aufnahme beenden' : 'Sprechen'}>
+                {sprache.hoert ? Icon.stop : Icon.mic}
               </button>
             ) : null}
             <button type="button" className={'btn primary' + (done ? ' done' : '')} onClick={save} disabled={(!text.trim() && !done) || busy}>
@@ -187,6 +160,7 @@ ci.zeige ? (
             <ul className="tasks group">
               {jetzt.map((it, n) => (
                 <TaskRow key={it.id} it={it} big={n === 0} onToggle={() => toggle(it)} leaving={leaving === it.id}>
+                  {n === 0 && vorschlag && !it.zeit ? <button type="button" className="chipbtn frei" aria-label={`Im Kalender frei von ${hhmm(vorschlag.von)} bis ${hhmm(vorschlag.bis)}, als Uhrzeit setzen`} onClick={() => zeit(it, hhmm(vorschlag.von))}>{hhmm(vorschlag.von)}–{hhmm(vorschlag.bis)} frei</button> : null}
                   <TimeChip value={it.zeit} onChange={(v) => zeit(it, v)} />
                   <button type="button" className="chipbtn" onClick={() => spaeter(it)}>Nicht heute</button>
                   <WennChip aufgabe={it.schritt || it.titel || it.text.slice(0, 80)} wert={it.wenn} onSetzen={(w) => act(() => patch(it.id, { wenn: w }))} />
@@ -196,7 +170,7 @@ ci.zeige ? (
             </ul>
           )
           : st.laeuft ? <div className="group pad"><p className="note working">Claude sortiert deinen Tag …</p></div>
-          : <div className="group pad"><p className="muted small">{items.length ? 'Für heute ist nichts gesetzt.' : 'Nichts offen. Halte oben fest, was ansteht. Claude sortiert es ein.'}</p></div>}
+          : <div className="group pad"><p className="muted small">{items.length ? 'Für heute ist nichts gesetzt.' : 'Nichts offen. Halte unten fest, was ansteht. Claude sortiert es ein.'}</p></div>}
         {st?.fehler ? <p className="gnote bad">Sortieren hat nicht geklappt: {st.fehler}</p> : null}
         {st && items.length > 0 ? (
           <p className="gnote">
@@ -230,7 +204,6 @@ st?.erledigtHeute.length ? (
         </section>
       ) : null
     ),
-    coach: <Coach stand={ci} />,
     schnell: <Schnellzugriff onGedanke={gedanke} />,
     empfohlen: <Empfohlen stand={ci} />,
     kalender: <KalenderHeute />,
@@ -238,21 +211,11 @@ st?.erledigtHeute.length ? (
     geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
     menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
   };
-  const zuletzt = st?.zuletzt.length ? (
-        <section className="section" aria-label="Zuletzt festgehalten">
-          <h2>Zuletzt festgehalten</h2>
-          <Log items={st.zuletzt} freshId={freshId} />
-          <p className="gnote flush"><Link href="/archiv" className="linkbtn">Alles im Logbuch</Link></p>
-        </section>
-      ) : null;
-  const mitFeld = bausteine.includes('festhalten') || feldOffen;
-  const reihe = bausteine.filter((b) => b !== 'woche' && (b !== 'festhalten' || mitFeld));
-  if (feldOffen && !bausteine.includes('festhalten')) reihe.unshift('festhalten');
+  const reihe = bausteine.filter((b) => b !== 'woche');
 
   return (
     <main className="wrap breit">
       <TopBar title="Heute" />
-      {!bausteine.includes('festhalten') ? <button type="button" className="plus-btn" aria-label="Festhalten" aria-expanded={feldOffen} onClick={() => setFeldOffen((x) => !x)}>{feldOffen ? Icon.close : Icon.plus}</button> : null}
       <header className="head">
         <span className="eyebrow">{today}</span>
         <h1 className="title">Heute<i>.</i></h1>
@@ -264,11 +227,17 @@ st?.erledigtHeute.length ? (
 
       {breit ? (
         <div className="heute-spalten">
-          <div className="spalte">{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}{zuletzt}</div>
-          <div className="spalte">{reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
+          <div className="spalte">{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
+          <div className="spalte">
+            <aside className="hero coach coach-panel" aria-label="Coach">{coachInhalt}</aside>
+            {reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
+          </div>
         </div>
-      ) : <>{reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}{zuletzt}</>}
-
+      ) : <>
+        {reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
+        <CoachLeiste stand={ci} onOeffnen={gedanke} />
+        {coachOffen ? <CoachBlatt onZu={() => setCoachOffen(false)}>{coachInhalt}</CoachBlatt> : null}
+      </>}
 
       {toast}
       <TabBar />

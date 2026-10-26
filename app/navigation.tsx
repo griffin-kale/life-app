@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /**
  * Navigation für große Bildschirme. iPhone: nichts davon, dort bleibt die Leiste unten (TabBar).
@@ -50,6 +50,8 @@ export function Navigation() {
   const aus = pfad.startsWith('/login') || pfad.startsWith('/setup');
   const an = aktiverBereich(pfad);
 
+  // Auf Heute öffnet Festhalten den Coach direkt, von anderen Seiten geht es dorthin
+  const festhalten = useCallback(() => { if (pfad === '/') window.dispatchEvent(new Event('life-festhalten')); else router.push('/?festhalten=1'); }, [pfad, router]);
   // Tastatur auf iPad und Mac: N hält fest, ⌘K oder / sucht im Logbuch. In Eingabefeldern bleibt alles normal.
   useEffect(() => {
     if (aus) return;
@@ -58,13 +60,13 @@ export function Navigation() {
       const tippt = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); router.push('/archiv?suche=1'); return; }
       if (tippt || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); router.push('/?festhalten=1'); }
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); festhalten(); }
       else if (e.key === '/') { e.preventDefault(); router.push('/archiv?suche=1'); }
       else if (e.key === 'Escape') setOffen(false);
     };
     window.addEventListener('keydown', f);
     return () => window.removeEventListener('keydown', f);
-  }, [aus, router]);
+  }, [aus, router, festhalten]);
   useEffect(() => { setOffen(false); }, [pfad]);
   if (aus) return null;
 
@@ -92,7 +94,7 @@ export function Navigation() {
       </aside>
       <div className="werkzeugleiste" role="toolbar" aria-label="Werkzeuge">
         <Link href="/archiv?suche=1" className="wz-suche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg>Suchen<kbd>⌘K</kbd></Link>
-        <Link href="/?festhalten=1" className="wz-fest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Festhalten<kbd>N</kbd></Link>
+        <Link href="/?festhalten=1" className="wz-fest" onClick={(e) => { if (pfad === '/') { e.preventDefault(); festhalten(); } }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Festhalten<kbd>N</kbd></Link>
       </div>
     </>
   );

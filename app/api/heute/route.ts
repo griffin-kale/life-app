@@ -14,7 +14,8 @@ export async function GET() {
   const [items, erledigt, zuletzt, kontext, zieleText, sortAm, fehler, laeuft, wartet] = await Promise.all([
     offene(),
     sql<Item[]>`select * from items where status = 'erledigt' and erledigt_at >= date_trunc('week', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin' order by erledigt_at desc`,
-    sql<Item[]>`select * from items where status <> 'archiv' order by created_at desc limit 3`,
+    // Was heute festgehalten wurde, für die Spur im Coach-Gespräch
+    sql<Item[]>`select * from items where status <> 'archiv' and created_at >= date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin' order by created_at desc limit 50`,
     getSetting('kontext'), getSetting('ziele'), getSetting('sort_am'), getSetting('sort_fehler'), laeuftGerade(),
     sql<{ n: number }[]>`select count(*)::int as n from items where status = 'neu' and fehler is null and created_at > now() - interval '5 minutes'`,
   ]);

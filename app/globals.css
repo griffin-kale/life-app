@@ -994,3 +994,68 @@ a.chat-chip { background: #F2CC5B; color: #001D51; }
 .kal-zeile { gap: 10px; }
 .kal-zeile .lbl { flex: 1; }
 .kal-punkt { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; }
+
+/* ---------- 0.18: Heute aufgeräumt – Wochenringe oben, Coach als Leiste und Blatt ---------- */
+/* Wochenringe: fünf Ringe ineinander, daneben Werte und Level */
+.wochenringe { display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: 22px; background: var(--panel); box-shadow: var(--card-shadow); color: var(--ink); text-decoration: none; }
+.wochenringe:active { background: var(--press); }
+.wr-bild { flex: 0 0 auto; width: 46%; max-width: 168px; height: auto; }
+.wr-text { flex: 1; min-width: 0; display: grid; gap: 5px; font-size: .875rem; }
+.wr-kopf { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wr-kopf em { font-style: normal; color: var(--ink); }
+.wr-zeile { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.wr-zeile i { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; }
+.wr-zeile .num { margin-left: auto; color: var(--muted); font-weight: 500; }
+.wr-level { display: grid; gap: 5px; margin-top: 3px; font-size: .75rem; color: var(--muted); }
+.wr-level b { color: var(--ink); }
+.wr-weg { display: block; height: 5px; border-radius: 3px; background: rgb(var(--tint-rgb) / .16); overflow: hidden; }
+.wr-weg span { display: block; height: 100%; border-radius: 3px; background: var(--k-geld); }
+
+/* Freie Zeit aus dem Kalender an der ersten Aufgabe */
+.chipbtn.frei { color: var(--sand); background: rgb(var(--sand-rgb) / .14); }
+
+/* Coach-Leiste über der Tab-Leiste (iPhone, iPad hochkant schmal). Verlaufskarte, bleibt in beiden Modi dunkel. */
+.coach-leiste { position: fixed; z-index: 11; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(66px + env(safe-area-inset-bottom, 0px)); max-width: 616px; margin: 0 auto; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 16px; border: 0; border-radius: 20px; background: var(--hero); color: var(--hero-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 14px 30px -12px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .12); }
+.coach-leiste:active { opacity: .85; }
+.cl-text { flex: 1; min-width: 0; color: var(--hero-muted); font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-punkt { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #F2CC5B; }
+.cl-stern { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--hero-ink); color: #001D51; }
+.cl-stern svg { width: 18px; height: 18px; }
+.wrap:has(.coach-leiste) { padding-bottom: 66px; }
+body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom, 0px)); }
+
+/* Coach als Blatt von unten: eine Scrollfläche, das Feld klebt unten */
+.coach-blatt.hero { position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top, 0px) + 36px); max-width: 640px; margin: 0 auto; display: grid; align-content: start; gap: 12px; padding: 8px 16px 0; border-radius: 28px 28px 0 0; overflow-y: auto; overscroll-behavior: contain; }
+.coach-blatt .chat { max-height: none; overflow: visible; }
+.cb-kopf { position: relative; display: grid; justify-items: center; min-height: 30px; }
+.cb-kopf .blatt-griff { background: rgb(255 255 255 / .35); margin-top: 2px; }
+.cb-zu { position: absolute; right: -6px; top: -2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgb(255 255 255 / .12); color: var(--hero-ink); cursor: pointer; }
+.cb-zu svg { width: 18px; height: 18px; }
+@media (prefers-reduced-motion: no-preference) { .coach-blatt { animation: blatt-hoch 320ms var(--ease-out) both; } @keyframes blatt-hoch { from { transform: translateY(48px); opacity: 0; } } }
+
+/* Ein Feld für Festhalten und Fragen */
+.coach-eingabe { position: sticky; bottom: 0; display: grid; gap: 8px; margin: 2px -16px 0; padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: #04112E; box-shadow: 0 -1px 0 rgb(255 255 255 / .1); z-index: 2; }
+.coach-eingabe textarea { min-height: 64px; max-height: 40vh; resize: none; border: 0; border-radius: 14px; padding: 11px 12px; background: rgb(255 255 255 / .1); color: var(--hero-ink); font-size: 1rem; line-height: 1.4; }
+.coach-eingabe textarea::placeholder { color: var(--hero-muted); }
+.coach-eingabe textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .4); }
+.coach-hoert { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .8125rem; color: var(--hero-muted); }
+.coach-knoepfe { display: flex; gap: 8px; }
+.coach-knoepfe button { min-height: 46px; border: 0; border-radius: 14px; font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; }
+.coach-knoepfe button:disabled { cursor: default; }
+.coach-fest:disabled { background: #5B6478; color: #1A2440; }
+.coach-fragen:disabled { color: var(--hero-muted); }
+.coach-fest { flex: 1; background: var(--hero-ink); color: #001D51; }
+.coach-fragen { flex: 1; background: rgb(255 255 255 / .12); color: var(--hero-ink); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18); }
+.coach-mic { width: 46px; flex: 0 0 auto; display: grid; place-items: center; background: rgb(255 255 255 / .12); color: var(--hero-ink); }
+.coach-mic.an { background: #FF8A80; color: #001D51; }
+.coach-mic svg { width: 20px; height: 20px; }
+
+/* Spur im Gespräch: was heute festgehalten wurde */
+.chat-zeile.fest { justify-self: end; display: grid; gap: 3px; background: none; box-shadow: inset 0 0 0 1px rgb(242 204 91 / .55); color: var(--hero-ink); text-decoration: none; border-bottom-right-radius: 6px; }
+.chat-zeile.fest small { font-size: .6875rem; font-weight: 600; color: #F2CC5B; white-space: normal; }
+.chat-mehr { justify-self: center; min-height: 36px; padding: 0 12px; border: 0; background: none; color: var(--hero-muted); font: inherit; font-size: .8125rem; cursor: pointer; }
+
+/* iPad quer und Mac: Coach fest in der rechten Spalte */
+.coach-panel { position: sticky; top: 64px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; }
+.coach-panel .chat { max-height: none; overflow: visible; }
+.coach-panel .coach-eingabe { margin: 2px -16px -18px; padding-bottom: 16px; }

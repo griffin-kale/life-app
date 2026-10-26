@@ -51,7 +51,7 @@ export default function HeuteAnpassen() {
             </ul>
           </section>
         ) : null}
-        <p className="gnote">Jetzt dran und der Fragebogen bleiben immer an, weil der Coach ohne Antworten nichts zu sagen hat. Ohne Festhalten-Feld sitzt oben rechts auf Heute ein Plus.</p>
+        <p className="gnote">Jetzt dran und der Fragebogen bleiben immer an, weil der Coach ohne Antworten nichts zu sagen hat. Festhalten geht immer über die Coach-Leiste unten, auf dem Mac über das Feld rechts oder die Taste N.</p>
         <button type="button" className="btn wide" onClick={() => speichern([...STANDARD])}>Zurück zum Standard</button>
       </> : <p className="loading">Lädt …</p>}
       {toast}
