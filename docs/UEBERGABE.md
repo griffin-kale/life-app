@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.22.1.
+Stand: 26. Oktober 2026, Version 0.23.0.
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist mit 0.21.0 erledigt.
 
@@ -58,6 +58,10 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Coach mit Händen und Opus 0.23 (Peter, 26.10.2026):** Peter hat dem Coach mehrfach eine neue Zielsumme genannt, der Coach hat „aktualisiert“ gesagt, gespeichert war nichts: Der Coach konnte nichts ändern und hat das trotzdem behauptet. Jetzt darf er genau drei Werte setzen (Zielsumme eines Sparziels, Rücklage, Sparrate), über das Feld `aktion` in seiner JSON-Antwort. Life prüft gegen feste Listen (`lib/coach-aktion.ts`), führt selbst aus und schreibt die Bestätigung selbst („✓ Gespeichert …“ oder „Nicht geändert …“). Beträge von Rücklage und Sparrate gehen weiter nicht an Claude, nur die Namen der Sparziele. Weitere Aktionen kommen nur mit derselben Prüfung dazu. Die Zielsumme lässt sich auch direkt unter Geld → Sparziele ändern („Ziel ändern“), vorher ging nur Anlegen und Entfernen.
+- **Stärkstes Modell in entscheidenden Momenten (Peter, 26.10.2026):** `MODEL_DEEP` (Standard `claude-opus-5-5`, per `CLAUDE_MODEL_DEEP` in der .env änderbar) für den Morgen-Coach, die Standortbestimmung und Gespräche mit Entscheidungen, Planung, Überlastung oder langen Nachrichten (`entscheidend()`). Alles andere bleibt bei Sonnet, Einordnen bei Haiku. Ist Opus nicht erreichbar, antwortet Sonnet (`askJsonTief`). Kosten: Opus kostet pro Aufruf ein Mehrfaches, bei ein paar Gesprächen am Tag bleibt das im Rahmen.
+- **Nach unten ziehen lädt neu 0.23:** Nur in der App vom Home-Bildschirm, Safari kann das selbst. Lädt die ganze Seite neu, weil die Seiten ihre Daten selbst holen. Greift nur ganz oben und nie in offenen Blättern oder Feldern.
 
 - **Aufräumen 0.22.1 (Peter, 26.10.2026):** 0.16.1 bis 0.22.0 sind in `main`. Drei Dependabot-Merges mit roter CI (TypeScript 7, simplewebauthn 14, React 19.3) haben `main` zerbrochen und sind zurückgenommen. Regel ab jetzt: Dependabot-PRs nur mit grüner CI mergen, große Sprünge einzeln als eigene Aufgabe mit Tests (vor allem simplewebauthn, weil es die Anmeldung trifft). Gemergte Zweige werden gelöscht, der Mac arbeitet auf `main`. Danach kamen die gebündelten PRs: React und React DOM 19.3.1 zusammen (#26, alle Tests grün) und die GitHub-Actions auf v7 (#25).
 

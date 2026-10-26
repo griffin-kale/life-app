@@ -1,10 +1,11 @@
-import { askJson, geschuetzteNamen, MODEL } from './claude';
+import { askJson, askJsonTief, geschuetzteNamen, MODEL } from './claude';
+import { AKTIONEN_TEXT, aktionPruefen, bestaetigung, entscheidend, type CoachAktion } from './coach-aktion';
 import { ensureSchema, getSetting, sql } from './db';
 import { BOEGEN, who5, type Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { koerperZusammenfassung, warnsignale } from './coach-regeln';
 import { koerperStand } from './koerper';
-import { geldKurz, geldStand } from './geld';
+import { geldKurz, geldStand, haushalt } from './geld';
 import { menschenKurz } from './menschen';
 import { tageslage } from './tag';
 import { standZeilenLesen } from './stand';
@@ -96,7 +97,8 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
 
   let text = ''; let geste = '';
   try {
-    const a = await askJson<{ text?: unknown; geste?: unknown }>(prompt, MODEL(), 700);
+    // Der Morgen setzt den Tag: dafür das stärkste Modell. Der Rückblick am Abend reicht mit dem Standard.
+    const a = art === 'morgen' ? await askJsonTief<{ text?: unknown; geste?: unknown }>(prompt, 700) : await askJson<{ text?: unknown; geste?: unknown }>(prompt, MODEL(), 700);
     text = typeof a.text === 'string' ? a.text.trim().slice(0, 400) : '';
     geste = art === 'morgen' && typeof a.geste === 'string' ? a.geste.trim().slice(0, 200) : '';
   } catch { /* Ohne Claude bleiben die Warnsignale */ }
@@ -115,21 +117,43 @@ export async function coachChat(nachricht: string, userId = 'peter'): Promise<Ch
   const tag = heuteBerlin();
   const text = nachricht.replace(/\s+/g, ' ').trim().slice(0, 1000);
   await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'ich', ${text})`;
-  const [{ zeilen }, verlauf] = await Promise.all([grundlage(userId), chatVerlauf(userId)]);
+  const h = await haushalt(userId);
+  const [{ zeilen }, verlauf, spar] = await Promise.all([grundlage(userId), chatVerlauf(userId),
+    sql<{ name: string }[]>`select name from geld_toepfe where haushalt_id = ${h} and art = 'spar' and aktiv order by sortierung, id`.catch(() => [] as { name: string }[])]);
+  const sparziele = spar.map((x) => x.name);
   const prompt = [
     'COACH CHAT',
     ...zeilen,
     'Peter schreibt dir direkt. Antworte wie ein guter Coach im Gespräch: 1 bis 4 Sätze, konkret, mit einem nächsten Schritt, wenn es passt. Keine Listen, keine Überschriften. Bei Fragen zu Gesundheit gibst du keine Diagnosen und rätst bei anhaltenden Beschwerden zu ärztlichem Rat.',
     'Gespräch von heute:\n' + verlauf.slice(-12).map((z) => `${z.rolle === 'ich' ? 'Peter' : 'Coach'}: ${z.text}`).join('\n'),
-    'Antworte nur mit JSON: {"text": string (deine Antwort, höchstens 500 Zeichen)}',
+    sparziele.length ? 'Sparziele (nur Namen): ' + sparziele.join(', ') : 'Sparziele: noch keine angelegt.',
+    AKTIONEN_TEXT,
+    'Antworte nur mit JSON: {"text": string (deine Antwort, höchstens 500 Zeichen), "aktion": Objekt oder null}',
   ].join('\n\n');
-  let antwort = '';
+  let antwort = ''; let nachtrag = '';
   try {
-    const a = await askJson<{ text?: unknown }>(prompt, MODEL(), 600);
+    type A = { text?: unknown; aktion?: unknown };
+    const a = entscheidend(text) ? await askJsonTief<A>(prompt, 700) : await askJson<A>(prompt, MODEL(), 700);
     antwort = typeof a.text === 'string' ? a.text.trim().slice(0, 600) : '';
+    const ak = aktionPruefen(a.aktion, sparziele);
+    if (ak && 'fehler' in ak) nachtrag = `Nicht geändert: ${ak.fehler}`;
+    else if (ak) nachtrag = await ausfuehren(ak, h).then(() => bestaetigung(ak)).catch(() => 'Nicht geändert: Das Speichern hat nicht geklappt. Bitte unter Geld nachtragen.');
   } catch (e) { antwort = `Ich komme gerade nicht an Claude ran (${oeffentlich(e, 'keine Verbindung', 'coach')}). Versuch es gleich nochmal.`; }
   if (antwort) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${antwort})`;
+  if (nachtrag) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${nachtrag})`;
   return chatVerlauf(userId);
+}
+
+/** Führt eine geprüfte Aktion aus. Nur im eigenen Haushalt, nur aktive Sparziele. */
+async function ausfuehren(a: CoachAktion, h: string): Promise<void> {
+  if (a.art === 'sparziel_ziel') {
+    const r = await sql`update geld_toepfe set betrag_cent = ${a.cent} where haushalt_id = ${h} and art = 'spar' and aktiv and lower(name) = lower(${a.ziel})`;
+    if (!r.count) throw new Error('kein Sparziel');
+    return;
+  }
+  await sql`insert into geld_profil (haushalt_id) values (${h}) on conflict do nothing`;
+  if (a.art === 'ruecklage') await sql`update geld_profil set ruecklage_cent = ${a.cent}, updated_at = now() where haushalt_id = ${h}`;
+  else await sql`update geld_profil set sparrate_cent = ${a.cent}, updated_at = now() where haushalt_id = ${h}`;
 }
 
 export async function chatVerlauf(userId = 'peter'): Promise<ChatZeile[]> {

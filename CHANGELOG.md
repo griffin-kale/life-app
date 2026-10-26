@@ -2,6 +2,19 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.23.0] – 2026-10-26
+
+Coach mit Händen, Opus für entscheidende Momente, Ziehen zum Neuladen (Peter, 26.10.2026).
+
+### Neu
+- **Nach unten ziehen lädt neu.** In der App vom Home-Bildschirm ganz oben nach unten ziehen, loslassen, Life lädt neu.
+- **Zielsumme ändern.** Unter Geld → Sparziele hat jedes Ziel „Ziel ändern“.
+- **Der Coach kann Geldwerte setzen.** Sagst du ihm „Setz mein Sparziel Urlaub auf 3000 Euro“, ändert Life die Zielsumme. Genauso Rücklage und Sparrate. Life bestätigt selbst mit „✓ Gespeichert …“ oder sagt, warum es nicht ging. Der Coach behauptet nichts mehr, was er nicht getan hat.
+- **Opus in entscheidenden Momenten.** Der Morgen-Coach, die Standortbestimmung und Gespräche über Entscheidungen, Planung oder Überlastung laufen über Claude Opus. Ist Opus nicht erreichbar, antwortet Sonnet.
+
+### Behoben
+- Der Coach hat Änderungen bestätigt, die er gar nicht machen konnte.
+
 ## [0.22.1] – 2026-10-26
 
 Aufräumen nach dem Merge von 0.16.1 bis 0.22.0 (Peter, 26.10.2026).
