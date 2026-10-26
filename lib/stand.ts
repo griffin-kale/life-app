@@ -1,4 +1,4 @@
-import { askJson, MODEL } from './claude';
+import { askJsonTief } from './claude';
 import { ensureSchema, getSetting, setSetting, sql } from './db';
 import type { Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
@@ -66,7 +66,7 @@ export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, A
     'Antworte nur mit JSON: {"zusammenfassung": string (höchstens 400 Zeichen), "vorschlaege": [{"art": string, "text": string (höchstens 200 Zeichen), "bereich"?: string, "herleitung"?: string}]}',
   ].filter(Boolean).join('\n\n');
   let auswertung: Auswertung = { zusammenfassung: '', vorschlaege: [] };
-  try { auswertung = pruefeAuswertung(nr, await askJson(prompt, MODEL(), 1400)); }
+  try { auswertung = pruefeAuswertung(nr, await askJsonTief(prompt, 1400)); }
   catch { auswertung = { zusammenfassung: 'Claude ist gerade nicht erreichbar. Deine Antworten sind gespeichert, die Auswertung kannst du gleich nochmal anstoßen.', vorschlaege: [] }; }
   await sql`update standort set auswertung = ${sql.json(auswertung)} where id = ${id}`;
   return { id, auswertung };

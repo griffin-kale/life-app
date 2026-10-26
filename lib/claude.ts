@@ -15,6 +15,8 @@ const getClient = () => (client ??= new Anthropic({ apiKey: process.env.ANTHROPI
 const ohnePraefix = (m: string | undefined) => m?.replace(/^(?:eu\.|us\.|apac\.)?anthropic\./, '') || '';
 export const MODEL_FAST = () => ohnePraefix(process.env.CLAUDE_MODEL_FAST) || 'claude-haiku-5-5';
 export const MODEL = () => ohnePraefix(process.env.CLAUDE_MODEL) || 'claude-sonnet-5-5';
+/** Für Momente, in denen es zählt: Morgen-Coach, Wochenrunde, Entscheidungen im Gespräch (Peter, 26.10.2026). */
+export const MODEL_DEEP = () => ohnePraefix(process.env.CLAUDE_MODEL_DEEP) || 'claude-opus-5-5';
 export const claudeBereit = () => !!process.env.ANTHROPIC_API_KEY;
 
 /** Alle Namen, die Claude nie sieht: Peters Liste, das Team und was Claude früher selbst als Namen erkannt hat. */
@@ -95,6 +97,16 @@ export async function askJson<T>(prompt: string, model = MODEL_FAST(), maxTokens
   if (!claudeBereit()) throw new Hinweis('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
   const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
   return zurueck((await anfragen(maskiert, model, maxTokens)) as T, zuordnung);
+}
+
+/** Wie askJson, aber mit dem stärksten Modell. Klappt das nicht (Modell nicht freigeschaltet, überlastet), antwortet das Standardmodell. */
+export async function askJsonTief<T>(prompt: string, maxTokens = 900): Promise<T> {
+  try { return await askJson<T>(prompt, MODEL_DEEP(), maxTokens); }
+  catch (e) {
+    if (e instanceof Hinweis) throw e;
+    console.warn('[claude] starkes Modell nicht erreichbar, weiter mit Standard');
+    return askJson<T>(prompt, MODEL(), maxTokens);
+  }
 }
 
 /** Wie askJson, dazu ein Foto (JPEG, im Browser verkleinert und ohne Ortsdaten). Der Text wird genauso pseudonymisiert. */
