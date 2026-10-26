@@ -1,20 +1,18 @@
 import webpush from 'web-push';
 import { ensureSchema, getSetting, setSetting, sql } from './db';
-import { entschluesseln, verschluesseln } from './passwort-core';
+import { aufschliessen, zuschliessen } from './passwort-core';
 
 /**
  * Mitteilungen auf das iPhone über Web Push. Der Inhalt ist Ende-zu-Ende verschlüsselt (RFC 8291),
  * Apples Push-Dienst sieht nur Kauderwelsch. Der private Schlüssel liegt verschlüsselt in der Datenbank.
  */
 
-const geheim = () => { const s = process.env.SESSION_SECRET; if (!s || s.length < 32) throw new Error('SESSION_SECRET fehlt'); return s; };
-
 export async function vapid(): Promise<{ publicKey: string; privateKey: string }> {
   await ensureSchema();
   const pub = await getSetting('vapid_public'); const box = await getSetting('vapid_private');
-  if (pub && box) return { publicKey: pub, privateKey: entschluesseln(box, geheim(), 'vapid') };
+  if (pub && box) return { publicKey: pub, privateKey: aufschliessen(box, 'vapid') };
   const k = webpush.generateVAPIDKeys();
-  await setSetting('vapid_private', verschluesseln(k.privateKey, geheim(), 'vapid'));
+  await setSetting('vapid_private', zuschliessen(k.privateKey, 'vapid'));
   await setSetting('vapid_public', k.publicKey);
   return k;
 }

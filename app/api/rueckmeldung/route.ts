@@ -2,10 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import pkg from '@/package.json';
 import { begrenzt } from '@/lib/ratelimit';
 import { ARTEN, BEREICHE, GEWICHT, githubBereit, liste, melden } from '@/lib/rueckmeldung';
+import { ohneSitzung } from '@/lib/sitzung';
 
-export async function GET() { return NextResponse.json({ liste: await liste(), github: githubBereit() }); }
+export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
+  return NextResponse.json({ liste: await liste(), github: githubBereit() });
+}
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   if (!(b.art in ARTEN) || !(BEREICHE as readonly string[]).includes(b.bereich) || !(b.gewicht in GEWICHT))

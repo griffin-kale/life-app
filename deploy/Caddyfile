@@ -1,5 +1,9 @@
 # Holt das HTTPS-Zertifikat automatisch und leitet an die App weiter.
 {$DOMAIN} {
 	encode zstd gzip
+	# Größer ist keine Anfrage an Life. Fotos kommen im Browser verkleinert an (unter 2 MB), Rest ist Text.
+	request_body {
+		max_size 8MB
+	}
 	reverse_proxy app:3000
 }

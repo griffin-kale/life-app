@@ -4,11 +4,13 @@ import { ARTEN, KATEGORIEN, TYPEN, enrich } from '@/lib/enrich';
 import { AKTIV, JETZT_MAX, STAPEL, heuteBerlin, liste, sortiere } from '@/lib/priorisieren';
 import { getSetting } from '@/lib/db';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 type Ctx = { params: Promise<{ id: string }> };
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const { id } = await params; if (!UUID.test(id)) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   await ensureSchema();
   const [item] = await sql<Item[]>`select * from items where id = ${id}`;
@@ -16,6 +18,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const { id } = await params; if (!UUID.test(id)) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   const b = await req.json().catch(() => ({}));
@@ -72,6 +75,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const { id } = await params; if (!UUID.test(id)) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   await ensureSchema();
   await sql`delete from items where id = ${id}`;

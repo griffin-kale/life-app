@@ -1,9 +1,12 @@
-import { NextResponse, after } from 'next/server';
+import { NextResponse, after, type NextRequest } from 'next/server';
+import { begrenzt } from '@/lib/ratelimit';
 import { ensureSchema, getSetting, sql, type Item } from '@/lib/db';
 import { AKTIV, engpassAus, heuteBerlin, laeuftGerade, liste, offene, sortiere, tagesStartNoetig } from '@/lib/priorisieren';
+import { ohneSitzung } from '@/lib/sitzung';
 
 /** Alles für Heute und Woche: offene Stapel, heute Erledigtes, Ziele mit Fortschritt dieser Woche. */
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const neuerTag = await tagesStartNoetig();
   if (neuerTag) after(() => sortiere('tag'));
@@ -42,7 +45,9 @@ export async function GET() {
 }
 
 /** Neu sortieren auf Knopfdruck. */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
+  const zuViel = begrenzt(req, 'sortieren'); if (zuViel) return zuViel;
   await ensureSchema();
   after(() => sortiere('tag'));
   return NextResponse.json({ ok: true });

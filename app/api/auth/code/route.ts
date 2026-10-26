@@ -1,17 +1,15 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { SESSION_COOKIE, validSession } from '@/lib/session';
+import { NextResponse } from 'next/server';
+import { ohneSitzung } from '@/lib/sitzung';
 import { aktiv, ausschalten } from '@/lib/zweifaktor';
 
-/** /api/auth/ ist offen. Status und Ausschalten nur mit gültiger Sitzung. */
-async function angemeldet(req: NextRequest) { return validSession(req.cookies.get(SESSION_COOKIE)?.value); }
-
-export async function GET(req: NextRequest) {
-  if (!(await angemeldet(req))) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
+/** Status und Ausschalten nur mit gültiger Sitzung. */
+export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   return NextResponse.json({ aktiv: await aktiv() });
 }
 
-export async function DELETE(req: NextRequest) {
-  if (!(await angemeldet(req))) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
+export async function DELETE() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ausschalten();
   return NextResponse.json({ ok: true });
 }

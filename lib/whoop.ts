@@ -1,5 +1,5 @@
 import { ensureSchema, getSetting, setSetting, sql } from './db';
-import { entschluesseln, verschluesseln } from './passwort-core';
+import { aufschliessen, zuschliessen } from './passwort-core';
 import { heuteBerlin } from './priorisieren';
 
 /**
@@ -15,7 +15,6 @@ export const SCOPES = 'offline read:recovery read:cycles read:sleep read:workout
 
 export const whoopBereit = () => !!(process.env.WHOOP_CLIENT_ID && process.env.WHOOP_CLIENT_SECRET);
 export const redirectUri = () => `${(process.env.PUBLIC_ORIGIN || 'http://localhost:3000').replace(/\/$/, '')}/api/whoop/callback`;
-const geheim = () => { const s = process.env.SESSION_SECRET; if (!s || s.length < 32) throw new Error('SESSION_SECRET fehlt'); return s; };
 
 type Tokens = { access: string; refresh: string; ablauf: number };
 
@@ -39,7 +38,7 @@ async function tokenAnfrage(params: Record<string, string>): Promise<Tokens> {
 }
 
 async function speichern(t: Tokens, userId: string) {
-  await setSetting(`whoop_tokens:${userId}`, verschluesseln(JSON.stringify(t), geheim(), 'whoop'));
+  await setSetting(`whoop_tokens:${userId}`, zuschliessen(JSON.stringify(t), 'whoop'));
 }
 
 export async function verbunden(userId = 'peter'): Promise<boolean> { return !!(await getSetting(`whoop_tokens:${userId}`)); }
@@ -54,13 +53,13 @@ export async function trennen(userId = 'peter'): Promise<void> { await setSettin
 async function zugang(userId: string): Promise<string> {
   const box = await getSetting(`whoop_tokens:${userId}`);
   if (!box) throw new Error('WHOOP ist nicht verbunden');
-  let t = JSON.parse(entschluesseln(box, geheim(), 'whoop')) as Tokens;
+  let t = JSON.parse(aufschliessen(box, 'whoop')) as Tokens;
   if (t.ablauf > Date.now() + 60_000) return t.access;
   const conn = await sql.reserve();
   try {
     await conn`select pg_advisory_lock(4712)`;
     const frisch = await getSetting(`whoop_tokens:${userId}`);
-    t = JSON.parse(entschluesseln(frisch, geheim(), 'whoop')) as Tokens;
+    t = JSON.parse(aufschliessen(frisch, 'whoop')) as Tokens;
     if (t.ablauf <= Date.now() + 60_000) { t = await tokenAnfrage({ grant_type: 'refresh_token', refresh_token: t.refresh, scope: 'offline' }); await speichern(t, userId); }
     return t.access;
   } finally { await conn`select pg_advisory_unlock(4712)`; conn.release(); }

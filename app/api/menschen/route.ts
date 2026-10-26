@@ -4,13 +4,18 @@ import { menschenStand } from '@/lib/menschen';
 import { KREISE, TAKT, type Kreis } from '@/lib/menschen-regeln';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 const USER = 'peter';
 const DATUM = /^\d{4}-\d{2}-\d{2}$/;
 
-export async function GET() { return NextResponse.json(await menschenStand(USER)); }
+export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
+  return NextResponse.json(await menschenStand(USER));
+}
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
@@ -33,6 +38,7 @@ export async function POST(req: NextRequest) {
 
 /** Kreis, Takt, Geburtstag oder Notiz ändern. */
 export async function PATCH(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const id = Number(b.id); if (!Number.isInteger(id)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
@@ -44,6 +50,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const id = Number(req.nextUrl.searchParams.get('id'));
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
   await sql`delete from personen where id = ${id} and user_id = ${USER}`;

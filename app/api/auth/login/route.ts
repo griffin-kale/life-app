@@ -2,14 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { ensureSchema, sql } from '@/lib/db';
-import { CHALLENGE_COOKIE, SESSION_COOKIE, cookieOptions, createSession, readChallenge } from '@/lib/session';
+import { challengeCookie, readChallenge } from '@/lib/session';
+import { sitzungSetzen } from '@/lib/sitzung';
 import { rp } from '@/lib/webauthn';
 import { begrenzt } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
   const zuViel = begrenzt(req, 'anmelden'); if (zuViel) return zuViel;
   const { response } = await req.json().catch(() => ({}));
-  const challenge = await readChallenge(req.cookies.get(CHALLENGE_COOKIE)?.value, 'login');
+  const challenge = await readChallenge(req.cookies.get(challengeCookie())?.value, 'login');
   if (!challenge || !response?.id) return NextResponse.json({ error: 'Zeit abgelaufen. Bitte nochmal.' }, { status: 400 });
   await ensureSchema();
   const rows = await sql`select id, public_key, counter, transports from credentials where id = ${response.id}`;
@@ -24,11 +25,10 @@ export async function POST(req: NextRequest) {
     if (!v.verified) throw new Error('nicht bestätigt');
     await sql`update credentials set counter = ${v.authenticationInfo.newCounter} where id = ${cred.id}`;
   } catch (e) {
-    return NextResponse.json({ error: 'Anmeldung fehlgeschlagen: ' + (e as Error).message }, { status: 403 });
+    console.warn('[auth] Anmeldung abgelehnt', (e as Error).name);
+    return NextResponse.json({ error: 'Anmeldung fehlgeschlagen. Bitte nochmal.' }, { status: 403 });
   }
-  const s = await createSession();
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, s.value, cookieOptions(s.maxAge));
-  res.cookies.delete(CHALLENGE_COOKIE);
+  const res = await sitzungSetzen(NextResponse.json({ ok: true }));
+  res.cookies.delete(challengeCookie());
   return res;
 }

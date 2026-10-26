@@ -2,6 +2,7 @@ import { standAus, standZeilen } from './standort';
 import { montagVon } from './tagesregeln';
 import { askJson, MODEL } from './claude';
 import { ensureSchema, getSetting, setSetting, sql, type Item } from './db';
+import { oeffentlich } from './fehler';
 
 export const STAPEL = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
 export type Stapel = (typeof STAPEL)[number];
@@ -130,7 +131,7 @@ export async function sortiere(modus: 'tag' | 'nachtrag'): Promise<void> {
       for (let i = 0; i < 3; i++) {
         await setSetting('sort_nochmal', '');
         try { await lauf(m); await setSetting('sort_fehler', ''); }
-        catch (e) { await setSetting('sort_fehler', String((e as Error).message || e).slice(0, 300)); }
+        catch (e) { await setSetting('sort_fehler', oeffentlich(e, 'Sortieren hat nicht geklappt.', 'sortieren')); }
         if ((await getSetting('sort_nochmal')) !== '1') break;
         m = 'nachtrag';
       }

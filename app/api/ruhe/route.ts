@@ -4,8 +4,10 @@ import { wochenTag } from '@/lib/fragen';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
 import { vorlage } from '@/lib/ruhe';
+import { ohneSitzung } from '@/lib/sitzung';
 
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const [w] = await sql<{ minuten: number; tage: number }[]>`
     select coalesce(round(sum(dauer_sek) / 60.0), 0)::int as minuten, count(distinct tag)::int as tage
@@ -15,6 +17,7 @@ export async function GET() {
 
 /** Eine Sitzung festhalten. Unter einer Minute zählt nicht. */
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));

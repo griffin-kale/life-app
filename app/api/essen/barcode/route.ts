@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { eanOk, produkt } from '@/lib/essen';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 export async function GET(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const ean = req.nextUrl.searchParams.get('ean') ?? '';
   if (!eanOk(ean)) return NextResponse.json({ error: 'Ungültige Barcode-Nummer' }, { status: 400 });

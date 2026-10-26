@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getSetting, setSetting } from '@/lib/db';
 import { STAND, bausteineAus, nachruesten } from '@/lib/heute-bausteine';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 /** Welche Bausteine Heute zeigt und in welcher Reihenfolge. Pro Mensch gespeichert, damit es auf jedem Gerät gleich aussieht. */
 const KEY = (userId: string) => `heute:${userId}`;
@@ -16,10 +17,12 @@ async function lesen(userId: string) {
 }
 
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   return NextResponse.json({ bausteine: await lesen('peter') });
 }
 
 export async function PUT(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const bausteine = bausteineAus(b?.bausteine);

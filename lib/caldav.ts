@@ -13,7 +13,7 @@ export const kalenderBereit = () => !!(process.env.ICLOUD_USER && process.env.IC
 const BASIS = () => process.env.CALDAV_URL || 'https://caldav.icloud.com/';
 const MAX = 5_000_000;
 
-export class KalenderFehler extends Error {}
+export class KalenderFehler extends Error { override name = 'KalenderFehler'; }
 
 async function dav(method: 'PROPFIND' | 'REPORT', url: string, body: string, depth: '0' | '1'): Promise<{ text: string; url: string }> {
   const test = process.env.CALDAV_URL;

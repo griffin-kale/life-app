@@ -4,14 +4,21 @@ import { betragAus } from '@/lib/geld-regeln';
 import { bonLesen, geldStand, haushalt, topfVorschlag } from '@/lib/geld';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
+import { oeffentlich } from '@/lib/fehler';
+import { jpegSaeubern } from '@/lib/jpeg';
 
 const USER = 'peter';
 const cent = (x: unknown, max = 100_000_000) => { const n = Math.round(Number(x)); return Number.isFinite(n) && n >= 0 && n <= max ? n : null; };
 const name = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, 60) : '');
 
-export async function GET() { return NextResponse.json(await geldStand(USER)); }
+export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
+  return NextResponse.json(await geldStand(USER));
+}
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
@@ -34,8 +41,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, cent: c, was });
       }
       case 'bon': {
-        const bild = typeof b.bild === 'string' ? b.bild.replace(/^data:image\/jpeg;base64,/, '') : '';
-        if (!bild || bild.length > 2_000_000 || !/^[A-Za-z0-9+/=]+$/.test(bild)) return NextResponse.json({ error: 'Foto zu groß oder ungültig' }, { status: 400 });
+        const roh = typeof b.bild === 'string' ? b.bild.replace(/^data:image\/jpeg;base64,/, '') : '';
+        const bild = roh && roh.length <= 2_000_000 ? jpegSaeubern(roh) : null;
+        if (!bild) return NextResponse.json({ error: 'Foto zu groß oder ungültig' }, { status: 400 });
         const woche = await sql<{ id: string; name: string }[]>`select id::text, name from geld_toepfe where haushalt_id = ${h} and art = 'woche' and aktiv order by sortierung, id`;
         const r = await bonLesen(bild, woche.map((t) => t.name));
         const topf = (await eigenerTopf(b.topf_id))?.id ?? woche.find((t) => t.name === r.topf)?.id ?? woche[0]?.id ?? null;
@@ -75,12 +83,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
     }
-  } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 502 }); }
+  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Das hat nicht geklappt. Bitte nochmal.') }, { status: 502 }); }
   return NextResponse.json({ error: 'Unbekannte Aktion' }, { status: 400 });
 }
 
 /** Wochenbetrag eines Topfs ändern. */
 export async function PATCH(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const h = await haushalt(USER); const c = cent(b.betrag_cent); const id = Number(b.id);
@@ -90,6 +99,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const h = await haushalt(USER);
   const art = req.nextUrl.searchParams.get('art'); const id = Number(req.nextUrl.searchParams.get('id'));
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });

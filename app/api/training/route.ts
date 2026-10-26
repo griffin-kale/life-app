@@ -5,17 +5,20 @@ import { standSpeichern, trainingStand } from '@/lib/koerper';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
 import { einheitPlanen, MUSKELN, nachEinheit, UEBUNGEN, uebung, type Ergebnis, type Feedback, type Muskel } from '@/lib/training';
+import { ohneSitzung } from '@/lib/sitzung';
 
 const PUMP = ['wenig', 'mittel', 'stark']; const KATER = ['keiner', 'weg', 'noch da']; const GELENKE = ['gut', 'zieht', 'schmerzt'];
 
 /** Die Einheit für heute, fertig geplant. */
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const s = await trainingStand();
   const heute = heuteBerlin();
   return NextResponse.json({ stand: { einheitenSoll: s.einheitenSoll, uhrzeit: s.uhrzeit, volumen: s.volumen }, einheit: einheitPlanen(s, heute) });
 }
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
@@ -47,6 +50,7 @@ export async function POST(req: NextRequest) {
 
 /** Einstellungen des Plans: Einheiten pro Woche, Uhrzeit, Übung tauschen. */
 export async function PATCH(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const s = await trainingStand();

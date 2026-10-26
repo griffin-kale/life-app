@@ -9,6 +9,7 @@ import { menschenKurz } from './menschen';
 import { tageslage } from './tag';
 import { standZeilenLesen } from './stand';
 import { kalenderKurz } from './kalender';
+import { oeffentlich } from './fehler';
 
 export { warnsignale };
 
@@ -124,7 +125,7 @@ export async function coachChat(nachricht: string, userId = 'peter'): Promise<Ch
   try {
     const a = await askJson<{ text?: unknown }>(prompt, MODEL(), 600);
     antwort = typeof a.text === 'string' ? a.text.trim().slice(0, 600) : '';
-  } catch (e) { antwort = `Ich komme gerade nicht an Claude ran (${(e as Error).message}). Versuch es gleich nochmal.`; }
+  } catch (e) { antwort = `Ich komme gerade nicht an Claude ran (${oeffentlich(e, 'keine Verbindung', 'coach')}). Versuch es gleich nochmal.`; }
   if (antwort) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${antwort})`;
   return chatVerlauf(userId);
 }

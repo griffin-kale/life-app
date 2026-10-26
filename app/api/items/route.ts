@@ -2,8 +2,10 @@ import { NextResponse, after, type NextRequest } from 'next/server';
 import { ensureSchema, sql, type Item } from '@/lib/db';
 import { createItem, enrich, TYPEN } from '@/lib/enrich';
 import { begrenzt } from '@/lib/ratelimit';
+import { ohneSitzung } from '@/lib/sitzung';
 
 export async function GET(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const p = req.nextUrl.searchParams;
   const typ = p.get('typ'); const q = (p.get('q') || '').trim(); const archiv = p.get('archiv') === '1'; const erledigt = p.get('erledigt') === '1';
@@ -18,6 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const aus = await ohneSitzung(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const { text } = await req.json().catch(() => ({}));
   if (typeof text !== 'string' || !text.trim()) return NextResponse.json({ error: 'Leer' }, { status: 400 });

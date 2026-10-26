@@ -94,8 +94,10 @@ export default function Einstellungen() {
           <div className="cell static"><span>Face ID (Passkey)</span><span className="val">bevorzugt</span></div>
           <div className="cell static"><span>Passwort und Code</span><span className="val">{code === null ? '…' : code ? 'an' : 'aus'}</span></div>
           {code ? <button type="button" className="cell danger" onClick={codeAus}>Passwort und Code ausschalten</button> : null}
+          <a className="cell tint" href="/setup"><span>Weiteres Gerät einrichten</span>{Icon.chevronRight}</a>
+          <button type="button" className="cell danger" onClick={() => fetch('/api/auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ alle: true }) }).then(() => { window.location.href = '/login'; })}>Auf allen Geräten abmelden</button>
         </div>
-        <p className="gnote">Passwort und Code sind der Weg für Geräte ohne Passkey. Sobald Face ID überall geht, schalte ihn hier aus.</p>
+        <p className="gnote">Passwort und Code sind der Weg für Geräte ohne Passkey. Sobald Face ID überall geht, schalte ihn hier aus. „Auf allen Geräten abmelden“ beendet jede Sitzung, auch eine gestohlene.</p>
       </section>
 
       <section className="gsec">
@@ -109,7 +111,7 @@ export default function Einstellungen() {
 
       <Rueckmeldung onToast={(t, k) => setToast(t, k)} />
 
-      <p className="foot">Life 0.15.2 · Server in Deutschland</p>
+      <p className="foot">Life 0.16.0 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

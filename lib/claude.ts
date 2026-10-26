@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getSetting, setSetting, sql } from './db';
+import { ensureSchema, getSetting, setSetting, sql } from './db';
 import { maskieren, namenAus, zurueck, type Name } from './pseudonym';
+import { Hinweis } from './fehler';
 
 /**
  * Claude über die Anthropic-API (Entscheidung Peter, 25.10.2026).
@@ -18,8 +19,10 @@ export const claudeBereit = () => !!process.env.ANTHROPIC_API_KEY;
 
 /** Alle Namen, die Claude nie sieht: Peters Liste, das Team und was Claude früher selbst als Namen erkannt hat. */
 export async function geschuetzteNamen(): Promise<Name[]> {
+  // Fällt die Datenbank aus, bricht der Claude-Aufruf ab. Ohne Namensliste gingen Namen im Klartext raus.
+  await ensureSchema();
   const [namen, team, auto, leute] = await Promise.all([getSetting('namen'), getSetting('team'), getSetting('namen_auto'),
-    sql<{ name: string }[]>`select name from personen`.catch(() => [] as { name: string }[])]);
+    sql<{ name: string }[]>`select name from personen`]);
   // Peter selbst gehört dazu: Claude soll nie erfahren, um wen es geht.
   const besitzer: Name[] = [{ name: 'Peter Gneuß', art: 'Person' }, { name: 'Gneuß', art: 'Person' }, { name: 'Peter', art: 'Person' }];
   return [...besitzer, ...namenAus(namen), ...namenAus(team), ...namenAus(auto), ...leute.map((l) => ({ name: l.name, art: 'Person' as const }))];
@@ -65,20 +68,20 @@ async function anfragen(content: Inhalt, model: string, maxTokens: number): Prom
     const start = text.indexOf('{'); const end = text.lastIndexOf('}');
     if (start >= 0 && end > start) { try { return JSON.parse(text.slice(start, end + 1)); } catch { /* unten melden */ } }
     console.warn('[claude] Antwort ohne JSON', { model, tokens, stop: msg.stop_reason, bloecke: msg.content.map((b) => b.type).join(',') });
-    throw new Error(msg.stop_reason === 'max_tokens' ? 'Antwort zu lang, abgeschnitten' : msg.stop_reason === 'refusal' ? 'Claude hat abgelehnt' : 'Antwort ohne JSON');
+    throw new Hinweis(msg.stop_reason === 'max_tokens' ? 'Antwort zu lang, abgeschnitten' : msg.stop_reason === 'refusal' ? 'Claude hat abgelehnt' : 'Antwort ohne JSON');
   }
-  throw new Error('Antwort zu lang, abgeschnitten');
+  throw new Hinweis('Antwort zu lang, abgeschnitten');
 }
 
 export async function askJson<T>(prompt: string, model = MODEL_FAST(), maxTokens = 900): Promise<T> {
-  if (!claudeBereit()) throw new Error('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
+  if (!claudeBereit()) throw new Hinweis('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
   const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
   return zurueck((await anfragen(maskiert, model, maxTokens)) as T, zuordnung);
 }
 
 /** Wie askJson, dazu ein Foto (JPEG, im Browser verkleinert und ohne Ortsdaten). Der Text wird genauso pseudonymisiert. */
 export async function askJsonBild<T>(prompt: string, jpegBase64: string, model = MODEL(), maxTokens = 600): Promise<T> {
-  if (!claudeBereit()) throw new Error('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
+  if (!claudeBereit()) throw new Hinweis('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
   const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
   return zurueck((await anfragen([
     { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },

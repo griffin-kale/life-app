@@ -5,9 +5,11 @@ import { heuteBerlin, offene } from '@/lib/priorisieren';
 import { koerperStand } from '@/lib/koerper';
 import { geldStand } from '@/lib/geld';
 import { tageslage } from '@/lib/tag';
+import { ohneSitzung } from '@/lib/sitzung';
 
 /** Was der Coach heute gesagt hat. Warnsignale rechnet Life bei jedem Abruf neu, auch ohne Claude. */
 export async function GET() {
+  const aus = await ohneSitzung(); if (aus) return aus;
   await ensureSchema();
   const tag = heuteBerlin();
   const [rows, items, k, g, lage] = await Promise.all([

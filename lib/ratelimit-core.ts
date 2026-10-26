@@ -15,5 +15,12 @@ export function hit(key: string, max: number, windowMs: number, now = Date.now()
   return b.n <= max ? { ok: true, retryAfter: 0 } : { ok: false, retryAfter: Math.ceil((b.reset - now) / 1000) };
 }
 
+/** Zählt nicht mit, sagt nur, ob das Limit schon erreicht ist. Für Zähler, die nur Fehlversuche zählen. */
+export function voll(key: string, max: number, now = Date.now()): { ok: boolean; retryAfter: number } {
+  const b = buckets.get(key);
+  if (!b || b.reset <= now || b.n < max) return { ok: true, retryAfter: 0 };
+  return { ok: false, retryAfter: Math.ceil((b.reset - now) / 1000) };
+}
+
 /** Nur für Tests. */
 export function _reset() { buckets.clear(); }
