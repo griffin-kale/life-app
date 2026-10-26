@@ -24,11 +24,45 @@ export async function pushEinstellungen(): Promise<PushEinstellungen> {
 
 const jetztBerlin = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
 import { faellig, minuten } from './zeitplan-regeln';
+import { einmalMit, LETZTER_LAUF, ohneUeberlappung, type EinmalSpeicher } from './zeitplan-schutz';
 
-async function einmal(schluessel: string, tag: string, f: () => Promise<boolean>) {
-  if ((await getSetting(`gesendet:${schluessel}`)) === tag) return;
-  if (await f()) await setSetting(`gesendet:${schluessel}`, tag);
+/** Nummer der Postgres-Sperre, damit auch zwei Container nie gleichzeitig senden. */
+const SCHLOSS = 7_291_001;
+
+/** „Schon gesendet“ in `settings`. Der Schlüssel wird in einer Anweisung gesetzt, bevor gesendet wird. */
+const gesendet: EinmalSpeicher = {
+  async beanspruchen(schluessel, tag) {
+    const k = `gesendet:${schluessel}`;
+    const rows = await sql<{ vorher: string | null }[]>`
+      with alt as (select value from settings where key = ${k})
+      insert into settings (key, value) values (${k}, ${tag})
+      on conflict (key) do update set value = excluded.value where settings.value is distinct from excluded.value
+      returning (select value from alt) as vorher`;
+    return rows.length ? { ok: true, vorher: rows[0].vorher } : { ok: false, vorher: tag };
+  },
+  async zuruecksetzen(schluessel, tag, vorher) {
+    const k = `gesendet:${schluessel}`;
+    if (vorher === null) await sql`delete from settings where key = ${k} and value = ${tag}`;
+    else await sql`update settings set value = ${vorher} where key = ${k} and value = ${tag}`;
+  },
+};
+
+const einmal = (schluessel: string, tag: string, f: () => Promise<boolean>) => einmalMit(gesendet, schluessel, tag, f);
+
+/** Hält die Sitzungs-Sperre auf einer eigenen Verbindung, solange `f` läuft. */
+async function mitSperre(f: () => Promise<void>): Promise<boolean> {
+  await ensureSchema();
+  const v = await sql.reserve();
+  try {
+    const [r] = await v<{ ok: boolean }[]>`select pg_try_advisory_lock(${SCHLOSS}) as ok`;
+    if (!r?.ok) return false;
+    try { await f(); } finally { await v`select pg_advisory_unlock(${SCHLOSS})`; }
+    return true;
+  } finally {
+    v.release();
+  }
 }
+const exklusiv = ohneUeberlappung(mitSperre);
 
 export async function tick(userId = 'peter') {
   await ensureSchema();
@@ -90,11 +124,21 @@ export async function tick(userId = 'peter') {
   }
 }
 
+/** Ein Lauf des Zeitplans: nie überlappend, danach steht der Zeitpunkt für `/api/health` fest. */
+export async function lauf(): Promise<void> {
+  const fertig = await exklusiv(async () => {
+    await tick();
+    await setSetting(LETZTER_LAUF, new Date().toISOString());
+  });
+  if (!fertig) console.warn('zeitplan: voriger Lauf noch nicht fertig, dieser fällt aus');
+}
+
 let gestartet = false;
 export function starten() {
   if (gestartet || process.env.LIFE_ZEITPLAN === 'aus') return;
   gestartet = true;
-  const lauf = () => tick().catch((e) => console.error('zeitplan', (e as Error).message));
-  setTimeout(lauf, 20_000);
-  setInterval(lauf, 60_000).unref();
+  // Nur der Name des Fehlers ins Log, Texte können Inhalte tragen
+  const lauf_ = () => lauf().catch((e) => console.error('zeitplan', (e as Error).name));
+  setTimeout(lauf_, 20_000);
+  setInterval(lauf_, 60_000).unref();
 }
