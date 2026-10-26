@@ -13,6 +13,7 @@ Heute aufgeräumt (Peter, 26.10.2026): Richtung B aus drei Mockups, der Coach ge
 - **Spur im Gespräch.** Was du heute festhältst, steht als goldene Blase im Coach-Verlauf, mit dem Titel von Claude. Tippen öffnet den Eintrag. Die Spur kommt aus der Datenbank von Life und geht nie an Claude.
 - **Gespräch kompakt.** Der Coach zeigt die letzten vier Blasen, „Ganzes Gespräch“ klappt den Rest auf. Das Blatt hat nur noch eine Scrollfläche.
 - **Freie Zeit an der ersten Aufgabe.** Findet Life im Kalender Platz fürs Wichtigste, steht an der ersten Aufgabe in „Jetzt dran“ ein Chip wie „14:00–15:30 frei“. Tippen setzt die Uhrzeit.
+- **Engpass bei den Aufgaben.** Der Engpass steht nicht mehr als Kasten im Kopf, sondern als getönte Zeile oben in „Jetzt dran“: „Zahlt ein auf deinen Engpass: …“. Tippen führt in die Einstellungen. Ohne Engpass steht dort „Engpass festlegen“ (Variante E3 aus vier Mockups).
 - **Mac und iPad quer:** Der Coach steht fest in der rechten Spalte. N und „Festhalten“ oben rechts springen auf Heute direkt ins Feld.
 
 ### Geändert
