@@ -2,6 +2,11 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.15.2] – 2026-10-26
+
+### Sicherheit
+- **Kritische Lücke geschlossen:** Das Cookie aus der offenen Passkey-Anmeldung (`/api/auth/login-options`) war mit demselben Schlüssel signiert wie die Sitzung und wurde als Sitzung angenommen. Wer es zurückschickte, kam ohne Passkey an alle Daten. Sitzung und Challenge haben jetzt eigene, abgeleitete Schlüssel, einen Typ und eine Zielgruppe, die geprüft werden. Alle bisherigen Sitzungen sind damit ungültig, jedes Gerät meldet sich einmal neu an.
+
 ## [0.15.1] – 2026-10-26
 
 ### Behoben

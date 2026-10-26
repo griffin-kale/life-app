@@ -109,7 +109,7 @@ export default function Einstellungen() {
 
       <Rueckmeldung onToast={(t, k) => setToast(t, k)} />
 
-      <p className="foot">Life 0.15.1 · Server in Deutschland</p>
+      <p className="foot">Life 0.15.2 · Server in Deutschland</p>
       {toast}
       <TabBar />
     </main>

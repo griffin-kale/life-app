@@ -30,6 +30,11 @@ test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sic
   expect((await request.get('/api/coach')).status()).toBe(401);
   for (const u of ['/api/stand', '/api/stand/1', '/api/kalender']) expect((await request.get(u)).status(), u).toBe(401);
   expect((await request.post('/api/kalender')).status()).toBe(401);
+  // Ein Challenge-Cookie aus der offenen Anmeldung darf nie als Sitzung gelten
+  const opt = await request.post('/api/auth/login-options');
+  const ch = (opt.headers()['set-cookie'] || '').match(/life_challenge=([^;]+)/)?.[1];
+  expect(ch).toBeTruthy();
+  expect((await request.get('/api/export', { headers: { cookie: `life_session=${ch}` } })).status()).toBe(401);
   expect((await request.post('/api/capture', { headers: { authorization: 'Bearer falsch' }, data: { text: 'x' } })).status()).toBe(401);
   const health = await request.get('/api/health');
   expect(health.status()).toBe(200);
