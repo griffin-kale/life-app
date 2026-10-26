@@ -43,26 +43,45 @@ export async function namenLernen(neu: unknown): Promise<void> {
   await setSetting('namen_auto', [alt, ...zeilen].filter(Boolean).join('\n').slice(-8000));
 }
 
+type Inhalt = string | Anthropic.Messages.ContentBlockParam[];
+
+/**
+ * Claude antwortet über ein erzwungenes Werkzeug. So kommt immer ein JSON-Objekt zurück und nie Fließtext drumherum.
+ * Wird die Antwort abgeschnitten, fragt Life einmal mit doppeltem Platz nach. Ins Log kommen nur Kennzahlen, nie Inhalte.
+ */
+async function anfragen(content: Inhalt, model: string, maxTokens: number): Promise<unknown> {
+  for (let versuch = 0, tokens = maxTokens; versuch < 2; versuch++, tokens = Math.min(tokens * 2, 8000)) {
+    const msg = await getClient().messages.create({
+      model, max_tokens: tokens,
+      tools: [{ name: 'ergebnis', description: 'Gib das Ergebnis genau im verlangten JSON-Format zurück.', input_schema: { type: 'object', additionalProperties: true } }],
+      tool_choice: { type: 'tool', name: 'ergebnis' },
+      messages: [{ role: 'user', content }],
+    });
+    const werkzeug = msg.content.find((b) => b.type === 'tool_use');
+    if (msg.stop_reason === 'max_tokens' && versuch === 0) { console.warn('[claude] abgeschnitten, neuer Versuch', { model, tokens }); continue; }
+    if (werkzeug && werkzeug.type === 'tool_use' && werkzeug.input && typeof werkzeug.input === 'object') return werkzeug.input;
+    // Ältere Antworten ohne Werkzeug: JSON aus dem Text holen
+    const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+    const start = text.indexOf('{'); const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) { try { return JSON.parse(text.slice(start, end + 1)); } catch { /* unten melden */ } }
+    console.warn('[claude] Antwort ohne JSON', { model, tokens, stop: msg.stop_reason, bloecke: msg.content.map((b) => b.type).join(',') });
+    throw new Error(msg.stop_reason === 'max_tokens' ? 'Antwort zu lang, abgeschnitten' : msg.stop_reason === 'refusal' ? 'Claude hat abgelehnt' : 'Antwort ohne JSON');
+  }
+  throw new Error('Antwort zu lang, abgeschnitten');
+}
+
 export async function askJson<T>(prompt: string, model = MODEL_FAST(), maxTokens = 900): Promise<T> {
   if (!claudeBereit()) throw new Error('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
   const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
-  const msg = await getClient().messages.create({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: maskiert }] });
-  const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
-  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('Antwort ohne JSON');
-  return zurueck(JSON.parse(text.slice(start, end + 1)) as T, zuordnung);
+  return zurueck((await anfragen(maskiert, model, maxTokens)) as T, zuordnung);
 }
 
 /** Wie askJson, dazu ein Foto (JPEG, im Browser verkleinert und ohne Ortsdaten). Der Text wird genauso pseudonymisiert. */
 export async function askJsonBild<T>(prompt: string, jpegBase64: string, model = MODEL(), maxTokens = 600): Promise<T> {
   if (!claudeBereit()) throw new Error('Claude ist noch nicht verbunden (ANTHROPIC_API_KEY fehlt)');
   const { text: maskiert, zuordnung } = maskieren(prompt, await geschuetzteNamen());
-  const msg = await getClient().messages.create({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: [
+  return zurueck((await anfragen([
     { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },
     { type: 'text', text: maskiert },
-  ] }] });
-  const text = msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
-  const start = text.indexOf('{'); const end = text.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('Antwort ohne JSON');
-  return zurueck(JSON.parse(text.slice(start, end + 1)) as T, zuordnung);
+  ], model, maxTokens)) as T, zuordnung);
 }

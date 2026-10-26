@@ -96,7 +96,10 @@ http.createServer((req, res) => {
       : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [{ type: 'text', text: JSON.stringify(a) }], stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
+      // Langer Eintrag mit „ABSCHNEIDEN“: beim ersten Versuch abgeschnitten wie bei einem zu knappen Limit
+      if (text.includes('Eintrag (oft diktiert') && !text.startsWith('COACH') && !text.startsWith('SORTIERLAUF') && text.includes('ABSCHNEIDEN') && (body.max_tokens ?? 0) <= 1500) return res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [{ type: 'tool_use', id: 'tu_1', name: 'ergebnis', input: {} }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 1 } }));
+      const block = body.tool_choice?.name ? { type: 'tool_use', id: 'tu_1', name: body.tool_choice.name, input: a } : { type: 'text', text: JSON.stringify(a) };
+      res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: body.model || 'x', content: [block], stop_reason: body.tool_choice ? 'tool_use' : 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }));
     }, !essen && !bon && !geld && p.startsWith('SORTIERLAUF') ? 400 : 150);
     console.log('mock', bon ? 'bon' : geld ? 'geld' : essen ? 'essen' : p.startsWith('SORTIERLAUF') ? 'sort' : p.startsWith('COACH') ? 'coach' : 'enrich', body.model);
   });

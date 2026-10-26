@@ -2,6 +2,12 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.13.1] – 2026-10-26
+
+### Behoben
+- Einordnen schlug bei langen, diktierten Einträgen mit „Antwort ohne JSON“ fehl. Claude antwortet jetzt über ein erzwungenes Werkzeug und liefert damit immer ein JSON-Objekt. Wird eine Antwort abgeschnitten, fragt Life einmal mit doppeltem Platz nach. Fürs Einordnen gibt es mehr Platz (1500 statt 900 Tokens).
+- Fehlermeldungen sagen jetzt, ob die Antwort abgeschnitten war oder Claude abgelehnt hat. Ins Server-Log kommen dabei nur Kennzahlen, nie Inhalte.
+
 ## [0.13.0] – 2026-10-25
 
 ### Hinzugefügt

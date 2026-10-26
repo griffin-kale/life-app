@@ -114,6 +114,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect((await page.request.get('/woche/gibtsnicht')).status()).toBe(404);
   });
 
+  await test.step('Claude: abgeschnittene Antwort wird mit mehr Platz wiederholt', async () => {
+    const r = await (await page.request.post('/api/items', { data: { text: 'Langer diktierter Gedanke zum ABSCHNEIDEN, Umfrage seitenweise statt scrollen' } })).json();
+    await expect.poll(async () => { const it = await (await page.request.get(`/api/items/${r.id}`)).json(); return it.status === 'neu' && !it.fehler ? 'wartet' : (it.fehler ?? 'ok'); }, { timeout: 15000 }).toBe('ok');
+  });
+
   await test.step('Eintrag öffnen und zurück', async () => {
     await page.goto('/');
     await page.locator('section[aria-label="Jetzt dran"] .ttitle').first().click();
