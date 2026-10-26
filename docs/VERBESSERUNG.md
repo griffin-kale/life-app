@@ -117,6 +117,8 @@ Die kritische Lücke ist behoben. Das Challenge-Cookie galt als Sitzung und ist 
 
 ## Phase 4 – UX und UI (Zweig `feature/ux`)
 
+**Stand 0.18.0:** Punkte 1, 3 und 4 sind mit dem Umbau von Heute erledigt (Mockups, Peters Wahl B mit Coach-Blatt wie A). Abweichungen: Festhalten liegt im Coach-Blatt statt als eigenes Feld, der Kalender zeigt auf Heute nur noch freie Zeit an der ersten Aufgabe. Punkt 2 hat sich damit erledigt: Die Coach-Leiste öffnet das Feld mit einem Tippen. Offen bleibt: Offen-Punkte im Coach als Links.
+
 Zeig Peter vor dem Bauen zwei bis drei Mockups für Heute, mit iPhone, iPad und Mac nebeneinander. Er entscheidet, erst dann bauen.
 
 1. **Heute: das Wichtigste nach oben.**

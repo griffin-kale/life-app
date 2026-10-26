@@ -2,6 +2,34 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.18.0] – 2026-10-26
+
+Heute aufgeräumt (Peter, 26.10.2026): Richtung B aus drei Mockups, der Coach geht wie in Richtung A als Blatt auf. Zieht Teile von Phase 4 aus `docs/VERBESSERUNG.md` vor.
+
+### Neu
+- **Wochenringe ganz oben.** Fünf Ringe ineinander wie bei Apple Fitness, daneben die Werte pro Konto und das Level. Tippen öffnet den Kompass.
+- **Coach-Leiste unten.** Über der Tab-Leiste sitzt „Was geht dir durch den Kopf?“. Ein Tippen öffnet den Coach als Blatt von unten, die Tastatur ist sofort da. Ein gelber Punkt zeigt, dass der Coach Warnsignale oder Offenes hat.
+- **Ein Feld für beides.** Im Coach entscheidest du mit zwei Knöpfen: „Festhalten“ legt einen Eintrag an, „Coach fragen“ schickt die Nachricht an den Coach. Mikrofon und Vorschläge liegen direkt darüber.
+- **Spur im Gespräch.** Was du heute festhältst, steht als goldene Blase im Coach-Verlauf, mit dem Titel von Claude. Tippen öffnet den Eintrag. Die Spur kommt aus der Datenbank von Life und geht nie an Claude.
+- **Gespräch kompakt.** Der Coach zeigt die letzten vier Blasen, „Ganzes Gespräch“ klappt den Rest auf. Das Blatt hat nur noch eine Scrollfläche.
+- **Freie Zeit an der ersten Aufgabe.** Findet Life im Kalender Platz fürs Wichtigste, steht an der ersten Aufgabe in „Jetzt dran“ ein Chip wie „14:00–15:30 frei“. Tippen setzt die Uhrzeit.
+- **Mac und iPad quer:** Der Coach steht fest in der rechten Spalte. N und „Festhalten“ oben rechts springen auf Heute direkt ins Feld.
+
+### Geändert
+- Heute zeigt standardmäßig: Wochenringe, Fragebogen (wenn fällig), Jetzt dran, Empfohlen, Schnellzugriffe, Als Nächstes, Heute erledigt.
+- Der Kalender-Block, das Festhalten-Feld und die Tagespunkte sind nicht mehr Standard. Unter „Heute anpassen“ lassen sie sich wieder dazuschalten.
+- „Zuletzt festgehalten“ ist weg von Heute. Alles steht im Logbuch.
+- Gespeicherte Listen stellt Life einmal um (`STAND = 5` in `lib/heute-bausteine.ts`): Ringe nach oben, Jetzt dran früh, eigene Bausteine wie Körper kurz bleiben.
+- Der Baustein „coach“ fällt weg, der Coach ist immer da.
+- Das Plus oben rechts auf Heute fällt weg, die Coach-Leiste übernimmt.
+
+### Technik
+- `/api/heute` liefert in `zuletzt` alle Einträge von heute (höchstens 50) statt der letzten drei.
+- Spracheingabe als eigener Hook (`app/sprache.ts`) für Coach und Festhalten-Feld.
+
+### Tests
+- Ende-zu-Ende: Festhalten über das Coach-Blatt mit Spur, Coach fragen im Blatt, Coach fest rechts auf dem Mac mit Taste N, Kalender als zuschaltbarer Baustein. Unit: Umbau der gespeicherten Listen.
+
 ## [0.17.0] – 2026-10-26
 
 Phase 2 aus `docs/VERBESSERUNG.md`: Betrieb. Teil 1 ohne SSH, Uptime Kuma und fertige Images, die brauchen erst Schritte von Peter.

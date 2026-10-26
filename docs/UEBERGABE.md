@@ -2,9 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.17.0.
+Stand: 26. Oktober 2026, Version 0.18.0.
 
-Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter.
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist noch offen.
 
 ## Worum es geht
 
@@ -14,6 +14,7 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 
 | Bereich | Stand | Wo im Code |
 |---|---|---|
+| Heute aufgeräumt: Wochenringe oben, Coach-Leiste und Coach-Blatt mit einem Feld für Festhalten und Fragen, Spur im Gespräch, freie Zeit an der ersten Aufgabe, Coach fest rechts auf dem Mac | 0.18 | `app/page.tsx`, `app/coach.tsx` (`CoachInhalt`, `CoachLeiste`, `CoachBlatt`, `useCoachChat`), `app/ringe.tsx` (`Wochenringe`), `app/sprache.ts`, `lib/heute-bausteine.ts` |
 | Erfassen per Text, Mikrofon, Kurzbefehl, Teilen-Menü | läuft seit 0.1 | `app/page.tsx`, `app/api/capture`, `lib/enrich.ts` |
 | Einordnen und Priorisieren mit Engpass, „Jetzt dran“ (3), Stapel, Lernen aus Korrekturen | läuft seit 0.3 | `lib/priorisieren.ts`, `app/woche` |
 | Anmeldung per Passkey, ersatzweise Passwort und Einmal-Code | 0.5 | `lib/webauthn.ts`, `lib/zweifaktor.ts`, `lib/totp-core.ts` |
@@ -53,6 +54,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Heute 0.18 (Peter, 26.10.2026):** Aus drei Mockups (Artefakt „Life Heute aufräumen“) Richtung B gewählt: große Wochenringe oben, Coach als Leiste über der Tab-Leiste. Geöffnet sieht der Coach aus wie in Richtung A, als Blatt von unten. Festhalten wandert in den Coach, mit zwei Knöpfen „Festhalten“ und „Coach fragen“ (Peters Wahl, statt dass Claude rät). Einwand dazu: Festhalten ist die häufigste Handlung, deshalb öffnet die Leiste das Blatt mit Tastatur, ein Tippen wie vorher. Kalender auf Heute nur noch als Chip mit freier Zeit an der ersten Aufgabe. „Zuletzt festgehalten“ ersetzt die Spur im Gespräch (Peters Wahl). Die Spur kommt aus `items`, nicht aus `coach_chat`, damit sie nie an Claude geht. Der Coach ist kein Baustein mehr, Kalender, Festhalten-Feld und Tagespunkte lassen sich weiter zuschalten.
 
 - **Betrieb 0.17 (Peter, 26.10.2026):** Sicherung bleibt auf dem Server, das Hetzner-Server-Backup ersetzt Storage Box und `age` (Peters Wahl). Restrisiko: Das Hetzner-Backup hängt am selben Konto und verschwindet mit dem Server, und es dreht nur den ganzen Server zurück. Deshalb liegen daneben geprüfte Dumps pro Tag. Ausfall-Meldung über Uptime Kuma auf einem eigenen kleinen Hetzner-Server (kein Fremddienst), SSH über Tailscale mit eigenem Deploy-Nutzer und fail2ban. `/api/health` ist die eine Stelle, die alles meldet: Datenbank, Zeitplan, Sicherung, Wiederherstellungstest. Die App liest dafür nur zwei Statusdateien aus `backups/` (Ordner 711, Dumps 600). Abweichung vom Plan: Caddy und Postgres laufen weiter auf `16-alpine` und `2-alpine` statt per Digest, weil die Cloud-Sitzung Docker Hub nicht erreicht. Das Release hält den Digest des App-Pakets fest, aufgespielt wird weiter per Tag.
 
