@@ -2,6 +2,30 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.17.0] – 2026-10-26
+
+Phase 2 aus `docs/VERBESSERUNG.md`: Betrieb. Teil 1 ohne SSH, Uptime Kuma und fertige Images, die brauchen erst Schritte von Peter.
+
+### Neu
+- **`/api/health` meldet mehr.** Neben der Datenbank auch den Zeitplan (503 ab fünf Minuten Verzug, direkt nach dem Start „startet“), das Alter der letzten Sicherung (503 ab 26 Stunden) und den letzten Wiederherstellungstest (503 bei Fehler oder nach 40 Tagen). Die Antwort enthält nur Wörter wie „ok“ oder „alt“, keine Zeiten.
+- **Sicherung mit Prüfung** (`deploy/backup.sh`, nachts 3:15 Uhr): bricht ab, wenn `pg_dump` scheitert, das gzip kaputt ist, das Endzeichen des Dumps fehlt oder die Datei zu klein ist. Ein halber Dump ersetzt nie mehr einen guten. Bewahrt 30 Tage auf, das Hetzner-Server-Backup nimmt den Ordner mit.
+- **Wiederherstellungstest** (`deploy/restore-test.sh`, am 1. jedes Monats): spielt die neueste Sicherung in eine Wegwerf-Datenbank ohne Netz ein und zählt Tabellen und Einträge.
+- **Aufspielen in einer Verbindung** (`deploy/aufspielen.sh`): sichert vorher, aktualisiert auch Postgres und Caddy, wartet auf `/api/health`. Touch ID kommt zweimal (Version) oder dreimal (`--build`), vorher bis zu 32-mal, weil jeder Gesundheits-Check eine eigene Verbindung war. Bei `--build` bleibt das alte Image als `life-app:prev` stehen.
+- **Healthchecks** im Compose für App, Datenbank und Caddy, Logs aller Dienste höchstens 3 × 10 MB.
+- **Zugriffslog in Caddy**, 14 Tage, ohne Query-Strings, Kopfzeilen und Cookies.
+
+### Behoben
+- **Zeitplan überlappt nicht mehr.** Ein Merker im Prozess plus eine Postgres-Sperre (`pg_try_advisory_lock`) verhindern, dass ein langsamer Lauf und der nächste gleichzeitig senden.
+- **Mitteilungen kommen nur einmal.** `einmal()` setzt „gesendet“ in einer einzigen Anweisung vor dem Senden. Klappt das Senden nicht, wird der Merker zurückgesetzt und der nächste Lauf versucht es wieder.
+- Fehler im Zeitplan schreiben nur noch den Fehlernamen ins Log, keine Texte.
+
+### CI
+- Die CI läuft für jeden Pull Request, egal auf welchen Zweig. Actions sind auf Commit-SHA festgelegt.
+- Ein Release baut nur, wenn der Tag auf `main` steht, zur Version in `package.json` passt und dieselben Prüfungen grün sind. Der Digest des Pakets steht in der Zusammenfassung.
+
+### Tests
+- Neu: `tests/unit/zeitplan-schutz.test.ts` (Überlappung, einmal senden, Zurücksetzen, Gesundheit) und `tests/unit/betrieb.test.ts` (Alter von Sicherung und Test). Beide Skripte sind gegen eine Attrappe für `docker` geprüft: guter Dump, abgebrochener Dump, kaputte Datei.
+
 ## [0.16.1] – 2026-10-26
 
 ### Behoben

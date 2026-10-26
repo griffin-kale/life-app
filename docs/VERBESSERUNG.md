@@ -70,6 +70,8 @@ Die kritische Lücke ist behoben. Das Challenge-Cookie galt als Sitzung und ist 
 
 ## Phase 2 – Betrieb (Zweig `chore/betrieb`)
 
+**Stand 0.17.0:** Punkte 2, 4 (ohne Uptime-Dienst), 5 und 6 (ohne Digest) erledigt. Punkt 3 nach Peters Entscheidung ohne Storage Box und `age`: Hetzner-Server-Backup plus geprüfte Dumps. Offen: Punkt 1 (Lese-Token und `GHCR_IMAGE`), Uptime Kuma auf eigenem Server, Punkt 7 mit Tailscale, Deploy-Nutzer und fail2ban.
+
 1. **Zweige aufräumen.**
    - Den Stapel nach `main` bringen, am einfachsten über einen Pull Request vom neuesten Zweig. Peter gibt mit „Merge“ frei.
    - Dann `v0.x.y` taggen und `GHCR_IMAGE` in der `.env` setzen.

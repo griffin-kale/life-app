@@ -2,9 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.16.1.
+Stand: 26. Oktober 2026, Version 0.17.0.
 
-Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt, als Nächstes kommt Phase 2 Betrieb.
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter.
 
 ## Worum es geht
 
@@ -43,7 +43,9 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 1. **Anthropic-Schlüssel** in der Console der Griffin & Kale GmbH anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen, Schlüssel in `/opt/life/deploy/.env` als `ANTHROPIC_API_KEY=` eintragen, dann `docker compose up -d --force-recreate app`. Ohne Schlüssel sortiert nichts und der Coach schweigt.
 2. **WHOOP-App** auf developer.whoop.com registrieren. Weiterleitung `https://life.gneuss.xyz/api/whoop/callback`, Scopes: offline, read:recovery, read:cycles, read:sleep, read:workout, read:body_measurement. `WHOOP_CLIENT_ID` und `WHOOP_CLIENT_SECRET` in die `.env`, App neu starten, in Life unter Körper „WHOOP verbinden“.
 3. **`ENCRYPTION_KEY` eintragen, vor dem Aufspielen von 0.16.0:** auf dem Server `cd /opt/life/deploy && (grep -q '^ENCRYPTION_KEY=' .env || echo "ENCRYPTION_KEY=$(openssl rand -base64 48)" >> .env)`. Der Wert erscheint dabei nirgends, und ein vorhandener Schlüssel bleibt stehen. Danach nie wieder ändern oder löschen, sonst sind Einmal-Code, WHOOP und Push-Schlüssel unlesbar. Eine Kopie gehört in 1Password.
-4. **Fertige Images (Phase 2):** `main` steht seit 26.10. auf dem Live-Stand, Tag `v0.15.3` ist gesetzt. Offen: Lese-Token für GitHub-Pakete auf dem Server und `GHCR_IMAGE` in der `.env`. Bis dahin Aufspielen mit `deploy.sh --build`.
+4. **Fertige Images (Phase 2):** Lese-Token für GitHub-Pakete (classic, nur `read:packages`) auf dem Server mit `docker login ghcr.io` hinterlegen und `GHCR_IMAGE=ghcr.io/griffin-kale/life-app` in die `.env`. Bis dahin Aufspielen mit `deploy.sh --build`.
+4a. **Hetzner-Server-Backup** ist gebucht (Peter, 26.10.2026). Es sichert den ganzen Server täglich, dazu kommen die geprüften Datenbank-Dumps unter `/opt/life/deploy/backups`.
+4b. **Für den Rest von Phase 2:** einen zweiten kleinen Hetzner-Server für Uptime Kuma anlegen, ein Tailscale-Konto anlegen und die App auf dem Mac installieren.
 5. **Mitteilungen einschalten:** Life vom Home-Bildschirm öffnen, Einstellungen, „Mitteilungen einschalten“, „Probe schicken“.
 6. **GitHub-Schlüssel für Rückmeldungen** (optional): Fine-grained Token nur für `griffin-kale/life-app`, nur „Issues: Read and write“, als `GITHUB_ISSUES_TOKEN=` in die `.env`. Ohne Schlüssel bleiben Meldungen nur in Life.
 7. **Kalender verbinden:** auf account.apple.com unter „Anmelden und Sicherheit“ → „App-spezifische Passwörter“ eines mit dem Namen „Life“ anlegen. In die `.env` `ICLOUD_USER=` (deine Apple-ID) und `ICLOUD_APP_PASSWORT=` eintragen, `docker compose up -d --force-recreate app`, dann in Life Einstellungen → Kalender → „Kalender suchen“. Widerrufen geht jederzeit an derselben Stelle.
@@ -51,6 +53,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Betrieb 0.17 (Peter, 26.10.2026):** Sicherung bleibt auf dem Server, das Hetzner-Server-Backup ersetzt Storage Box und `age` (Peters Wahl). Restrisiko: Das Hetzner-Backup hängt am selben Konto und verschwindet mit dem Server, und es dreht nur den ganzen Server zurück. Deshalb liegen daneben geprüfte Dumps pro Tag. Ausfall-Meldung über Uptime Kuma auf einem eigenen kleinen Hetzner-Server (kein Fremddienst), SSH über Tailscale mit eigenem Deploy-Nutzer und fail2ban. `/api/health` ist die eine Stelle, die alles meldet: Datenbank, Zeitplan, Sicherung, Wiederherstellungstest. Die App liest dafür nur zwei Statusdateien aus `backups/` (Ordner 711, Dumps 600). Abweichung vom Plan: Caddy und Postgres laufen weiter auf `16-alpine` und `2-alpine` statt per Digest, weil die Cloud-Sitzung Docker Hub nicht erreicht. Das Release hält den Digest des App-Pakets fest, aufgespielt wird weiter per Tag.
 
 - **Claude-Werkzeug 0.16.1 (26.10.2026):** Manche Modelle lehnen `tool_choice` „tool“ mit Fehler 400 ab. `lib/claude.ts` (`senden`) versucht das erzwungene Werkzeug, erkennt die Ablehnung (`zwangAbgelehnt` in `lib/fehler.ts`), merkt sich das Modell im Speicher und fragt mit „auto“ nach. Die Systemanweisung bittet um genau einen Aufruf von „ergebnis“, notfalls holt Life das JSON aus dem Text. Antworten prüft Life weiter gegen feste Listen. Strukturierte Ausgaben (`output_config.format`) wären die sauberere Lösung, brauchen aber pro Aufruf ein festes Schema. Das ist ein Kandidat für Phase 5 Technik.
 - **Sicherheit 0.16 (Peter, 26.10.2026):** Phase 1 aus `docs/VERBESSERUNG.md`. `ENCRYPTION_KEY` kommt mit diesem Release (Peters Wahl), alte Geheimnisse bleiben lesbar und werden beim Start umgeschlüsselt. Abweichung vom Plan: statt eines Zählers `sitzung_version` eine Tabelle `sitzungen`. Mit dem Zähler hätte Abmelden auf dem iPhone auch den Mac abgemeldet, mit der Tabelle widerruft Abmelden genau eine Sitzung und „Auf allen Geräten abmelden“ alle. Die Middleware läuft im Edge-Runtime ohne Datenbank, deshalb prüft sie nur die Signatur, jede API-Route prüft zusätzlich die Tabelle. Seiten laden ihre Daten nur über die API.
@@ -110,14 +114,27 @@ Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, F
 
 - Zweig pro Stufe, Pull Request mit CHANGELOG, Peter mergt. Tests: `npm run typecheck`, `npm run test:unit`, `npm run build && npm run test:e2e` (braucht Postgres auf Port 5433, siehe `playwright.config.ts`). Die Attrappe `tests/e2e/mock-claude.mjs` spielt Claude, WHOOP und Open Food Facts.
 - Auf Peters Mac ist `NODE_ENV=production` gesetzt. Deshalb dort `NODE_ENV=development npm ci --include=dev`, sonst fehlen TypeScript und Playwright.
-- Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` oder im Notfall `--build`. Jede SSH-Verbindung fragt Touch ID ab.
+- Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` (2× Touch ID) oder im Notfall `--build` (3× Touch ID). Die Arbeit macht `deploy/aufspielen.sh` auf dem Server: Sicherung vorher, Update, Warten auf `/api/health`. Zurück nach `--build`: auf dem Server `docker tag life-app:prev life-app:local && docker compose up -d app`.
 - Geheimnisse trägt nur Peter auf dem Server ein. Claude liest die `.env` nicht.
 - Arbeitet Claude aus einer Cloud-Sitzung, kommt der Code per `git bundle` auf den Mac und von dort zu GitHub, weil die Cloud nicht auf das Repo schreiben darf. Die e2e-Tests laufen in der Cloud mit eigenem Postgres auf Port 5433, auf dem Mac gibt es kein Postgres.
+
+## Sicherung und Wiederherstellung
+
+- Jede Nacht um 3:15 Uhr schreibt `deploy/backup.sh` einen geprüften Dump nach `/opt/life/deploy/backups/life-JJJJ-MM-TT.sql.gz` (30 Tage). Vor jedem Update läuft dieselbe Sicherung.
+- Am 1. jedes Monats spielt `deploy/restore-test.sh` den neuesten Dump in eine Wegwerf-Datenbank ein. Von Hand: `bash /opt/life/deploy/restore-test.sh`. Protokoll in `backups/backup.log`.
+- `/api/health` liefert 503, wenn die Sicherung älter als 26 Stunden ist oder der Test gescheitert ist.
+- **Ernstfall, Datenbank zurückholen** (auf dem Server, ersetzt alle Daten seit dem Dump, deshalb nur nach Rückfrage):
+  1. `cd /opt/life/deploy && docker compose stop app`
+  2. `bash backup.sh` (Sicherung des kaputten Stands, falls noch etwas zu retten ist)
+  3. `docker compose exec -T db psql -U life -d postgres -c 'drop database life' -c 'create database life owner life'`
+  4. `gunzip -c backups/life-JJJJ-MM-TT.sql.gz | docker compose exec -T db psql -U life -d life -v ON_ERROR_STOP=1`
+  5. `docker compose start app`, dann `/api/health` prüfen.
+- Ist der ganze Server weg: in der Hetzner-Konsole aus dem Server-Backup wiederherstellen.
 
 ## Bekannte Grenzen
 
 - Neue Namen erreichen Claude beim ersten Mal im Klartext. Abhilfe: Namen vorab unter Einstellungen eintragen.
 - WHOOP-Zonen sind eine Näherung für Zone 2 nach Attia.
-- Der Zeitplan läuft im App-Prozess. Startet der Container neu, holt Life verpasste Mitteilungen bis zu zwei Stunden später nach.
+- Der Zeitplan läuft im App-Prozess. Startet der Container neu, holt Life verpasste Mitteilungen bis zu zwei Stunden später nach. Hängt er länger als fünf Minuten, meldet `/api/health` 503.
 - Mitteilungen auf dem iPhone nur für die App vom Home-Bildschirm, ab iOS 16.4.
 - Kamera und Wake Lock hängen von der iOS-Version ab. Barcode geht immer auch per Nummer.
