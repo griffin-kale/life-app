@@ -354,6 +354,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Tanken' })).toContainText('80 €');
     await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
     await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    // Phase 3: Der Bon wird vor dem Senden zugeschnitten, nur der Streifen geht an Claude
+    const zuschnitt = page.getByRole('dialog', { name: 'Bon zuschneiden' });
+    await expect(zuschnitt).toBeVisible();
+    await zuschnitt.getByRole('button', { name: 'Obere Kante, mit Pfeiltasten verschieben' }).press('ArrowDown');
+    await zuschnitt.getByRole('button', { name: 'Ausschnitt senden' }).click();
     await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Testmarkt' })).toContainText('23,45 €');
     await expect(page.locator('section[aria-label="Diese Woche"] .kachel.topf')).toHaveCount(3);
     await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufenplan');
@@ -612,6 +617,9 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(letzter).toContain('16:30–18:00 Familie (geschützt');
     expect(letzter).toMatch(/10:00–11:00 Abstimmung mit \[Person \d+\]/);
     expect(letzter).not.toContain('Laternenumzug');
+    // Phase 3: Coach und Sortierlauf bekommen kein Datum, nur Wochentag und relative Fristen
+    const mitDatum = prompts.filter((x) => /^(COACH|SORTIERLAUF)/.test(x) && /\d{4}-\d{2}-\d{2}|\d{1,2}\. (Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)/.test(x));
+    expect(mitDatum).toEqual([]);
     expect(letzter).not.toContain('Carlotta');
     // Ausgeschaltet zählt der Kalender nicht mehr
     await page.goto('/einstellungen');

@@ -1124,3 +1124,12 @@ body:has(.coach-leiste) .toast { bottom: calc(146px + env(safe-area-inset-bottom
 .tabbar a.tb-mitte svg, .tabbar button.tb-mitte svg { width: 26px; height: 26px; }
 body:has(.coach-leiste) .tb-schnell, body:has(.coach-leiste) .tb-halten { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 .tb-scrim { background: rgb(4 10 24 / .8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* ---------- 0.21: Datenschutz – Bon zuschneiden ---------- */
+.bon-blatt { max-height: calc(100dvh - 40px); overflow-y: auto; }
+.bon-flaeche { position: relative; touch-action: none; border-radius: 14px; overflow: hidden; background: #000; max-height: 58dvh; }
+.bon-flaeche img { display: block; width: 100%; height: auto; max-height: 58dvh; object-fit: contain; -webkit-user-select: none; user-select: none; pointer-events: none; }
+.bon-schatten { position: absolute; left: 0; right: 0; background: rgb(0 0 0 / .62); pointer-events: none; }
+.bon-kante { position: absolute; left: 0; right: 0; height: 44px; margin-top: -22px; border: 0; padding: 0; background: none; cursor: ns-resize; touch-action: none; }
+.bon-kante::before { content: ''; position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: var(--sand); }
+.bon-kante::after { content: ''; position: absolute; left: 50%; top: 14px; width: 44px; height: 16px; margin-left: -22px; border-radius: 99px; background: var(--sand); }

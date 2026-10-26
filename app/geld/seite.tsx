@@ -1,4 +1,5 @@
 'use client';
+import { BonZuschnitt } from '../bon-zuschnitt';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
@@ -43,17 +44,6 @@ function TopfKachel({ t, i }: { t: Topf; i: number }) {
 
 const Loeschen = ({ onClick, label = 'Löschen' }: { onClick: () => void; label?: string }) => <button type="button" className="chipbtn" onClick={onClick}>{label}</button>;
 
-async function bonFoto(f: File): Promise<string> {
-  const url = URL.createObjectURL(f);
-  try {
-    const img = new Image(); img.src = url; await img.decode();
-    const s = Math.min(1, 1400 / Math.max(img.width, img.height));
-    const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL('image/jpeg', 0.82); // neu gespeichert, ohne Ortsdaten
-  } finally { URL.revokeObjectURL(url); }
-}
-
 function Neu({ label, platzhalter, onSenden, ohneName }: { label: string; platzhalter: string; onSenden: (name: string, cent: number) => Promise<void>; ohneName?: boolean }) {
   const [n, setN] = useState(ohneName ? label : ''); const [b, setB] = useState('');
   const c = centAus(b);
@@ -92,6 +82,7 @@ export function GeldSeite({ teil }: { teil?: string }) {
   const [wahl, setWahl] = useState<Record<string, number>>({ Alltag: 15000, Familie: 5000, Spaß: 5000 });
   const [toast, setToast] = useToast();
   const foto = useRef<HTMLInputElement>(null);
+  const [bon, setBon] = useState<File | null>(null);
   const laden = useCallback(async () => setG(await api<G>('/api/geld')), []);
   useEffect(() => { laden().catch((e) => setToast((e as Error).message, 'err')); }, [laden, setToast]);
   // Aus dem Schnellzugriff: direkt ins Ausgabe-Feld
@@ -151,7 +142,8 @@ export function GeldSeite({ teil }: { teil?: string }) {
           <div className="row-btns">
             <button type="button" className="btn primary" disabled={busy || !betragAus(text)} onClick={async () => { if (await post({ aktion: 'buchung', text, topf_id: topf || undefined }, 'Festgehalten')) setText(''); }}>{busy ? 'Speichert …' : 'Festhalten'}</button>
             <button type="button" className="btn" disabled={busy} onClick={() => foto.current?.click()}>Bon fotografieren</button>
-            <input ref={foto} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) await post({ aktion: 'bon', bild: await bonFoto(f), topf_id: topf || undefined }, 'Bon gelesen'); }} />
+            <input ref={foto} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setBon(f); }} />
+            {bon ? <BonZuschnitt datei={bon} onAbbrechen={() => setBon(null)} onFertig={async (bild) => { setBon(null); await post({ aktion: 'bon', bild, topf_id: topf || undefined }, 'Bon gelesen'); }} /> : null}
           </div>
         </section>
 
