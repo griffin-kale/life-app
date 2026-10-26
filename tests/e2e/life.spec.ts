@@ -116,17 +116,33 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   await test.step('Festhalten und von Claude sortieren lassen', async () => {
     await page.goto('/');
     await expect(page.locator('.engpass')).toContainText('Content hochfahren');
+    // Heute zeigt kein Feld mehr: die Leiste unten öffnet den Coach mit dem Feld
+    await expect(page.locator('section[aria-label="Festhalten"]')).toHaveCount(0);
+    await expect(page.locator('section[aria-label="Heute im Kalender"]')).toHaveCount(0);
+    await page.locator('.coach-leiste').click();
+    const blatt = page.getByRole('dialog', { name: 'Coach' });
+    const feld = blatt.getByLabel('Was geht dir durch den Kopf?');
+    await expect(feld).toBeFocused();
     for (const t of EINTRAEGE) {
-      await page.fill('.capture textarea', t);
-      await page.locator('.capture button.btn.primary').click();
-      await expect(page.locator('.capture button.btn.primary')).toContainText('Festgehalten');
+      await feld.fill(t);
+      await blatt.getByRole('button', { name: 'Festhalten' }).click();
+      await expect(feld).toHaveValue('');
     }
+    // Spur im Gespräch: das Letzte steht unten, Ältere hinter „Ganzes Gespräch“
+    await expect(blatt.locator('.chat-zeile.fest')).toHaveCount(4);
+    await expect(blatt.locator('.chat-zeile.fest').last()).toContainText(EINTRAEGE.at(-1)!);
+    await blatt.getByRole('button', { name: /Ganzes Gespräch/ }).click();
+    await expect(blatt.locator('.chat-zeile.fest')).toHaveCount(EINTRAEGE.length);
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/coach-blatt.png' });
+    await page.keyboard.press('Escape');
+    await expect(blatt).toHaveCount(0);
     await warteBisRuhig(page);
     await page.reload();
     await warteBisRuhig(page);
     const jetzt = page.locator('section[aria-label="Jetzt dran"] .ttitle');
     await expect(jetzt).toHaveCount(3);
     await expect(jetzt.first()).toContainText(/Newsletter|Behörden-Geschichten/);
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/heute-iphone.png' });
   });
 
   await test.step('Nicht heute und Rückgängig', async () => {
@@ -214,11 +230,12 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const em = page.locator('section[aria-label="Empfohlen für dich"] a.empfohlen');
     await expect(em).toBeVisible();
     expect(await em.getAttribute('href')).toMatch(/^\//);
-    const coach = page.locator('section[aria-label="Coach"]');
+    await page.locator('.coach-leiste').click();
+    const coach = page.getByRole('dialog', { name: 'Coach' });
     await coach.getByRole('button', { name: 'Ich bin müde' }).click();
     await expect(coach.locator('.chat-zeile.coach').last()).toContainText('NSDR');
-    await coach.getByLabel('Nachricht an den Coach').fill('Soll Carlotta das Angebot übernehmen?');
-    await coach.getByRole('button', { name: 'Senden' }).click();
+    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Soll Carlotta das Angebot übernehmen?');
+    await coach.getByRole('button', { name: 'Coach fragen' }).click();
     await expect(coach.locator('.chat-zeile.coach:not(.working)')).toHaveCount(2);
     await expect(coach.locator('.chat-zeile.ich').last()).toContainText('Carlotta');
     const v = await (await page.request.get('/api/coach/chat')).json();
@@ -379,7 +396,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#F2F1EC');
-    await expect(page.locator('.tagespunkte li')).toHaveCount(7);
+    await expect(page.locator('.wochenringe')).toBeVisible();
     if (process.env.SCREENSHOTS) for (const t of ['light', 'dark']) {
       await page.evaluate((x) => { document.documentElement.dataset.theme = x; }, t);
       for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/mehr', 'mehr'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart'], ['/stand', 'stand'], ['/stand/1', 'stand-etappe']]) {
@@ -393,23 +410,26 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 
-  await test.step('Heute anpassen: Festhalten-Feld aus, Plus öffnet es, Körper kurz an, Standard zurück', async () => {
+  await test.step('Heute anpassen: Festhalten-Feld dazu, Körper kurz an, Standard zurück', async () => {
     await page.goto('/einstellungen/heute');
     await expect(page.getByRole('switch', { name: 'Jetzt dran anzeigen' })).toBeDisabled();
+    await expect(page.locator('section[aria-label="Angezeigt"]')).not.toContainText('Coach');
     await page.getByRole('switch', { name: 'Festhalten-Feld anzeigen' }).click();
     await page.getByRole('switch', { name: 'Körper kurz anzeigen' }).click();
     await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Körper kurz');
     await page.getByRole('button', { name: 'Körper kurz nach oben' }).click();
     await page.goto('/');
-    await expect(page.locator('section[aria-label="Festhalten"]')).toHaveCount(0);
+    await page.locator('section[aria-label="Festhalten"] textarea').fill('Erfundener Gedanke aus dem Feld');
+    await page.locator('section[aria-label="Festhalten"]').getByRole('button', { name: 'Festhalten' }).click();
+    await expect(page.locator('section[aria-label="Festhalten"] button.btn.primary')).toContainText('Festgehalten');
     await expect(page.locator('section[aria-label="Körper kurz"]')).toContainText('Erholung');
-    await page.getByRole('button', { name: 'Festhalten' }).first().click();
-    await expect(page.locator('section[aria-label="Festhalten"] textarea')).toBeFocused();
-    const r = await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: ['coach', '<script>', 'coach'] } });
-    expect((await r.json()).bausteine).toEqual(['fragebogen', 'coach', 'jetzt']);
+    // Der alte Baustein „coach“ ist kein Baustein mehr und fällt raus
+    const r = await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: ['coach', 'naechste', '<script>', 'naechste'] } });
+    expect((await r.json()).bausteine).toEqual(['fragebogen', 'naechste', 'jetzt']);
     await page.goto('/einstellungen/heute');
     await page.getByRole('button', { name: 'Zurück zum Standard' }).click();
-    await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Festhalten-Feld');
+    await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Wochenringe');
+    await expect(page.locator('section[aria-label="Angezeigt"]')).not.toContainText('Festhalten-Feld');
   });
 
   await test.step('Schnellzugriffe: Plus öffnet alle Wege, Essen führt zur Essen-Seite', async () => {
@@ -432,6 +452,14 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.seitenleiste')).toBeVisible();
     await expect(page.locator('.tabbar')).toBeHidden();
     await expect(page.locator('.heute-spalten')).toBeVisible();
+    // Auf dem Mac steht der Coach fest rechts, N springt ins Feld
+    const panel = page.locator('aside[aria-label="Coach"]');
+    await expect(panel).toBeVisible();
+    await expect(page.locator('.coach-leiste')).toHaveCount(0);
+    await page.locator('h1').click();
+    await page.keyboard.press('n');
+    await expect(panel.getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
+    await page.locator('h1').click();
     await page.locator('.seitenleiste').getByRole('link', { name: 'Körper' }).click();
     await page.waitForURL('/koerper');
     await expect(page.locator('.seitenleiste a[aria-current="page"]')).toHaveText('Körper');
@@ -518,15 +546,20 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(k).toContainText('Privat');
     await expect(k.getByLabel('Art von Familie Gneuß')).toHaveValue('familie');
     await expect(k).not.toContainText('Erinnerungen');
+    // Der ganze Tag ist kein Standard mehr auf Heute, lässt sich aber dazuschalten
+    const std = (await (await page.request.get('/api/heute/bausteine')).json()).bausteine;
+    await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: [...std, 'kalender'] } });
     await page.goto('/');
     const heute = page.locator('section[aria-label="Heute im Kalender"]');
     await expect(heute).toContainText('Abstimmung mit Carlotta');
     await expect(heute).toContainText('Laternenumzug');
     await expect(heute).toContainText('08:00');
-    const coach = page.locator('section[aria-label="Coach"]');
-    await coach.getByLabel('Nachricht an den Coach').fill('Wann passt das Angebot heute?');
-    await coach.getByRole('button', { name: 'Senden' }).click();
-    await expect(coach.locator('.chat-zeile.coach:not(.working)')).toHaveCount(3);
+    await page.locator('.coach-leiste').click();
+    const coach = page.getByRole('dialog', { name: 'Coach' });
+    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Wann passt das Angebot heute?');
+    await coach.getByRole('button', { name: 'Coach fragen' }).click();
+    await expect(coach.locator('.chat-zeile.working')).toHaveCount(0);
+    await expect.poll(async () => (await (await page.request.get('/api/coach/chat')).json()).verlauf.length).toBe(6);
     const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
     const letzter = prompts.filter((x) => x.startsWith('COACH CHAT')).at(-1)!;
     expect(letzter).toContain('16:30–18:00 Familie (geschützt');
@@ -547,7 +580,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   await test.step('Standortbestimmung: drei Etappen, frei erzählt, Vorschläge übernehmen', async () => {
     expect((await (await page.request.get('/api/coach')).json()).standortEtappe).toBe(1);
     await page.goto('/');
-    await page.locator('section[aria-label="Coach"]').getByRole('link', { name: 'Standortbestimmung' }).click();
+    await page.locator('.coach-leiste').click();
+    await page.getByRole('dialog', { name: 'Coach' }).getByRole('link', { name: 'Standortbestimmung' }).click();
     await page.waitForURL('/stand/1');
     const seiten = page.locator('.bl-seite');
     await expect(seiten).toHaveCount(6);
