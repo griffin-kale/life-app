@@ -1,13 +1,29 @@
-# Meldet Sicherheitsupdates als Pull Request. Nichts wird ohne Prüfung und grüne CI übernommen.
+# Meldet Updates als Pull Request. Nichts wird ohne Prüfung und grüne CI übernommen.
+# Seit 0.22.1 (Peter, 26.10.2026): große Versionssprünge kommen nicht automatisch, kleine gebündelt einmal im Monat.
+# Sicherheitsupdates meldet GitHub unabhängig davon sofort.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+    groups:
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      klein:
+        update-types: ['minor', 'patch']
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups:
+      actions:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /
     schedule: { interval: monthly }
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
