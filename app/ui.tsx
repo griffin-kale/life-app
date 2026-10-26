@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 export type Item = {
   id: string; created_at: string; status: string; typ: string; text: string; roh: string | null; url: string | null;
   titel: string | null; quelle: string | null; kategorie: string | null; art: string | null; schritt: string | null;
-  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null; wenn?: string | null; energie?: number | null;
+  begruendung: string | null; kern: string | null; frage: string | null; parken_bis: string | null; fehler: string | null; wenn?: string | null; energie?: number | null; an_coach?: boolean;
   ziel: string | null; hebel: number | null; aufwand_min: number | null; frist: string | null; wer: string | null; delegieren_an: string | null;
   stapel: string | null; rang: number | null; grund: string | null; sortiert_am: string | null; zeit: string | null; zeit_tag: string | null;
   erledigt_at: string | null; merged_into: string | null; manuell_tag: string | null; manuell_stapel: string | null;

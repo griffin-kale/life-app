@@ -5,6 +5,7 @@ import { safeFetch } from './safefetch';
 import { kontakteAusEintrag } from './menschen';
 import { oeffentlich } from './fehler';
 import { videoId } from './youtube';
+import { coachChat } from './coach';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -37,6 +38,7 @@ type Antwort = {
   typ: string; kategorie: string; art: string; titel: string; bereinigt: string; schritt: string; begruendung: string; kern: string; frage: string;
   ziel?: string; hebel?: number; aufwand_min?: number; frist?: string; wer?: string; delegieren_an?: string;
   namen?: { name: string; art: string }[];
+  anCoach?: boolean;
 };
 
 /** Ordnet einen Eintrag ein. Fehler landen im Feld "fehler", der Eintrag bleibt erhalten. */
@@ -72,7 +74,7 @@ export async function enrich(id: string): Promise<void> {
       `Heute ist ${wtag}, ${heute}.`,
       'Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n' + item.text,
       url ? `Link: ${url}${titel ? `\nTitel: ${titel}` : ''}${quelle ? `\nQuelle: ${quelle}` : ''}${typHint ? `\nHinweis: ${typHint}` : ''}` : '',
-      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer), "ziel": string (genau eines von Peters Zielen, auf das der Eintrag einzahlt, sonst leer), "hebel": Zahl 0 bis 3 (Wirkung auf den Engpass, 3 = direkt; streng), "aufwand_min": 15, 60 oder 240 (bei notiz, idee und wissen 0), "frist": "JJJJ-MM-TT" (nur wenn der Eintrag eine Frist nennt oder klar macht, sonst leer), "wer": "ich" oder "delegieren", "delegieren_an": string (Name aus dem Team, sonst leer), "namen": [{"name": string, "art": "person"|"firma"|"ort"}] (Eigennamen von Menschen, Firmen und Orten, die im Eintrag im Klartext stehen; Platzhalter in eckigen Klammern nicht aufnehmen; sonst leer)}',
+      'Antworte nur mit JSON: {"typ": string, "kategorie": string, "art": string, "titel": string (höchstens 8 Wörter), "bereinigt": string (der Eintrag in sauberem Deutsch: Füllwörter und Versprecher raus, Sinn und Peters Ton bleiben, Links unverändert), "schritt": string (konkreter nächster Schritt mit Verb am Anfang, höchstens 12 Wörter; leer bei notiz, idee und wissen), "begruendung": string (höchstens 10 Wörter), "kern": string (bei wissen: die Kernidee in 1 bis 2 Sätzen, sonst leer), "frage": string (bei wissen: eine Frage an Peter, wie er das anwendet, sonst leer), "ziel": string (genau eines von Peters Zielen, auf das der Eintrag einzahlt, sonst leer), "hebel": Zahl 0 bis 3 (Wirkung auf den Engpass, 3 = direkt; streng), "aufwand_min": 15, 60 oder 240 (bei notiz, idee und wissen 0), "frist": "JJJJ-MM-TT" (nur wenn der Eintrag eine Frist nennt oder klar macht, sonst leer), "wer": "ich" oder "delegieren", "delegieren_an": string (Name aus dem Team, sonst leer), "namen": [{"name": string, "art": "person"|"firma"|"ort"}] (Eigennamen von Menschen, Firmen und Orten, die im Eintrag im Klartext stehen; Platzhalter in eckigen Klammern nicht aufnehmen; sonst leer), "anCoach": true oder false (true nur, wenn Peter den Coach direkt anspricht oder um Rat bittet, etwa „Ich habe nur 30 Minuten, was jetzt?“ oder „Ich bin müde, was soll ich tun?“; Aufgaben, Ideen, Notizen und Wissen sind immer false)}',
     ].filter(Boolean).join('\n\n');
     const a = await askJson<Antwort>(prompt, undefined, 1500);
     await namenLernen(a.namen).catch(() => {});
@@ -87,13 +89,20 @@ export async function enrich(id: string): Promise<void> {
     const frist = /^\d{4}-\d{2}-\d{2}$/.test(String(a.frist || '')) ? String(a.frist) : null;
     const wer = a.wer === 'delegieren' ? 'delegieren' : 'ich';
     const an = wer === 'delegieren' ? (String(a.delegieren_an || '').slice(0, 60) || null) : null;
+    // Fragen an den Coach: Der Coach antwortet im Gespräch, der Eintrag bleibt im Logbuch unter Archiviert und kommt nicht in die Stapel
+    const anCoach = a.anCoach === true && !url;
     await sql`update items set status = 'sortiert', typ = ${typ}, kategorie = ${kategorie}, art = ${art},
       titel = ${(a.titel || titel || '').slice(0, 200) || null}, quelle = ${quelle ? quelle.split('\n')[0] : null},
       roh = coalesce(roh, text), text = ${(a.bereinigt || item.text).slice(0, 8000)}, url = ${url},
       schritt = ${(a.schritt || '').slice(0, 300) || null}, begruendung = ${(a.begruendung || '').slice(0, 200) || null},
       kern = ${(a.kern || '').slice(0, 1200) || null}, frage = ${(a.frage || '').slice(0, 400) || null},
       parken_bis = ${parken}, ziel = ${ziel}, hebel = ${hebel}, aufwand_min = ${aufwand}, frist = ${frist},
-      wer = ${wer}, delegieren_an = ${an}, fehler = null, updated_at = now() where id = ${id}`;
+      wer = ${wer}, delegieren_an = ${an}, an_coach = ${anCoach}, fehler = null, updated_at = now() where id = ${id}`;
+    if (anCoach) {
+      await sql`update items set status = 'archiv', stapel = null where id = ${id}`;
+      await coachChat(item.text).catch(() => {});
+      return;
+    }
     // Etwas zu tun? Dann gleich in die Stapel einsortieren.
     if ((AKTIV as readonly string[]).includes(kategorie)) await sortiere('nachtrag').catch(() => {});
   } catch (e) {
