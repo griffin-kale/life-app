@@ -4,6 +4,7 @@ import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 import { safeFetch } from './safefetch';
 import { kontakteAusEintrag } from './menschen';
 import { oeffentlich } from './fehler';
+import { videoId } from './youtube';
 
 export const TYPEN = ['gedanke', 'zitat', 'video', 'buch', 'link'] as const;
 export const KATEGORIEN = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat', 'notiz', 'idee', 'wissen'] as const;
@@ -23,7 +24,8 @@ async function fetchPage(raw: string): Promise<{ title: string; text: string; si
 }
 
 async function youtube(raw: string): Promise<{ title: string; author: string } | null> {
-  const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(raw)}`, { signal: AbortSignal.timeout(6000) });
+  const id = videoId(raw); if (!id) return null;
+  const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}`, { signal: AbortSignal.timeout(6000), redirect: 'error' });
   if (!res.ok) return null;
   const j = await res.json() as { title?: string; author_name?: string };
   return { title: j.title ?? '', author: j.author_name ?? '' };

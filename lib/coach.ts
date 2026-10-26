@@ -10,6 +10,7 @@ import { tageslage } from './tag';
 import { standZeilenLesen } from './stand';
 import { kalenderKurz } from './kalender';
 import { oeffentlich } from './fehler';
+import { fristRelativ, jetztBerlin } from './zeit';
 
 export { warnsignale };
 
@@ -56,7 +57,8 @@ async function grundlage(userId: string) {
     kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel, ruheMin: k.ruheMin, ruheTage: k.ruheTage });
   const jetzt = items.filter((i) => i.stapel === 'jetzt').slice(0, 3);
   const menschen = namen.filter((n) => n.art === 'Person' && !/^(Peter|Gneuß|Peter Gneuß)$/.test(n.name)).map((n) => n.name);
-  const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+  // Phase 3: nur der Wochentag, kein Datum neben Schlaf, HRV und WHO-5
+  const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' }).format(new Date());
 
   const zeilen = [
     'Du bist Peters Coach: ein erfahrener Trainer und Stabschef in einem. Du kennst seine Daten der letzten Tage und sagst ihm in wenigen Sätzen, worauf es heute ankommt.',
@@ -67,12 +69,12 @@ async function grundlage(userId: string) {
     stand.length ? 'Peters Stand aus der Standortbestimmung:\n' + stand.join('\n') : '',
     lage?.standortEtappe ? `Peter hat die Standortbestimmung noch nicht abgeschlossen (Etappe ${lage.standortEtappe} von 3 ist offen). Geht es um Richtung, Prioritäten oder den Engpass, schlag ihm diese Etappe vor: zwölf Minuten, frei erzählt.` : '',
     ...kalender,
-    jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${i.frist})` : ''}${i.wenn ? ` | Plan: ${i.wenn}` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
+    jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${fristRelativ(i.frist)})` : ''}${i.wenn ? ` | Plan: ${i.wenn}` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',
     warnungen.length ? 'Warnsignale (von Life berechnet, sprich sie an):\n' + warnungen.map((w) => '- ' + w).join('\n') : 'Keine Warnsignale.',
     'Körper (zusammengefasst):\n' + koerper + (k.trainingstagHeute ? `\nHeute ist ein Trainingstag (Ganzkörper, Blockwoche ${k.blockWoche} von 5).` : ''),
     geld,
     menschenText,
-    zk.length && new Date().getDay() === 1 ? 'Liste „Zeit kaufen“ (heute ist Wochenrunde, sprich eine Idee an): ' + zk.map((z) => z.was).join(', ') : '',
+    zk.length && jetztBerlin().wochentag === 'Mon' ? 'Liste „Zeit kaufen“ (heute ist Wochenrunde, sprich eine Idee an): ' + zk.map((z) => z.was).join(', ') : '',
     checkins.length ? 'Antworten der letzten Tage:\n' + checkins.map(zeile).filter(Boolean).join('\n') : 'Noch keine Antworten aus den Fragebögen.',
     menschen.length ? 'Menschen in Peters Leben: ' + menschen.slice(0, 30).join(', ') : '',
     lage?.offen.length ? 'Heute noch offen (von Life berechnet):\n' + lage.offen.map((o) => '- ' + o).join('\n') : '',

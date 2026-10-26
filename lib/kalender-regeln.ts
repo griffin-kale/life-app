@@ -75,9 +75,23 @@ const WT = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'
  * Was der Coach vom Kalender erfährt. Familientermine nur als „Familie“, ohne Titel.
  * Kein Datum, nur „heute“ und Wochentage. Namen in Titeln pseudonymisiert askJson ohnehin.
  */
-export function kalenderZeilen(termine: Termin[], heute: string, jetztMin: number): string[] {
+/** Wörter, bei denen ein Termin nur als „Termin privat“ an Claude geht (Phase 3, Peter 26.10.2026). */
+const SCHUTZ = /(arzt|ärzt|praxis|therap|psych|klinik|krankenhaus|zahn|physio|ortho|gyn|\burolog|derma|\blabor|blutabnahme|impf|untersuch|\bop\b|\breha\b|beratung|coaching|anwalt|anwält|gericht|notar|polizei|bank|kredit|schuld|amt\b|jobcenter|bewerbung|vorstellungsgespräch|beerdigung|trauer)/i;
+
+/** Ein Termintitel, wie Claude ihn sehen darf. Bekannte Namen ersetzt die Pseudonymisierung, unbekannte nach „mit“, „bei“, „von“, „für“ fallen hier weg. */
+export function schutzTitel(roh: string, bekannte: string[] = []): string {
+  const t = roh.replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!t || SCHUTZ.test(t)) return 'Termin privat';
+  const bek = bekannte.map((n) => n.toLowerCase());
+  return t.replace(/\b(mit|bei|von|für)\s+((?:(?:Frau|Herrn?|Dr\.?)\s+)?[A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+)?)/gu, (ganz, w: string, name: string) => {
+    const kern = name.replace(/^(Frau|Herrn?|Dr\.?)\s+/, '');
+    return bek.some((b) => b === kern.toLowerCase() || b.split(' ').includes(kern.toLowerCase().split(' ')[0])) ? ganz : `${w} jemandem`;
+  });
+}
+
+export function kalenderZeilen(termine: Termin[], heute: string, jetztMin: number, bekannte: string[] = []): string[] {
   if (!termine.length) return ['Kalender: heute keine Termine eingetragen.'];
-  const titel = (t: { titel: string; art: KalenderArt }) => (t.art === 'familie' ? 'Familie (geschützt, nichts hineinplanen)' : `${t.titel.slice(0, 60)}${t.art === 'arbeit' ? ' (Arbeit)' : ''}`);
+  const titel = (t: { titel: string; art: KalenderArt }) => (t.art === 'familie' ? 'Familie (geschützt, nichts hineinplanen)' : `${schutzTitel(t.titel, bekannte)}${t.art === 'arbeit' ? ' (Arbeit)' : ''}`);
   const plan = tagesplan(termine, heute);
   const zeilen: string[] = [];
   const heuteT = plan.bloecke.filter((b) => b.art !== 'frei' && b.art !== 'vorschlag');

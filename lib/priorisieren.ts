@@ -10,9 +10,10 @@ export type Stapel = (typeof STAPEL)[number];
 export const AKTIV = ['engpass', 'entscheidung', 'aufgabe', 'projekt', 'privat'] as const;
 export const JETZT_MAX = 3;
 
-const TZ = 'Europe/Berlin';
-export const heuteBerlin = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(d);
-const wochentag = () => new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+import { TZ, fristRelativ, heuteBerlin } from './zeit';
+export { heuteBerlin };
+// Phase 3: Claude bekommt nur den Wochentag, Fristen relativ zu heute, kein Datum
+const wochentag = () => new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
 
 export const liste = (s: string) => s.split('\n').map((z) => z.replace(/^[-•*\s]+/, '').trim()).filter(Boolean);
 export const engpassAus = (kontext: string) => kontext.match(/engpass\s*:\s*(.+)/i)?.[1]?.trim() ?? '';
@@ -52,7 +53,7 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   const alter = (d: string) => Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 864e5));
   const zeilen = items.map((it, n) => {
     const manuell = it.manuell_tag === tag ? ` | HEUTE VON PETER GESETZT: ${it.manuell_stapel} (nicht ändern)` : '';
-    return `${n}. ${it.schritt || it.titel || it.text.slice(0, 120)}${fokus.includes(it.id) ? ' | DREI DINGE DER WOCHE (Peter)' : ''} | Eintrag: ${it.text.slice(0, 220).replace(/\n/g, ' ')} | Kategorie: ${it.kategorie} | Ziel: ${it.ziel || '-'} | Hebel: ${it.hebel ?? '-'} | Aufwand: ${AUFWAND(it.aufwand_min)} | Frist: ${it.frist || '-'} | Wer: ${it.wer === 'delegieren' ? `delegieren${it.delegieren_an ? ' an ' + it.delegieren_an : ''}` : 'Peter'} | Bisher: ${it.stapel || 'neu'} | Alter: ${alter(it.created_at)} Tage${manuell}`;
+    return `${n}. ${it.schritt || it.titel || it.text.slice(0, 120)}${fokus.includes(it.id) ? ' | DREI DINGE DER WOCHE (Peter)' : ''} | Eintrag: ${it.text.slice(0, 220).replace(/\n/g, ' ')} | Kategorie: ${it.kategorie} | Ziel: ${it.ziel || '-'} | Hebel: ${it.hebel ?? '-'} | Aufwand: ${AUFWAND(it.aufwand_min)} | Frist: ${fristRelativ(it.frist, tag)} | Wer: ${it.wer === 'delegieren' ? `delegieren${it.delegieren_an ? ' an ' + it.delegieren_an : ''}` : 'Peter'} | Bisher: ${it.stapel || 'neu'} | Alter: ${alter(it.created_at)} Tage${manuell}`;
   });
   const prompt = [
     'SORTIERLAUF',

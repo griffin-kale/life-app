@@ -242,10 +242,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
   await test.step('Heute: Empfehlung mit einem Tipp, Coach zum Ansprechen', async () => {
     await page.goto('/');
-    // Empfohlen und Schnellzugriffe sind seit 0.19 nicht mehr Standard, der Coach formuliert die Empfehlung
-    await expect(page.locator('section[aria-label="Empfohlen für dich"]')).toHaveCount(0);
+    // Empfohlen ist Standard (0.20), Schnellzugriffe sitzen in der Mitte der Leiste
+    const em = page.locator('section[aria-label="Empfohlen für dich"] a.empfohlen');
+    await expect(em).toBeVisible();
+    expect(await em.getAttribute('href')).toMatch(/^\//);
     await expect(page.locator('section[aria-label="Schnellzugriffe"]')).toHaveCount(0);
-    expect((await (await page.request.get('/api/coach')).json()).empfehlung?.href).toMatch(/^\//);
     await page.locator('.coach-leiste').click();
     const coach = page.getByRole('dialog', { name: 'Coach' });
     await coach.getByRole('button', { name: 'Ich bin müde' }).click();
@@ -353,6 +354,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Tanken' })).toContainText('80 €');
     await expect(page.locator('main')).toContainText('Topf „Familie“ ist diese Woche 30 € über dem Rahmen');
     await page.locator('input[type=file]').first().setInputFiles({ name: 'bon.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    // Phase 3: Der Bon wird vor dem Senden zugeschnitten, nur der Streifen geht an Claude
+    const zuschnitt = page.getByRole('dialog', { name: 'Bon zuschneiden' });
+    await expect(zuschnitt).toBeVisible();
+    await zuschnitt.getByRole('button', { name: 'Obere Kante, mit Pfeiltasten verschieben' }).press('ArrowDown');
+    await zuschnitt.getByRole('button', { name: 'Ausschnitt senden' }).click();
     await expect(page.locator('section[aria-label="Zuletzt"] .buchung', { hasText: 'Testmarkt' })).toContainText('23,45 €');
     await expect(page.locator('section[aria-label="Diese Woche"] .kachel.topf')).toHaveCount(3);
     await expect(page.locator('section[aria-label="Bereiche"]')).toContainText('Stufenplan');
@@ -454,20 +460,38 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Angezeigt"]')).not.toContainText('Festhalten-Feld');
   });
 
-  await test.step('Schnellzugriffe: Plus öffnet alle Wege, Essen führt zur Essen-Seite', async () => {
-    // Nicht mehr Standard, lässt sich aber dazuschalten
-    const std = (await (await page.request.get('/api/heute/bausteine')).json()).bausteine;
-    await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: [...std, 'schnell'] } });
-    await page.goto('/');
-    const reihe = page.locator('section[aria-label="Schnellzugriffe"]');
-    await reihe.getByRole('button', { name: 'Alle Wege zum Festhalten' }).click();
-    const blatt = page.getByRole('dialog', { name: 'Festhalten' });
-    await expect(blatt.getByRole('button')).toHaveCount(6);
+  await test.step('Leiste: Heute in der Mitte, Plus mit sechs Wegen, Halten auf Körper', async () => {
+    await page.goto('/woche');
+    // Außerhalb von Heute führt die Mitte zu Heute
+    await page.locator('.tabbar').getByRole('link', { name: 'Heute' }).click();
+    await page.waitForURL('/');
+    // Auf Heute ist die Mitte ein Plus mit den schnellen Wegen
+    const plus = page.locator('.tabbar').getByRole('button', { name: 'Schnell festhalten' });
+    await plus.click();
+    const schnell = page.getByRole('dialog', { name: 'Schnell festhalten' });
+    await expect(schnell.getByRole('button')).toHaveCount(6);
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/leiste-plus.png' });
     await page.keyboard.press('Escape');
-    await expect(blatt).toHaveCount(0);
-    await reihe.getByRole('link', { name: 'Ausgabe' }).click();
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/leiste-heute.png' });
+    await expect(schnell).toHaveCount(0);
+    await plus.click();
+    await schnell.getByRole('button', { name: 'Gedanke' }).click();
+    await expect(page.getByRole('dialog', { name: 'Coach' }).getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await plus.click();
+    await schnell.getByRole('button', { name: 'Ausgabe' }).click();
     await page.waitForURL('/geld');
     await expect(page.getByLabel('Ausgabe, zum Beispiel 12,50 Bäcker')).toBeFocused();
+    // Halten auf Körper öffnet das Schnellmenü, ein kurzer Tipp öffnet die Seite
+    const koerper = page.locator('.tabbar a[aria-label="Körper"]');
+    await koerper.hover();
+    await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
+    const menue = page.getByRole('menu', { name: 'Körper schnell' });
+    await expect(menue.getByRole('menuitem')).toHaveCount(4);
+    if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/leiste-halten.png' });
+    await expect(page).toHaveURL('/geld');
+    await menue.getByRole('menuitem', { name: 'Ruhe starten' }).click();
+    await page.waitForURL('/koerper/ruhe');
   });
 
   await test.step('iPad und Mac: Seitenleiste, Leiste oben, Inspektor, Tastatur', async () => {
@@ -593,6 +617,9 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(letzter).toContain('16:30–18:00 Familie (geschützt');
     expect(letzter).toMatch(/10:00–11:00 Abstimmung mit \[Person \d+\]/);
     expect(letzter).not.toContain('Laternenumzug');
+    // Phase 3: Coach und Sortierlauf bekommen kein Datum, nur Wochentag und relative Fristen
+    const mitDatum = prompts.filter((x) => /^(COACH|SORTIERLAUF)/.test(x) && /\d{4}-\d{2}-\d{2}|\d{1,2}\. (Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)/.test(x));
+    expect(mitDatum).toEqual([]);
     expect(letzter).not.toContain('Carlotta');
     // Ausgeschaltet zählt der Kalender nicht mehr
     await page.goto('/einstellungen');

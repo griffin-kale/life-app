@@ -101,6 +101,8 @@ Die kritische Lücke ist behoben. Das Challenge-Cookie galt als Sitzung und ist 
 
 ## Phase 3 – Datenschutz (Zweig `fix/datenschutz`)
 
+**Erledigt mit 0.21.0 (Peters Wahl, 26.10.2026):** Kalender mit Schutzliste, Bons zuschneiden, YouTube nur mit Video-ID und Ausnahme in `CLAUDE.md`, kein Datum an Claude, Zeit zentral in `lib/zeit.ts`.
+
 1. **Kein Datum an Claude.** In `lib/coach.ts` steht „Heute ist Montag, 26. Oktober“ neben Schlaf, HRV und WHO-5. Nur noch den Wochentag schicken.
 2. **Kalendertitel.**
    - Private Titel gehen mit Uhrzeit raus. Neue Namen erkennt die Pseudonymisierung erst nach dem ersten Mal.

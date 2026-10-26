@@ -3,10 +3,10 @@
 export const BAUSTEINE = ['kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-export const STANDARD: Baustein[] = ['kompass', 'jetzt', 'fragebogen', 'naechste', 'erledigt'];
+export const STANDARD: Baustein[] = ['kompass', 'jetzt', 'empfohlen', 'fragebogen', 'naechste', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   kompass: ['Wochenringe', 'Klein neben dem Titel'],
-  schnell: ['Schnellzugriffe', 'Plus mit Menü, Essen, Ausgabe, Ruhe, Training'],
+  schnell: ['Schnellzugriffe', 'Zusätzlich zum Plus in der Mitte der Leiste'],
   empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
   kalender: ['Kalender', 'Der ganze Tag mit Terminen und freier Zeit'],
   fragebogen: ['Fragebogen', 'Erscheint, wenn er dran ist'],
@@ -31,7 +31,7 @@ export function bausteineAus(roh: unknown): Baustein[] {
 
 /** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
 const NEU: [number, Baustein, string][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
-export const STAND = 6;
+export const STAND = 7;
 
 /** Umbau 0.18 (Peter, 26.10.2026): Ringe nach oben, Jetzt dran früh, Kalender, Festhalten-Feld und Tagespunkte runter von Heute. */
 const WEG_5: string[] = ['kalender', 'festhalten', 'woche'];
@@ -58,5 +58,7 @@ export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein
     const f = neu.indexOf('fragebogen'), j = neu.indexOf('jetzt');
     if (f >= 0 && j > f) { neu.splice(j, 1); neu.splice(f, 0, 'jetzt'); }
   }
+  // 0.20 (Peter, 26.10.2026): Empfohlen ist wieder Standard, direkt unter der einen Sache. Schnellzugriffe sitzen jetzt in der Mitte der Leiste.
+  if (stand < 7 && !neu.includes('empfohlen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'empfohlen');
   return { liste: neu, stand: STAND };
 }

@@ -1088,3 +1088,48 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .konto[open] .konto-zeile .chev { transform: rotate(90deg); }
 .konto-mehr { display: grid; gap: 8px; padding: 2px 14px 14px 58px; }
 .einordnung > .group { margin-top: 10px; }
+
+/* ---------- 0.20: schwebende Leiste, Heute in der Mitte, Schnellmenüs ---------- */
+.tabbar { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 15; max-width: 440px; margin: 0 auto; height: 66px; padding: 0 10px; align-items: center; justify-content: space-around; border-radius: 33px; box-shadow: inset 0 0 0 1px var(--hair), 0 14px 30px -12px rgb(var(--shadow-rgb) / .6); -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.tabbar a.tb-tab { flex: 0 0 auto; width: 52px; height: 52px; min-height: 0; max-width: none; border-radius: 50%; display: grid; place-items: center; }
+.tabbar a.tb-tab svg { width: 25px; height: 25px; }
+.tb-tab.gehalten { background: rgb(var(--tint-rgb) / .16); }
+.tb-mitte { width: 58px; height: 58px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); box-shadow: 0 0 0 5px rgb(var(--ink-rgb) / .12); cursor: pointer; text-decoration: none; }
+.tb-mitte svg { width: 26px; height: 26px; transition: transform 220ms var(--ease-out); }
+.tb-mitte.offen svg { transform: rotate(45deg); }
+.tb-mitte:active { opacity: .8; }
+.tb-scrim { position: fixed; inset: 0; z-index: 13; border: 0; padding: 0; background: rgb(0 0 0 / .5); cursor: default; }
+.tb-schnell { position: fixed; z-index: 14; left: 24px; right: 24px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); max-width: 400px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 10px; }
+.tb-weg { display: grid; justify-items: center; gap: 7px; padding: 4px 0; border: 0; background: none; color: #F6F3EA; font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+.tb-weg .sz-symbol { width: 58px; height: 58px; border-radius: 20px; color: #0A1326; }
+.tb-weg .sz-symbol svg { width: 26px; height: 26px; }
+.tb-weg:active { opacity: .6; }
+.tb-halten { position: fixed; z-index: 14; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: 240px; display: grid; border-radius: 20px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--hair), 0 20px 40px -10px rgb(0 0 0 / .6); overflow: hidden; }
+.tb-halten.links { left: 24px; }
+.tb-halten.rechts { right: 24px; }
+.tb-halten-titel { padding: 12px 16px 4px; font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tb-halten-weg { display: flex; align-items: center; min-height: 48px; padding: 0 16px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .9375rem; }
+.tb-halten-weg:first-of-type { border-top: 0; }
+.tb-halten-weg:active { background: var(--press); }
+@media (prefers-reduced-motion: no-preference) {
+  .tb-schnell, .tb-halten { animation: tb-rein 240ms var(--ease-out) both; }
+  @keyframes tb-rein { from { transform: translateY(16px); opacity: 0; } }
+}
+body { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+.toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+.coach-leiste { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); min-height: 50px; }
+body:has(.coach-leiste) .toast { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 768px) { body { padding-bottom: 56px; } .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); } }
+.tabbar a.tb-mitte { flex: 0 0 auto; width: 58px; height: 58px; min-height: 0; max-width: none; display: grid; place-items: center; color: var(--on-ink); }
+.tabbar a.tb-mitte svg, .tabbar button.tb-mitte svg { width: 26px; height: 26px; }
+body:has(.coach-leiste) .tb-schnell, body:has(.coach-leiste) .tb-halten { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+.tb-scrim { background: rgb(4 10 24 / .8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* ---------- 0.21: Datenschutz – Bon zuschneiden ---------- */
+.bon-blatt { max-height: calc(100dvh - 40px); overflow-y: auto; }
+.bon-flaeche { position: relative; touch-action: none; border-radius: 14px; overflow: hidden; background: #000; max-height: 58dvh; }
+.bon-flaeche img { display: block; width: 100%; height: auto; max-height: 58dvh; object-fit: contain; -webkit-user-select: none; user-select: none; pointer-events: none; }
+.bon-schatten { position: absolute; left: 0; right: 0; background: rgb(0 0 0 / .62); pointer-events: none; }
+.bon-kante { position: absolute; left: 0; right: 0; height: 44px; margin-top: -22px; border: 0; padding: 0; background: none; cursor: ns-resize; touch-action: none; }
+.bon-kante::before { content: ''; position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: var(--sand); }
+.bon-kante::after { content: ''; position: absolute; left: 50%; top: 14px; width: 44px; height: 16px; margin-left: -22px; border-radius: 99px; background: var(--sand); }
