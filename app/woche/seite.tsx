@@ -6,6 +6,9 @@ import { useCheckins } from '../coach';
 import { ZeitKaufen } from '../zeit-kaufen';
 import { UeberKarte } from '../ueberkarte';
 import { MitInspektor } from '../inspektor';
+import Link from 'next/link';
+
+type Ws = { offen: boolean; fokus: string[]; kandidaten: { id: string; titel: string }[] };
 
 const REIHE = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
 
@@ -51,6 +54,13 @@ export function WocheSeite({ teil }: { teil?: string }) {
     setToast('Gestrichen', 'ok', { label: 'Rückgängig', run: () => act(null, () => patch(it.id, { status: 'sortiert' })) });
   });
 
+  const [ws, setWs] = useState<Ws | null>(null);
+  useEffect(() => {
+    if (teil) return;
+    api<Ws>('/api/wochenstart').then(setWs).catch(() => {});
+    if (new URLSearchParams(location.search).get('wochenstart') === 'fertig') { setToast('Wochenstart abgeschlossen'); history.replaceState(null, '', '/woche'); }
+  }, [teil, setToast]);
+  const fokus = ws ? ws.fokus.map((id) => ws.kandidaten.find((k) => k.id === id)).filter((k): k is { id: string; titel: string } => !!k) : [];
   const [zk, setZk] = useState<number | null>(null);
   useEffect(() => { api<{ status: string }[]>('/api/zeit-kaufen').then((l) => setZk(l.filter((x) => x.status === 'idee').length)).catch(() => {}); }, []);
   const items = st?.items ?? [];
@@ -107,6 +117,23 @@ export function WocheSeite({ teil }: { teil?: string }) {
           <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
         </section>
       ) : ci.who5 !== null ? <p className="gnote">Wohlbefinden (WHO-5) diese Woche: {ci.who5} von 100{ci.who5 < 51 ? '. Unter 51 lohnt ein genauerer Blick, gern auch mit ärztlichem Rat.' : ''}</p> : null}
+
+      {!teil && ws?.offen ? (
+        <Link href="/wochenstart" className="ws-banner">
+          <span><b>Wochenstart</b><small>Rückblick, Engpass, drei Dinge, Parkplatz. Etwa zehn Minuten.</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+        </Link>
+      ) : null}
+
+      {!teil && fokus.length ? (
+        <section className="gsec" aria-label="Drei Dinge der Woche">
+          <h2 className="glabel">Drei Dinge der Woche</h2>
+          <div className="group fokus-liste">
+            {fokus.map((k, i) => <div key={k.id} className="cell static"><span className="fokus-nr">{i + 1}</span><span className="lbl" style={{ flex: 1 }}>{k.titel}</span></div>)}
+          </div>
+          <p className="gnote">Claude zieht sie beim Sortieren nach vorn. <Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p>
+        </section>
+      ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p> : null}
 
       {!teil && st ? (
         <section className="ueber" aria-label="Bereiche">

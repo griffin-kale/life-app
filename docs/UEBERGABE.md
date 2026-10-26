@@ -2,7 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 25. Oktober 2026, Version 0.11.0.
+Stand: 26. Oktober 2026, Version 0.15.3.
+
+Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen, Sicherheit zuerst).
 
 ## Worum es geht
 
@@ -28,6 +30,8 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 | Menschen, Wenn-dann-Pläne, Energie-Bilanz, Parkplatz, Zeit kaufen | 0.11 | `lib/menschen.ts`, `app/menschen`, `app/wenn.tsx`, `app/zeit-kaufen.tsx` |
 | Kompass: fünf Ringe, Verlauf, Level, Meilensteine | 0.10 | `lib/kompass.ts`, `lib/kompass-regeln.ts`, `app/kompass` |
 | Rückmeldungen ins Backlog, optional als GitHub-Issue | 0.9 | `lib/rueckmeldung.ts`, `app/rueckmeldung.tsx` |
+| Standortbestimmung in drei Etappen, Dein Stand, Kalender aus iCloud (lesend), Wochenziel | 0.15 | `lib/standort.ts` (Fragen, Prüfung, ohne Datenbank), `lib/stand.ts`, `app/stand`, `lib/caldav.ts`, `lib/ical-termine.ts`, `lib/kalender-regeln.ts`, `lib/kalender.ts`, `app/kalender.tsx` |
+| Coach-Gespräch, Offenes, Empfohlen für dich, Wochenstart, Fragebögen zum Blättern, Geld als Kacheln | 0.14 | `lib/tagesregeln.ts` (Regeln, ohne Datenbank), `lib/tag.ts`, `lib/coach.ts` (`coachChat`), `app/api/coach/chat`, `app/api/wochenstart`, `app/wochenstart`, `app/blaetter.tsx`, `app/coach.tsx`, `lib/zeitplan.ts` |
 | Übersicht mit Unterseiten (Körper, Geld, Woche), Schnellzugriffe, iPad und Mac mit Seitenleiste und Inspektor | 0.13 | `app/ueberkarte.tsx`, `app/koerper/{nacht,bewegung,essen}`, `app/geld/seite.tsx`, `app/woche/seite.tsx`, `app/schnell.tsx`, `app/navigation.tsx`, `app/inspektor.tsx` |
 | Design: Dunkel, Hell, wie das iPhone; Verlaufskarten, Kontenfarbe pro Bereich, Wochenringe, Level-Weg | 0.12 | `app/globals.css` (Tokens oben, Abschnitt 0.12), `lib/thema.ts`, `app/darstellung.tsx`, `app/ringe.tsx`, `lib/heute-bausteine.ts`, `app/einstellungen/heute`, `app/kurz.tsx` |
 
@@ -37,14 +41,17 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 
 1. **Anthropic-Schlüssel** in der Console der Griffin & Kale GmbH anlegen, Ausgabenlimit setzen, Auftragsverarbeitungsvertrag annehmen, Schlüssel in `/opt/life/deploy/.env` als `ANTHROPIC_API_KEY=` eintragen, dann `docker compose up -d --force-recreate app`. Ohne Schlüssel sortiert nichts und der Coach schweigt.
 2. **WHOOP-App** auf developer.whoop.com registrieren. Weiterleitung `https://life.gneuss.xyz/api/whoop/callback`, Scopes: offline, read:recovery, read:cycles, read:sleep, read:workout, read:body_measurement. `WHOOP_CLIENT_ID` und `WHOOP_CLIENT_SECRET` in die `.env`, App neu starten, in Life unter Körper „WHOOP verbinden“.
-3. **Pull Requests** `feature/fundament`, `feature/koerper`, `feature/ruhe`, `feature/geld` `feature/kompass` und `feature/menschen` nach `main` mergen, danach Tag auf die neueste Version. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
+3. **Alles nach `main` bringen:** Ein Pull Request von `chore/plan` nach `main` enthält den ganzen Stapel bis 0.15.3 (alle Feature-Zweige stecken darin). Nach „Merge“ den Tag `v0.15.3` auf `main` setzen und `GHCR_IMAGE` in der `.env` eintragen. Bis dahin läuft auf dem Server der Stand aus dem Zweig (Notweg `deploy.sh --build`).
 4. **Mitteilungen einschalten:** Life vom Home-Bildschirm öffnen, Einstellungen, „Mitteilungen einschalten“, „Probe schicken“.
 5. **GitHub-Schlüssel für Rückmeldungen** (optional): Fine-grained Token nur für `griffin-kale/life-app`, nur „Issues: Read and write“, als `GITHUB_ISSUES_TOKEN=` in die `.env`. Ohne Schlüssel bleiben Meldungen nur in Life.
-6. **`SETUP_TOKEN` leeren**, sobald alle Geräte eingerichtet sind.
-7. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
+6. **Kalender verbinden:** auf account.apple.com unter „Anmelden und Sicherheit“ → „App-spezifische Passwörter“ eines mit dem Namen „Life“ anlegen. In die `.env` `ICLOUD_USER=` (deine Apple-ID) und `ICLOUD_APP_PASSWORT=` eintragen, `docker compose up -d --force-recreate app`, dann in Life Einstellungen → Kalender → „Kalender suchen“. Widerrufen geht jederzeit an derselben Stelle.
+7. **`SETUP_TOKEN` leeren**, sobald alle Geräte eingerichtet sind.
+8. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
 
+- **Standortbestimmung und Kalender 0.15 (Peter, 26.10.2026):** Direkt in Life gebaut, drei Etappen à zwölf Minuten (Baseline mit Skalenfragen, Richtung, Engpass nach der Engpasstheorie). Claude schlägt vor, übernommen wird nur, was Peter antippt (feste Liste der Vorschlagsarten in `pruefeAuswertung`). Stand in `stand:peter`, Wochenziel in `wochenziel:peter`. Kalender: iCloud per CalDAV mit app-spezifischem Passwort (Peters Wahl, obwohl das Passwort auch Mail und Kontakte öffnet; Life nutzt es nur für PROPFIND und REPORT auf `caldav.icloud.com`). Arbeitskalender kommt später. Familientermine gehen ohne Titel an Claude.
+- **Coach und Tag 0.14 (Peter, 26.10.2026):** Gespräch direkt auf Heute, Verlauf pro Tag (Tabelle `coach_chat`). Proaktiv über vier Wege: verpasste Uhrzeit, Nachmittags-Check um 15 Uhr, Offenes in der Coach-Karte, Wochenstart am Montag. Wochenstart in vier Schritten (Rückblick, Engpass, drei Dinge, Parkplatz), abgeschlossen steht in `wochenstart:peter`, die drei Dinge in `fokus:peter`. „Empfohlen für dich“: feste Regeln in `lib/tagesregeln.ts` entscheiden, die Karte braucht keinen Claude-Aufruf und ist sofort da. Der Coach bekommt die Empfehlung als Grundlage und formuliert sie in seinem Text. Fragebögen blättern seitlich, eine Frage pro Seite. Geld folgt dem Kachelmuster von Körper.
 - **Struktur 0.13 (Peter, 25.10.2026):** Übersicht mit Unterseiten wie Apple Health und Oura (höchstens zwei Ebenen, jede Karte mit Zahl und Handlung), gleich für Körper, Geld und Woche. Schnellzugriffe als Baustein auf Heute, das erste Element ist ein Plus mit allen Wegen. Mac: Seitenleiste und Spalten, Logbuch und Woche mit Inspektor. iPad: quer Seitenleiste, hochkant schwebende Leiste oben. Web-Apps auf iOS können keine Schnellaktionen am App-Symbol und keine Widgets, deshalb Kurzbefehle und Aktionstaste. Festhalten liegt auf N statt ⌘N, weil Browser ⌘N für neue Fenster reservieren.
 
 - **Design 0.12 (Peter, 25.10.2026):** Grundlage Richtung A „Nachtblau mit Licht“ aus drei Mockups, dazu Erholung als Farbverlauf, Wochentag-Ringe mit Level-Weg und farbige Ruhe-Karten. Segment-Balken und volle Farbkarten (Richtung B) bewusst nicht. Wochenstand als Tagespunkte statt Ringreihe (zwei Ringreihen übereinander gefielen Peter nicht). Schrift Fraunces nach Recherche (Serifen wirken in Studien luxuriöser, Luxusmarken mischen Serife für Titel mit klarer Schrift für Text). Heute ist pro Mensch anpassbar (Setting `heute:<user_id>`, `lib/heute-bausteine.ts`), „Jetzt dran“ und Fragebogen bleiben fest, weil der Coach die Antworten braucht. Dunkel bleibt Standard. Der Modus steht im Cookie `life-thema`, damit der Server ohne Skript und ohne Aufblitzen richtig rendert. Die iOS-Statusleiste stellt sich erst beim nächsten Öffnen der App um.
@@ -98,6 +105,7 @@ Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, F
 ## Arbeitsweise
 
 - Zweig pro Stufe, Pull Request mit CHANGELOG, Peter mergt. Tests: `npm run typecheck`, `npm run test:unit`, `npm run build && npm run test:e2e` (braucht Postgres auf Port 5433, siehe `playwright.config.ts`). Die Attrappe `tests/e2e/mock-claude.mjs` spielt Claude, WHOOP und Open Food Facts.
+- Auf Peters Mac ist `NODE_ENV=production` gesetzt. Deshalb dort `NODE_ENV=development npm ci --include=dev`, sonst fehlen TypeScript und Playwright.
 - Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` oder im Notfall `--build`. Jede SSH-Verbindung fragt Touch ID ab.
 - Geheimnisse trägt nur Peter auf dem Server ein. Claude liest die `.env` nicht.
 - Arbeitet Claude aus einer Cloud-Sitzung, kommt der Code per `git bundle` auf den Mac und von dort zu GitHub, weil die Cloud nicht auf das Repo schreiben darf.

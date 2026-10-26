@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSetting, setSetting } from '@/lib/db';
-import { bausteineAus, nachruesten } from '@/lib/heute-bausteine';
+import { STAND, bausteineAus, nachruesten } from '@/lib/heute-bausteine';
 import { begrenzt } from '@/lib/ratelimit';
 
 /** Welche Bausteine Heute zeigt und in welcher Reihenfolge. Pro Mensch gespeichert, damit es auf jedem Gerät gleich aussieht. */
@@ -24,6 +24,6 @@ export async function PUT(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const bausteine = bausteineAus(b?.bausteine);
   await setSetting(KEY('peter'), JSON.stringify(bausteine));
-  await setSetting('heute_stand:peter', '2');
+  await setSetting('heute_stand:peter', String(STAND));
   return NextResponse.json({ bausteine });
 }

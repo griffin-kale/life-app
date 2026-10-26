@@ -1,7 +1,7 @@
 {
   "name": "life-app",
   "private": true,
-  "version": "0.13.0",
+  "version": "0.15.3",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -21,6 +21,7 @@
     "@simplewebauthn/server": "^13.3.3",
     "@zxing/browser": "0.2.1",
     "@zxing/library": "0.23.0",
+    "ical.js": "2.2.1",
     "jose": "^6.2.13",
     "next": "^15.5.28",
     "postgres": "^3.4.9",

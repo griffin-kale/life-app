@@ -44,6 +44,14 @@ export default function Ruhe() {
 
   const laden = useCallback(() => api<{ minuten: number; tage: number }>('/api/ruhe').then(setWoche).catch(() => {}), []);
   useEffect(() => { laden(); }, [laden]);
+  // Aus „Empfohlen für dich“: passende Vorlage hervorheben und hinscrollen, Start bleibt ein Tipp
+  const [gewaehlt, setGewaehlt] = useState<string | null>(null);
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('vorlage');
+    if (!v || !VORLAGEN.some((x) => x.id === v)) return;
+    setGewaehlt(v); if (v === 'nsdr') setWahl((w) => ({ ...w, nsdr: 20 }));
+    setTimeout(() => document.getElementById(`vorlage-${v}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 100);
+  }, []);
   useEffect(() => { if (!lauf) return; const t = setInterval(() => setJetzt(Date.now()), 200); return () => clearInterval(t); }, [lauf]);
 
   const beenden = useCallback(async (abgebrochen: boolean) => {
@@ -120,7 +128,7 @@ export default function Ruhe() {
         </div>
       ) : null}
       {VORLAGEN.map((x) => (
-        <section key={x.id} className={`ruhekarte r-${x.id}`} aria-label={x.name}>
+        <section key={x.id} id={`vorlage-${x.id}`} className={`ruhekarte r-${x.id}${gewaehlt === x.id ? ' gewaehlt' : ''}`} aria-label={x.name}>
           <div className="ruhekarte-kopf"><h2>{x.name}</h2><p>{x.beschreibung}</p></div>
           {x.id === 'wimhof' && !wimhofOffen ? <>
             <p className="ruhekarte-warn">Die Atmung kann zu kurzer Ohnmacht führen. Mach sie nur unter diesen Bedingungen:</p>

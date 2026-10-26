@@ -7,14 +7,16 @@ import { warnsignale } from './coach-regeln';
 import { abgleichen, verbunden, whoopBereit } from './whoop';
 import { geldStand } from './geld';
 import { kompassStand } from './kompass';
+import { tageslage } from './tag';
+import { vielleichtAbgleichen } from './kalender';
 
 /**
  * Läuft jede Minute im Server: WHOOP abgleichen und Mitteilungen zur richtigen Zeit schicken.
  * Jede Mitteilung höchstens einmal am Tag. Verpasste Zeitpunkte holt Life bis zu zwei Stunden später nach.
  */
 
-export type PushEinstellungen = { morgen: boolean; abend: boolean; warnung: boolean; training: boolean; morgenZeit: string; abendZeit: string };
-export const PUSH_STANDARD: PushEinstellungen = { morgen: true, abend: true, warnung: true, training: true, morgenZeit: '07:00', abendZeit: '20:30' };
+export type PushEinstellungen = { morgen: boolean; abend: boolean; warnung: boolean; training: boolean; verpasst: boolean; nachmittag: boolean; wochenstart: boolean; morgenZeit: string; abendZeit: string };
+export const PUSH_STANDARD: PushEinstellungen = { morgen: true, abend: true, warnung: true, training: true, verpasst: true, nachmittag: true, wochenstart: true, morgenZeit: '07:00', abendZeit: '20:30' };
 
 export async function pushEinstellungen(): Promise<PushEinstellungen> {
   try { return { ...PUSH_STANDARD, ...JSON.parse((await getSetting('push')) || '{}') }; } catch { return PUSH_STANDARD; }
@@ -37,6 +39,7 @@ export async function tick(userId = 'peter') {
     const abstand = minuten(uhr) >= 360 && minuten(uhr) <= 600 ? 3600_000 : 7200_000;
     if (Date.now() - zuletzt > abstand) await abgleichen(userId, 3).catch(() => {});
   }
+  await vielleichtAbgleichen(userId);
   const p = await pushEinstellungen();
   const [ci] = await sql<{ morgen: boolean; abend: boolean }[]>`
     select bool_or(art = 'morgen') as morgen, bool_or(art = 'abend') as abend from checkins where user_id = ${userId} and tag = ${tag}`;
@@ -62,6 +65,23 @@ export async function tick(userId = 'peter') {
     await setSetting('kompass_stunde', `${tag} ${stunde}`);
     const k = await kompassStand(userId).catch(() => null);
     if (k?.neu.length && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) await senden({ title: 'Meilenstein', body: `${k.neu.join(', ')}. Im Kompass steht, was als Nächstes kommt.`, url: '/kompass', tag: 'meilenstein' }, userId);
+  }
+  // Coach von selbst: verpasste Uhrzeit, Nachmittags-Check, Wochenstart am Montag
+  if ((p.verpasst || p.nachmittag || p.wochenstart) && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) {
+    const lage = await tageslage(userId).catch(() => null);
+    if (lage) {
+      if (p.verpasst) for (const a of lage.jetzt) {
+        if (a.erledigt || !a.zeit) continue;
+        const d = minuten(uhr) - minuten(a.zeit);
+        if (d >= 30 && d <= 120) await einmal(`verpasst:${a.id}`, tag, async () =>
+          (await senden({ title: 'Noch offen', body: `„${a.titel}“ stand für ${a.zeit} an. Jetzt machen oder verschieben?`, url: '/', tag: `verpasst-${a.id}` }, userId)) > 0);
+      }
+      const offen = lage.jetzt.filter((a) => !a.erledigt);
+      if (p.nachmittag && faellig(uhr, '15:00') && offen.length && offen.length === lage.jetzt.length) await einmal('nachmittag', tag, async () =>
+        (await senden({ title: 'Nachmittag', body: `Von „Jetzt dran“ ist noch nichts erledigt. Fang mit „${offen[0].titel}“ an, dreißig Minuten reichen.`, url: '/', tag: 'nachmittag' }, userId)) > 0);
+      if (p.wochenstart && lage.wochenstartOffen && new Date().getDay() === 1 && faellig(uhr, '08:30')) await einmal('wochenstart', tag, async () =>
+        (await senden({ title: 'Wochenstart', body: 'Zehn Minuten für die Woche: Rückblick, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
+    }
   }
   if (p.training) {
     const k = await koerperStand(userId);

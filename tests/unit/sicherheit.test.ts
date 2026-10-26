@@ -31,3 +31,19 @@ test('safeFetch lehnt interne Ziele, fremde Ports und andere Protokolle ab', asy
   await assert.rejects(safeFetch('http://[::1]/'));
   await assert.rejects(safeFetch('http://localhost/'));
 });
+
+test('Sitzung: ein Challenge-Cookie gilt nie als Sitzung, alte Sitzungen ohne Typ auch nicht', async () => {
+  process.env.SESSION_SECRET = 'test-session-secret-nur-fuer-tests-0123456789abcdef';
+  const { createSession, validSession, signChallenge, readChallenge } = await import('../../lib/session.ts');
+  const { SignJWT } = await import('jose');
+  const challenge = await signChallenge('abc', 'login');
+  assert.equal(await validSession(challenge), false);
+  assert.equal(await readChallenge(challenge, 'login'), 'abc');
+  assert.equal(await readChallenge(challenge, 'register'), null);
+  const s = await createSession();
+  assert.equal(await validSession(s.value), true);
+  assert.equal(await readChallenge(s.value, 'login'), null);
+  const alt = await new SignJWT({ sub: 'peter' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('30d').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  assert.equal(await validSession(alt), false);
+  assert.equal(await validSession('kaputt'), false);
+});

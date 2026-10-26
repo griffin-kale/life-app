@@ -275,6 +275,51 @@ export function ensureSchema(): Promise<void> {
           created_at timestamptz not null default now()
         )`;
       await sql`alter table items add column if not exists wenn text, add column if not exists energie smallint`;
+      // Version 0.14: Gespräch mit dem Coach, gilt pro Tag
+      await sql`
+        create table if not exists coach_chat (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          tag date not null,
+          rolle text not null check (rolle in ('ich', 'coach')),
+          text text not null,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`create index if not exists coach_chat_tag on coach_chat (user_id, tag, id)`;
+      // Version 0.15: Standortbestimmung in drei Etappen, Antworten und Auswertung
+      await sql`
+        create table if not exists standort (
+          id bigserial primary key,
+          user_id text not null references nutzer(id),
+          etappe smallint not null check (etappe between 1 and 3),
+          antworten jsonb not null,
+          auswertung jsonb,
+          created_at timestamptz not null default now()
+        )`;
+      await sql`create index if not exists standort_user on standort (user_id, etappe, id)`;
+      // Kalender aus iCloud, nur gelesen: Liste der Kalender und die Termine der nächsten Tage
+      await sql`
+        create table if not exists kalender (
+          user_id text not null references nutzer(id),
+          href text not null,
+          name text not null,
+          farbe text not null default '',
+          an boolean not null default true,
+          art text not null default 'privat' check (art in ('privat', 'familie', 'arbeit')),
+          primary key (user_id, href)
+        )`;
+      await sql`
+        create table if not exists termine (
+          user_id text not null references nutzer(id),
+          kalender text not null,
+          uid text not null,
+          beginn timestamptz not null,
+          ende timestamptz not null,
+          ganztag boolean not null default false,
+          titel text not null default '',
+          primary key (user_id, kalender, uid, beginn)
+        )`;
+      await sql`create index if not exists termine_zeit on termine (user_id, beginn)`;
       // Rückmeldungen aller Nutzenden: Fehler, Verbesserungen, Ideen
       await sql`
         create table if not exists rueckmeldungen (

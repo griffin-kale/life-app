@@ -58,6 +58,9 @@ WHOOP_CLIENT_ID=
 WHOOP_CLIENT_SECRET=
 # Rückmeldungen als GitHub-Aufgaben: Fine-grained Token, nur Issues auf griffin-kale/life-app
 GITHUB_ISSUES_TOKEN=
+# Kalender aus iCloud, nur lesend: Apple-ID und app-spezifisches Passwort „Life“ von account.apple.com
+ICLOUD_USER=
+ICLOUD_APP_PASSWORT=
 EOT
 fi
 

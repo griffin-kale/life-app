@@ -2,6 +2,54 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.15.3] – 2026-10-26
+
+### Dokumentation
+- Plan für das Fundament in `docs/VERBESSERUNG.md`: fünf Phasen (Sicherheit, Betrieb, Datenschutz, UX und UI, Technik), Noten der Prüfung vom 26.10.2026 und Ziele.
+- `docs/UEBERGABE.md` auf Stand 0.15.3 gebracht und auf den Plan verwiesen. Der Weg nach `main` läuft jetzt über einen einzigen Pull Request vom neuesten Zweig.
+
+## [0.15.2] – 2026-10-26
+
+### Sicherheit
+- **Kritische Lücke geschlossen:** Das Cookie aus der offenen Passkey-Anmeldung (`/api/auth/login-options`) war mit demselben Schlüssel signiert wie die Sitzung und wurde als Sitzung angenommen. Wer es zurückschickte, kam ohne Passkey an alle Daten. Sitzung und Challenge haben jetzt eigene, abgeleitete Schlüssel, einen Typ und eine Zielgruppe, die geprüft werden. Alle bisherigen Sitzungen sind damit ungültig, jedes Gerät meldet sich einmal neu an.
+
+## [0.15.1] – 2026-10-26
+
+### Behoben
+- „Kalender suchen“ fand bei iCloud keinen Kalender. iCloud schreibt die Kalenderart als `name='VEVENT'` in einfachen Anführungszeichen, Life erwartete doppelte. Die Testattrappe antwortet jetzt genauso wie iCloud.
+
+## [0.15.0] – 2026-10-26
+
+### Hinzugefügt
+- **Standortbestimmung** in drei Etappen zu je etwa zwölf Minuten: „Wo du stehst“ (pro Bereich eine Zahl von 1 bis 10 und der Grund dahinter), „Wohin“ (Werte, ein Jahr von heute, die nächsten zwölf Wochen, was liegen bleibt) und „Was dich bremst“ (der Coach leitet mit dir den Engpass her). Eine Frage pro Seite, du erzählst frei, gern per Diktat. Danach fasst der Coach zusammen und macht Vorschläge. In deinen Stand kommt nur, was du übernimmst oder in eigenen Worten umformulierst.
+- **Dein Stand** unter Mehr: Baseline als fünf Ringe, Fokus, Engpass mit Herleitung, Werte, Jahresbild, Ziele für zwölf Wochen, Wochenziel und das Wichtigste für heute. Coach und Sortierlauf kennen den Stand bei jedem Aufruf.
+- **Kalender aus iCloud**, nur lesend: privat und Familie. Auf Heute stehen Termine, freie Zeit und ein Vorschlag, wann das Wichtigste passt. In den Einstellungen schaltest du einzelne Kalender an und aus und legst fest, was Familie ist. Familienzeit gilt als geschützt: Der Coach plant nichts hinein und sieht dort nur „Familie“.
+- Wochenstart mit **Wochenziel** und Feld für eigene Dinge der Woche.
+
+### Behoben
+- „Drei Dinge der Woche“ war leer, wenn noch nichts einsortiert war. Jetzt stehen auch neue Einträge zur Wahl, und eigene Dinge gehen direkt.
+
+### Sicherheit
+- Life spricht nur mit iCloud-Hosts (`caldav.icloud.com`), verfolgt Weiterleitungen einzeln und prüft jedes Ziel. Antworten sind begrenzt und landen nie im Log. Neue Abhängigkeit `ical.js` 2.2.1 (Mozilla-Umfeld, ohne Abhängigkeiten und ohne Installationsskripte) für Wiederholungen und Zeitzonen.
+
+## [0.14.0] – 2026-10-26
+
+### Hinzugefügt
+- **Mit dem Coach sprechen:** auf Heute ein Feld und Vorschläge zum Antippen („Was jetzt?“, „Ich bin müde“, „Ich habe nur 30 Minuten“, „Ich schiebe etwas vor mir her“). Der Coach kennt den Tag, das Gespräch gilt für heute. Namen gehen wie immer nur als Platzhalter an Claude.
+- **Der Coach meldet sich selbst:** In der Coach-Karte steht, was heute noch offen ist (verpasste Uhrzeit, Morgenfragen, Training, Abendfragen, Wochenstart). Dazu Mitteilungen, wenn eine geplante Uhrzeit 30 Minuten vorbei ist, um 15 Uhr, wenn aus „Jetzt dran“ noch nichts erledigt ist, und montags um 8:30 für den Wochenstart. Alle drei lassen sich in den Einstellungen abschalten.
+- **Empfohlen für dich:** ein neuer Baustein auf Heute mit genau einer Sache, die jetzt passt, zum Beispiel NSDR nach kurzer Nacht, Atem am Nachmittag, Stille, Runterfahren am Abend oder die Krafteinheit am Trainingstag. Life entscheidet nach festen Regeln, der Coach greift sie in seinem Text auf, ein Tipp öffnet die passende Übung.
+- **Wochenstart** als eigene Seite in vier Schritten: Rückblick auf die letzte Woche, Engpass prüfen oder neu setzen, drei Dinge der Woche wählen, Parkplatz sichten. Die drei Dinge stehen danach auf „Woche“, Claude zieht sie beim Sortieren nach vorn.
+
+### Geändert
+- **Fragebögen zum Blättern:** eine Frage pro Seite, die Fläche bleibt stehen. Nach einer Antwort auf der Skala geht es von selbst weiter, „Fertig“ sitzt oben.
+- **Geld im Stil von Körper:** Töpfe der Woche als Kacheln mit Farbpunkt, großer Zahl und Balken. Buchungen als Zeilen mit Betrag rechts. Monatlich mit drei Kacheln (Einnahmen, feste Kosten, bleibt) und einer Liste pro Art, Sparziele und Taschengeld als Kacheln.
+
+## [0.13.1] – 2026-10-26
+
+### Behoben
+- Einordnen schlug bei langen, diktierten Einträgen mit „Antwort ohne JSON“ fehl. Claude antwortet jetzt über ein erzwungenes Werkzeug und liefert damit immer ein JSON-Objekt. Wird eine Antwort abgeschnitten, fragt Life einmal mit doppeltem Platz nach. Fürs Einordnen gibt es mehr Platz (1500 statt 900 Tokens).
+- Fehlermeldungen sagen jetzt, ob die Antwort abgeschnitten war oder Claude abgelehnt hat. Ins Server-Log kommen dabei nur Kennzahlen, nie Inhalte.
+
 ## [0.13.0] – 2026-10-25
 
 ### Hinzugefügt
