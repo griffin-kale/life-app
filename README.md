@@ -2,7 +2,7 @@
 
 Peters App für Gedanken, Aufgaben und Wissen. Festhalten per Text, Diktat oder Kurzbefehl. Claude ordnet jeden Eintrag ein, priorisiert die Aufgaben gegen den Engpass und hält bei Wissen die Kernidee und eine Frage fest.
 
-Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über Amazon Bedrock mit EU-Profil, aufgerufen in Frankfurt; die Verarbeitung bleibt in EU-Rechenzentren. Life gehört der Griffin & Kale GmbH. Regeln für die Arbeit am Projekt stehen in [CLAUDE.md](CLAUDE.md), alle Versionen in [CHANGELOG.md](CHANGELOG.md).
+Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt über die Anthropic-API und sieht nur Pseudonyme: Namen, Kontakte und IBANs gehen als Platzhalter raus, Gesundheitswerte nur zusammengefasst und ohne Datum. Life gehört der Griffin & Kale GmbH. Regeln für die Arbeit am Projekt stehen in [CLAUDE.md](CLAUDE.md), alle Versionen in [CHANGELOG.md](CHANGELOG.md).
 
 ## Was drin ist
 
@@ -22,7 +22,7 @@ Läuft komplett in Deutschland auf einem eigenen Hetzner-Server. Claude kommt ü
 
 | Teil | Technik |
 |---|---|
-| App | Next.js 15, TypeScript, keine externen Skripte oder Schriften (Instrument Serif liegt im Projekt) |
+| App | Next.js 15, TypeScript, keine externen Skripte oder Schriften (Fraunces liegt im Projekt) |
 | Datenbank | PostgreSQL 16 im selben Server |
 | HTTPS | Caddy, Zertifikat automatisch |
 | Claude | `@anthropic-ai/sdk`, Modelle `claude-haiku-5-5` und `claude-sonnet-5-5`, vorher pseudonymisiert (`lib/pseudonym.ts`) |
@@ -77,5 +77,5 @@ Bekannte Grenzen, bewusst in Kauf genommen:
 cp .env.example .env.local   # Werte eintragen, DATABASE_URL auf eine lokale Postgres zeigen lassen
 npm ci && npm run dev
 npm run typecheck && npm run test:unit
-npm run build && npm run test:e2e   # Postgres und Bedrock-Attrappe, siehe playwright.config.ts
+npm run build && npm run test:e2e   # Postgres und Claude-Attrappe, siehe playwright.config.ts
 ```

@@ -2,6 +2,26 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.24.0] – 2026-10-27
+
+Phase 0 von Life 2.0: Fundament (Peter, 27.10.2026). Für dich sieht Life gleich aus. Darunter ist es bereit für einen zweiten Menschen und für den Umbau von Heute und Woche.
+
+### Sicherheit
+- **Der Mensch kommt aus der Sitzung.** Keine Route und keine Bibliothek setzt mehr fest „peter“ ein. Einträge, Korrekturen, Sortierlauf, Suche und Export filtern nach dem Menschen der Sitzung. Fremde Einträge lassen sich auch per ID weder lesen noch ändern noch löschen.
+- **Kein stiller Rückfall auf Peters Haushalt.** Hat ein Mensch keinen Haushalt, bricht Geld mit einem Fehler ab, statt Peters Zahlen zu zeigen.
+- **Mitteilungen abbestellen** geht nur für die eigenen Abos.
+- **Namen zum Schützen** umfassen jetzt auch die Teamlisten aller Menschen und die Namen im Haushalt.
+
+### Technik
+- **Nummerierte Migrationen** in `lib/migrationen.ts` mit Tabelle `schema_version`, Sperre gegen zwei gleichzeitige Starts und einer Transaktion pro Schritt. Schritt 1: fehlende Indizes `korrekturen(item_id)` und `ruhe(user_id, tag)`. Schritt 2: Engpass, Ziele, Team, Mitteilungen und Sortierstand gelten pro Mensch, Peters Werte werden übernommen. Schritt 3: „schon gesendet“ für Mitteilungen pro Mensch, damit nach dem Update keine Mitteilung doppelt kommt.
+- **Zeitplan für jeden Menschen einzeln.** Scheitert der Lauf für einen, laufen die anderen weiter.
+- **Anmeldung:** Ein Passkey meldet den Menschen an, dem er gehört. Passwort und Code, Einrichtungscode und Kurzbefehl gehören dem ersten Menschen.
+- README und `.env.example` beschreiben die Anthropic-API statt Bedrock.
+
+### Tests
+- Neu: zwei Menschen sehen nur ihre eigenen Einträge, Einstellungen und ihr Geld (Ende-zu-Ende). Statisch: kein `'peter'` in Routen, keine Standard-Menschen in `lib`. Migrationen in der richtigen Reihenfolge. Version in `package.json`, CHANGELOG und UEBERGABE stimmt überein.
+- Der Trainingsschritt im großen Ablauf läuft jetzt an jedem Wochentag.
+
 ## [0.23.0] – 2026-10-26
 
 Coach mit Händen, Opus für entscheidende Momente, Ziehen zum Neuladen (Peter, 26.10.2026).

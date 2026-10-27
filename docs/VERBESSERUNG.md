@@ -163,6 +163,8 @@ Zeig Peter vor dem Bauen zwei bis drei Mockups für Heute, mit iPhone, iPad und 
 
 ## Phase 5 – Technik und Familie vorbereiten (Zweig `refactor/fundament`)
 
+**Stand 0.24.0 (Life 2.0, Phase 0):** Punkte 1 (ohne Settings-Suffix für Anmeldegeheimnisse), 5, 7 erledigt, Versionsprüfung als Unit-Test. Punkt 4 kommt mit dem neuen Heute (Life 2.0, Phase 1). Offen: 2, 3, 6, 8.
+
 1. **Nutzer statt `'peter'`.** 73 Stellen setzen den Nutzer fest ein, und 19 von 28 Abfragen auf `items` filtern nicht nach `user_id`.
    - `withUser(handler)` liest den Nutzer aus der Sitzung, jede Abfrage bekommt ihn.
    - Settings-Schlüssel bekommen das Nutzer-Suffix. `tick()` läuft für alle Nutzer.

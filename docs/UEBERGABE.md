@@ -2,7 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 26. Oktober 2026, Version 0.23.0.
+Stand: 27. Oktober 2026, Version 0.24.0.
+
+**Life 2.0 (ab 27.10.2026):** Konzept-Doc „Life 2.0 – Analyse und Konzept“ und klickbarer Prototyp „Life 2.0 Prototyp“ (Artefakte, Kurzfassung im Projekt unter `claude/LIFE-2-KONZEPT.md`). Peters Wahl: Heute als Cockpit (Richtung B) mit Tagesstreifen, vier Tabs Heute · Woche · Ziele · Ich mit Festhalten in der Mitte, Ernährung mit Protein zuerst und Gewichtstrend, Reihenfolge Fundament → Heute und Woche → Ziele und Rituale → Körper → Ruhe und Geist → Geld und Menschen → Familie. Phase 0 Fundament ist mit 0.24.0 gebaut.
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist mit 0.21.0 erledigt.
 
@@ -14,6 +16,7 @@ Life ist Peters persönliche App für die fünf Konten nach Sahil Bloom: Zeit, S
 
 | Bereich | Stand | Wo im Code |
 |---|---|---|
+| Fundament für mehrere Menschen: Mensch aus der Sitzung, Abfragen nach `user_id`, Einstellungen pro Mensch, nummerierte Migrationen | 0.24 | `lib/sitzung.ts` (`mitNutzer`, `ERSTER_NUTZER`), `lib/migrationen.ts`, `lib/db.ts` (`proNutzer`, `ensureSchema`), `lib/zeitplan.ts` (`lauf`) |
 | Ein Feld für alles: Leiste wächst zum Feld, Claude erkennt Fragen an den Coach | 0.22 | `app/coach.tsx` (`Eingabe`, `CoachFeld`), `lib/enrich.ts` (`anCoach`), `app/page.tsx` (`senden`) |
 | Datenschutz Phase 3: kein Datum an Claude, Kalendertitel mit Schutzliste, Bon zuschneiden, YouTube nur mit Video-ID, Zeit zentral | 0.21 | `lib/zeit.ts`, `lib/kalender-regeln.ts` (`schutzTitel`), `app/bon-zuschnitt.tsx`, `lib/youtube.ts` |
 | Schwebende Leiste mit Heute in der Mitte, Plus mit sechs Wegen auf Heute, Halten auf Körper und Geld | 0.20 | `app/tabbar.tsx` |
@@ -58,6 +61,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 9. Später: ui-ux-pro-max-Skill in den Einstellungen entfernen, alte SSH-Schlüssel auf dem Mac löschen, Schlüssel „Peters Mac“ bei Hetzner entfernen.
 
 ## Entscheidungen und Gründe
+
+- **Fundament 0.24 (Peter, 27.10.2026):** Erst das Fundament, dann der Umbau von Heute und Woche (Peters Wahl). Umgesetzt aus Phase 5: Mensch aus der Sitzung statt 73 festen Stellen, Abfragen auf `items` nach `user_id`, Zeitplan für alle Menschen, nummerierte Migrationen, fehlende Indizes, ein Test mit zwei Menschen, Dokumente angeglichen, Versionsprüfung als Unit-Test. Bewusst verschoben: „Heute in einem Abruf“ und das Designsystem 2.0 kommen mit dem Umbau von Heute (Phase 1), weil Heute dort ohnehin neu entsteht. Row Level Security folgt vor dem zweiten Menschen (Phase 6). Haushalt-weit bleiben die Namen zum Schützen: Was ein Mensch als Namen kennt, wird auch bei den anderen pseudonymisiert. Passwort, Code, Einrichtungscode und Kurzbefehl gehören dem ersten Menschen, bis weitere Menschen eigene Passkeys und Schlüssel haben. Alte Einstellungen ohne Suffix bleiben eine Version stehen und können danach weg.
 
 - **Coach mit Händen und Opus 0.23 (Peter, 26.10.2026):** Peter hat dem Coach mehrfach eine neue Zielsumme genannt, der Coach hat „aktualisiert“ gesagt, gespeichert war nichts: Der Coach konnte nichts ändern und hat das trotzdem behauptet. Jetzt darf er genau drei Werte setzen (Zielsumme eines Sparziels, Rücklage, Sparrate), über das Feld `aktion` in seiner JSON-Antwort. Life prüft gegen feste Listen (`lib/coach-aktion.ts`), führt selbst aus und schreibt die Bestätigung selbst („✓ Gespeichert …“ oder „Nicht geändert …“). Beträge von Rücklage und Sparrate gehen weiter nicht an Claude, nur die Namen der Sparziele. Weitere Aktionen kommen nur mit derselben Prüfung dazu. Die Zielsumme lässt sich auch direkt unter Geld → Sparziele ändern („Ziel ändern“), vorher ging nur Anlegen und Entfernen.
 - **Stärkstes Modell in entscheidenden Momenten (Peter, 26.10.2026):** `MODEL_DEEP` (Standard `claude-opus-5-5`, per `CLAUDE_MODEL_DEEP` in der .env änderbar) für den Morgen-Coach, die Standortbestimmung und Gespräche mit Entscheidungen, Planung, Überlastung oder langen Nachrichten (`entscheidend()`). Alles andere bleibt bei Sonnet, Einordnen bei Haiku. Ist Opus nicht erreichbar, antwortet Sonnet (`askJsonTief`). Kosten: Opus kostet pro Aufruf ein Mehrfaches, bei ein paar Gesprächen am Tag bleibt das im Rahmen.
@@ -138,6 +143,7 @@ Peters Wahl: Personen aus Einträgen erkennen, letzter Kontakt mit Erinnerung, F
 - Aufspielen vom Mac: `bash deploy/deploy.sh life-server vX.Y.Z` (2× Touch ID) oder im Notfall `--build` (3× Touch ID). Die Arbeit macht `deploy/aufspielen.sh` auf dem Server: Sicherung vorher, Update, Warten auf `/api/health`. Zurück nach `--build`: auf dem Server `docker tag life-app:prev life-app:local && docker compose up -d app`.
 - Geheimnisse trägt nur Peter auf dem Server ein. Claude liest die `.env` nicht.
 - Arbeitet Claude aus einer Cloud-Sitzung, kommt der Code per `git bundle` auf den Mac und von dort zu GitHub, weil die Cloud nicht auf das Repo schreiben darf. Die e2e-Tests laufen in der Cloud mit eigenem Postgres auf Port 5433, auf dem Mac gibt es kein Postgres.
+- Die e2e-Tests brauchen eine frische Datenbank wie in CI. Ein zweiter Lauf auf derselben Datenbank scheitert schon seit 0.23 im großen Ablauf (der Sortierlauf führt Doppeltes zu früh zusammen). Vor jedem Lauf die Testdatenbank neu anlegen. In der Cloud passt die Playwright-Version nicht zum vorinstallierten Browser, dort läuft e2e mit einer lokalen Konfiguration, die nur `executablePath` setzt (nicht im Repo).
 
 ## Sicherung und Wiederherstellung
 
