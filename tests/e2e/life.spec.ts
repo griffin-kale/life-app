@@ -31,13 +31,13 @@ const EINTRAEGE = [
 ];
 
 /** Meldet einen Browser-Kontext an, wie es ein zweites Gerät nach Face ID wäre. Nur mit dem Testgeheimnis. */
-async function anmelden(context: BrowserContext) {
+async function anmelden(context: BrowserContext, userId = 'peter') {
   process.env.SESSION_SECRET = TEST_ENV.SESSION_SECRET;
   const sid = randomBytes(24).toString('base64url');
   const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
-  await sql`insert into sitzungen (id, user_id) values (${sid}, 'peter')`;
+  await sql`insert into sitzungen (id, user_id) values (${sid}, ${userId})`;
   await sql.end();
-  const { value } = await signSession({ sid, userId: 'peter' });
+  const { value } = await signSession({ sid, userId });
   await context.addCookies([{ name: 'life_session', value, url: TEST_ENV.PUBLIC_ORIGIN }]);
 }
 
@@ -307,8 +307,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Training: Satz abhaken, Pause, Feedback, Satzzahl steigt', async () => {
-    await page.getByRole('link', { name: 'Krafteinheit starten' }).click();
-    await page.waitForURL('/koerper/training');
+    // Der Knopf auf Körper steht nur an Trainingstagen. Der Test läuft an jedem Wochentag, deshalb direkt zur Einheit.
+    await page.goto('/koerper/training');
     const beine = page.locator('section[aria-label="Goblet-Kniebeuge"]');
     await beine.getByRole('button', { name: 'Satz 1' }).click();
     await expect(page.locator('.pausebar')).toContainText('1:30');
@@ -900,4 +900,43 @@ test('ENCRYPTION_KEY: Umschlüsseln hebt gespeicherte Geheimnisse einmal auf v2'
     expect(aufschliessen(nachher, 'totp')).toBe(klar);
     expect(await umschluesseln()).toBe(0); // zweiter Start: nichts mehr zu tun
   } finally { delete process.env.ENCRYPTION_KEY; await sql.end(); }
+});
+
+test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und sein Geld', async ({ browser }) => {
+  const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
+  await sql`insert into haushalte (id, name) values ('zweiter', 'Zweiter Haushalt') on conflict do nothing`;
+  await sql`insert into nutzer (id, haushalt_id, name) values ('zweite', 'zweiter', 'Zweite') on conflict do nothing`;
+  await sql.end();
+  const peter = await browser.newContext(); await anmelden(peter);
+  const zweite = await browser.newContext(); await anmelden(zweite, 'zweite');
+  const P = peter.request, Z = zweite.request;
+
+  // Die Zweite hält etwas fest
+  const neu = await Z.post('/api/items', { headers: H, data: { text: 'Erfundener Eintrag nur für die Zweite' } });
+  expect(neu.status()).toBe(200);
+  const { id } = await neu.json();
+
+  // Peter sieht ihn nicht, auch nicht per ID, und kann ihn weder ändern noch löschen
+  const peterListe = await (await P.get('/api/items?limit=200')).json();
+  expect(peterListe.some((i: { id: string }) => i.id === id)).toBe(false);
+  expect((await P.get(`/api/items/${id}`)).status()).toBe(404);
+  expect((await P.patch(`/api/items/${id}`, { headers: H, data: { text: 'übernommen' } })).status()).toBe(404);
+  await P.delete(`/api/items/${id}`, { headers: H });
+  expect((await Z.get(`/api/items/${id}`)).status()).toBe(200);
+
+  // Die Zweite sieht nur ihren Eintrag, nichts von Peter
+  const zListe = await (await Z.get('/api/items?limit=200')).json();
+  expect(zListe.map((i: { id: string }) => i.id)).toEqual([id]);
+  expect(await (await Z.get('/api/export')).text()).not.toContain(EINTRAEGE[0]);
+
+  // Engpass gilt pro Mensch
+  expect((await Z.put('/api/settings', { headers: H, data: { kontext: 'Engpass: Zweitengpass ohne Bezug' } })).status()).toBe(200);
+  expect((await (await P.get('/api/settings')).json()).kontext).not.toContain('Zweitengpass');
+  expect((await (await Z.get('/api/settings')).json()).kontext).toContain('Zweitengpass');
+
+  // Geld hängt am eigenen Haushalt
+  expect((await (await Z.get('/api/geld')).json()).haushalt).toBe('zweiter');
+  expect((await (await P.get('/api/geld')).json()).haushalt).toBe('gneuss');
+
+  await peter.close(); await zweite.close();
 });
