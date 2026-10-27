@@ -1255,3 +1255,8 @@ body:has(.coach-leiste) .tb-schnell { bottom: calc(150px + env(safe-area-inset-b
 .rh-zeile .lbl small { color: var(--muted); font-size: .8125rem; }
 .cell.ck-konto .lbl, .cell.ck-konto .lbl small, .cell.rh-zeile .lbl, .cell.rh-zeile .lbl small, .cell.wk-zeile .lbl small { white-space: normal; overflow: visible; text-overflow: clip; }
 .cell.wk-tageskopf .lbl { flex: none; }
+
+/* Mehr zur Woche und Tageskopf: die Bezeichnung bleibt ganz, der Wert darf kürzen */
+section[aria-label="Mehr zur Woche"] .cell .lbl, .wk-tageskopf .lbl { flex: none; }
+section[aria-label="Mehr zur Woche"] .cell .val { min-width: 0; }
+section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -617,7 +617,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await erledigt.getByRole('radio', { name: 'gab Kraft' }).first().click();
     await expect(erledigt.getByRole('radio', { name: 'gab Kraft' }).first()).toHaveAttribute('aria-checked', 'true');
     await page.goto('/woche');
-    await expect(page.locator('section[aria-label="Mehr zur Woche"]')).toContainText('1 gaben Kraft, 0 kosteten Kraft');
+    await expect(page.locator('section[aria-label="Mehr zur Woche"]')).toContainText('+1 / −0');
     await page.goto('/woche/energie');
     await expect(page.locator('section[aria-label="Energie-Bilanz"]')).toContainText('Gab dir Kraft');
     await page.goto('/woche/zeit-kaufen');

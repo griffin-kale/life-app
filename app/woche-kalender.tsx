@@ -64,7 +64,7 @@ export function WochenKalender({ w, breit }: { w: Woche; breit: boolean }) {
         ))}
       </div>
       <div className="group" role="tabpanel" aria-label={TAGNAME[t.wt]}>
-        <div className="cell static wk-tageskopf"><span className="lbl"><b>{TAGNAME[t.wt]}, {t.nr}.</b></span><span className="val"><span>{dauer(t.frei)} frei zwischen 8 und 19 Uhr</span></span></div>
+        <div className="cell static wk-tageskopf"><span className="lbl"><b>{TAGNAME[t.wt]}, {t.nr}.</b></span><span className="val"><span>{dauer(t.frei)} frei</span></span></div>
         {t.ganztag.length ? <div className="cell static"><span className="lbl muted">Ganztägig: {t.ganztag.join(', ')}</span></div> : null}
         {t.bloecke.length ? t.bloecke.map((b, i) => (
           <div key={i} className="cell static wk-zeile" style={{ '--c': FARBE[b.art] ?? 'var(--sky)' } as React.CSSProperties}>

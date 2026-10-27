@@ -185,8 +185,8 @@ export function WocheSeite({ teil }: { teil?: string }) {
         <section className="gsec" aria-label="Mehr zur Woche">
           <div className="group">
             <Link className="cell" href="/woche/parkplatz"><span className="lbl">Parkplatz</span><span className="val"><span>{nach('geparkt').length ? `${nach('geparkt').length} geparkt` : 'Ablenkungen parken'}</span>{Icon.chevronRight}</span></Link>
-            <Link className="cell" href="/woche/zeit-kaufen"><span className="lbl">Zeit kaufen</span><span className="val"><span>{zk ? `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` : 'Was du abgeben könntest'}</span>{Icon.chevronRight}</span></Link>
-            <Link className="cell" href="/woche/energie"><span className="lbl">Energie-Bilanz</span><span className="val"><span>{st.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? `${st.kraft.gab.length} gaben Kraft, ${st.kraft.kostete.length} kosteten Kraft` : 'Was Kraft gab und kostete'}</span>{Icon.chevronRight}</span></Link>
+            <Link className="cell" href="/woche/zeit-kaufen"><span className="lbl">Zeit kaufen</span><span className="val"><span>{zk ? `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` : 'Abgeben'}</span>{Icon.chevronRight}</span></Link>
+            <Link className="cell" href="/woche/energie"><span className="lbl">Energie-Bilanz</span><span className="val"><span>{st.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? `+${st.kraft.gab.length} / −${st.kraft.kostete.length}` : 'Noch leer'}</span>{Icon.chevronRight}</span></Link>
           </div>
         </section>
       ) : null}
