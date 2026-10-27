@@ -4,8 +4,8 @@ import { claudeBereit } from '@/lib/claude';
 import { mitNutzer } from '@/lib/sitzung';
 
 const KEYS = ['kontext', 'ziele', 'team', 'namen', 'namen_auto'] as const;
-/** Namen zum Schützen gelten für den ganzen Haushalt, damit sie bei allen pseudonymisiert werden. Der Rest gilt pro Mensch. */
-const HAUSHALT = new Set<string>(['namen', 'namen_auto']);
+/** Die Namensliste von Hand gilt für den ganzen Haushalt. Gelernte Namen und der Rest gelten pro Mensch, geschützt wird bei allen. */
+const HAUSHALT = new Set<string>(['namen']);
 const schluessel = (k: string, uid: string) => (HAUSHALT.has(k) ? k : proNutzer(k, uid));
 
 export async function GET() {

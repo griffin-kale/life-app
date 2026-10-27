@@ -10,6 +10,8 @@ export type Migration = { nr: number; name: string; run: (tx: TransactionSql) =>
 
 /** Einstellungen, die ab 0.24 pro Mensch gelten. Der alte Schlüssel ohne Suffix bleibt eine Version stehen. */
 export const PRO_NUTZER = ['kontext', 'ziele', 'team', 'push', 'kompass_stunde', 'sort_am', 'sort_tag'] as const;
+/** Ab Schritt 4 pro Mensch: von Claude gelernte Namen. */
+export const PRO_NUTZER_2 = ['namen_auto'] as const;
 
 export const MIGRATIONEN: Migration[] = [
   {
@@ -32,6 +34,13 @@ export const MIGRATIONEN: Migration[] = [
       insert into settings (key, value)
       select 'gesendet:peter:' || substr(key, length('gesendet:') + 1), value from settings
       where key like 'gesendet:%' and key not like 'gesendet:peter:%'
+      on conflict (key) do nothing`,
+  },
+  {
+    nr: 4, name: 'Gelernte Namen pro Mensch',
+    run: (tx) => tx`
+      insert into settings (key, value)
+      select key || ':peter', value from settings where key in ${tx(PRO_NUTZER_2 as unknown as string[])}
       on conflict (key) do nothing`,
   },
 ];

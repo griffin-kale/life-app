@@ -10,7 +10,11 @@ Phase 0 von Life 2.0: Fundament (Peter, 27.10.2026). Für dich sieht Life gleich
 - **Der Mensch kommt aus der Sitzung.** Keine Route und keine Bibliothek setzt mehr fest „peter“ ein. Einträge, Korrekturen, Sortierlauf, Suche und Export filtern nach dem Menschen der Sitzung. Fremde Einträge lassen sich auch per ID weder lesen noch ändern noch löschen.
 - **Kein stiller Rückfall auf Peters Haushalt.** Hat ein Mensch keinen Haushalt, bricht Geld mit einem Fehler ab, statt Peters Zahlen zu zeigen.
 - **Mitteilungen abbestellen** geht nur für die eigenen Abos.
-- **Namen zum Schützen** umfassen jetzt auch die Teamlisten aller Menschen und die Namen im Haushalt.
+- **Namen zum Schützen** umfassen jetzt auch die Teamlisten aller Menschen und die Namen im Haushalt. Von Claude gelernte Namen gehören dem Menschen, aus dessen Eintrag sie kommen (Schritt 4), geschützt werden sie bei allen.
+- **Passwort und Code gehören dem ersten Menschen.** Ein anderer Mensch kann sie weder einrichten noch abschalten und sich so nie als Peter anmelden.
+- **Der iCloud-Zugang aus der .env gilt nur für den ersten Menschen.** Ohne diese Grenze hätte der Zeitplan Peters Termine auch bei weiteren Menschen eingetragen.
+- **Neu einordnen** geht nur für eigene Einträge. Ein Abo für Mitteilungen wechselt nicht still den Menschen.
+- **Zeitplan:** Scheitert der Lauf für einen Menschen, meldet `/api/health` den Verzug, statt den Fehler zu verstecken.
 
 ### Technik
 - **Nummerierte Migrationen** in `lib/migrationen.ts` mit Tabelle `schema_version`, Sperre gegen zwei gleichzeitige Starts und einer Transaktion pro Schritt. Schritt 1: fehlende Indizes `korrekturen(item_id)` und `ruhe(user_id, tag)`. Schritt 2: Engpass, Ziele, Team, Mitteilungen und Sortierstand gelten pro Mensch, Peters Werte werden übernommen. Schritt 3: „schon gesendet“ für Mitteilungen pro Mensch, damit nach dem Update keine Mitteilung doppelt kommt.

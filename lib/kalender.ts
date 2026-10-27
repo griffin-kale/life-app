@@ -1,5 +1,8 @@
-import { ensureSchema, getSetting, setSetting, sql } from './db';
-import { ereignisse, kalenderBereit, kalenderFinden, KalenderFehler } from './caldav';
+import { ensureSchema, ERSTER_NUTZER, getSetting, setSetting, sql } from './db';
+import { ereignisse, kalenderBereit as zugangDa, kalenderFinden, KalenderFehler } from './caldav';
+
+/** Der iCloud-Zugang in der .env gehört dem ersten Menschen. Andere bekommen später einen eigenen, verschlüsselten. */
+const kalenderBereit = (userId: string) => userId === ERSTER_NUTZER && zugangDa();
 import { artRaten, kalenderZeilen, tagesplan, type KalenderArt, type Termin } from './kalender-regeln';
 import { geschuetzteNamen } from './claude';
 import { heuteBerlin, jetztBerlin, minutenBerlin, plusTage, tagesbeginn } from './zeit';
@@ -15,7 +18,7 @@ export async function kalenderListe(userId: string): Promise<KalenderZeile[]> {
 
 /** Holt die Kalender und die Termine von gestern bis in acht Tagen. Ersetzt die gespeicherten Termine in diesem Fenster. */
 export async function abgleichen(userId: string): Promise<{ kalender: number; termine: number }> {
-  if (!kalenderBereit()) throw new KalenderFehler('Kalender: noch nicht eingerichtet');
+  if (!kalenderBereit(userId)) throw new KalenderFehler('Kalender: noch nicht eingerichtet');
   await ensureSchema();
   const gefunden = await kalenderFinden();
   for (const k of gefunden) {
@@ -63,7 +66,7 @@ const jetztMin = () => minutenBerlin();
 export type KalenderStand = { bereit: boolean; zuletzt: string | null; kalender: KalenderZeile[]; heute: ReturnType<typeof tagesplan> | null };
 
 export async function kalenderStand(userId: string, ziel?: { titel: string; dauer: number }): Promise<KalenderStand> {
-  const bereit = kalenderBereit();
+  const bereit = kalenderBereit(userId);
   const [liste, zuletzt] = await Promise.all([kalenderListe(userId), getSetting(`kalender_abgleich:${userId}`)]);
   if (!bereit || !liste.length) return { bereit, zuletzt: zuletzt || null, kalender: liste, heute: null };
   const t = await termine(userId);
@@ -72,7 +75,7 @@ export async function kalenderStand(userId: string, ziel?: { titel: string; daue
 
 /** Zeilen für den Coach. Leer, solange kein Kalender verbunden ist. */
 export async function kalenderKurz(userId: string): Promise<string[]> {
-  if (!kalenderBereit() || !(await kalenderListe(userId)).some((k) => k.an)) return [];
+  if (!kalenderBereit(userId) || !(await kalenderListe(userId)).some((k) => k.an)) return [];
   // Phase 3: Titel mit Gesundheitswörtern und unbekannten Namen nach „mit“ oder „bei“ gehen nicht an Claude
   const bekannte = (await geschuetzteNamen()).map((n) => n.name);
   return kalenderZeilen(await termine(userId), heuteBerlin(), jetztMin(), bekannte);
@@ -80,7 +83,7 @@ export async function kalenderKurz(userId: string): Promise<string[]> {
 
 /** Alle 30 Minuten zwischen 6 und 22 Uhr. Fehler landen nur als kurze Meldung im Log, ohne Inhalte. */
 export async function vielleichtAbgleichen(userId: string) {
-  if (!kalenderBereit()) return;
+  if (!kalenderBereit(userId)) return;
   const zuletzt = Date.parse((await getSetting(`kalender_abgleich:${userId}`)) || '0');
   const h = jetztBerlin().stunde;
   if (h < 6 || h >= 22 || Date.now() - zuletzt < 30 * 60_000) return;

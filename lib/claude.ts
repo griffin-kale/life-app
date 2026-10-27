@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ensureSchema, getSetting, setSetting, sql } from './db';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import { maskieren, namenAus, zurueck, type Name } from './pseudonym';
 import { Hinweis, zwangAbgelehnt } from './fehler';
 
@@ -24,17 +24,20 @@ export async function geschuetzteNamen(): Promise<Name[]> {
   // Fällt die Datenbank aus, bricht der Claude-Aufruf ab. Ohne Namensliste gingen Namen im Klartext raus.
   await ensureSchema();
   // Teamlisten gelten pro Mensch, geschützt werden die Namen aus allen Listen im Haushalt
-  const [namen, teams, auto, leute, haushalt] = await Promise.all([getSetting('namen'),
-    sql<{ value: string }[]>`select value from settings where key = 'team' or key like 'team:%'`, getSetting('namen_auto'),
+  const [namen, teams, autos, leute, haushalt] = await Promise.all([getSetting('namen'),
+    sql<{ value: string }[]>`select value from settings where key = 'team' or key like 'team:%'`,
+    sql<{ value: string }[]>`select value from settings where key = 'namen_auto' or key like 'namen_auto:%'`,
     sql<{ name: string }[]>`select name from personen`, sql<{ name: string }[]>`select name from nutzer`]);
   const team = teams.map((t) => t.value).join('\n');
+  const auto = autos.map((t) => t.value).join('\n');
   // Peter selbst gehört dazu: Claude soll nie erfahren, um wen es geht.
   const besitzer: Name[] = [{ name: 'Peter Gneuß', art: 'Person' }, { name: 'Gneuß', art: 'Person' }, { name: 'Peter', art: 'Person' }];
   return [...besitzer, ...haushalt.map((n) => ({ name: n.name, art: 'Person' as const })), ...namenAus(namen), ...namenAus(team), ...namenAus(auto), ...leute.map((l) => ({ name: l.name, art: 'Person' as const }))];
 }
 
 /** Merkt sich Namen, die Claude in einem Eintrag gefunden hat. Ab dem nächsten Aufruf sind sie Platzhalter. */
-export async function namenLernen(neu: unknown): Promise<void> {
+/** Gelernte Namen gehören dem Menschen, aus dessen Eintrag sie kommen. Geschützt werden sie trotzdem bei allen. */
+export async function namenLernen(neu: unknown, userId: string): Promise<void> {
   if (!Array.isArray(neu)) return;
   const bekannt = new Set((await geschuetzteNamen()).map((n) => n.name.toLowerCase()));
   const zeilen: string[] = [];
@@ -47,8 +50,8 @@ export async function namenLernen(neu: unknown): Promise<void> {
     zeilen.push(`${art === 'firma' ? 'Firma' : art === 'ort' ? 'Ort' : 'Person'}: ${name}`);
   }
   if (!zeilen.length) return;
-  const alt = await getSetting('namen_auto');
-  await setSetting('namen_auto', [alt, ...zeilen].filter(Boolean).join('\n').slice(-8000));
+  const alt = await getSetting(proNutzer('namen_auto', userId));
+  await setSetting(proNutzer('namen_auto', userId), [alt, ...zeilen].filter(Boolean).join('\n').slice(-8000));
 }
 
 type Inhalt = string | Anthropic.Messages.ContentBlockParam[];

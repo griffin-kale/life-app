@@ -23,7 +23,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { id } = await params; if (!UUID.test(id)) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   const b = await req.json().catch(() => ({}));
   await ensureSchema();
-  if (b.neuSortieren) { await sql`update items set status = 'neu', fehler = null where id = ${id} and user_id = ${uid}`; after(() => enrich(id)); return NextResponse.json({ ok: true }); }
+  if (b.neuSortieren) {
+    const r = await sql`update items set status = 'neu', fehler = null where id = ${id} and user_id = ${uid} returning id`;
+    if (!r.length) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
+    after(() => enrich(id));
+    return NextResponse.json({ ok: true });
+  }
   const [vorher] = await sql<Item[]>`select * from items where id = ${id} and user_id = ${uid}`;
   if (!vorher) return NextResponse.json({ error: 'nicht gefunden' }, { status: 404 });
   const tag = heuteBerlin();

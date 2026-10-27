@@ -24,7 +24,7 @@ export { endpointOk } from './push-regeln';
 export async function abonnieren(a: Abo, userId: string) {
   await ensureSchema();
   await sql`insert into push_abos (user_id, endpoint, p256dh, auth) values (${userId}, ${a.endpoint}, ${a.keys.p256dh}, ${a.keys.auth})
-    on conflict (endpoint) do update set p256dh = excluded.p256dh, auth = excluded.auth, user_id = excluded.user_id`;
+    on conflict (endpoint) do update set p256dh = excluded.p256dh, auth = excluded.auth where push_abos.user_id = excluded.user_id`;
 }
 /** Abo entfernen. Mit `userId` nur das eigene, ohne nur intern, wenn der Push-Dienst das Abo als erloschen meldet. */
 export async function abbestellen(endpoint: string, userId?: string) {

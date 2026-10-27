@@ -130,10 +130,13 @@ export async function tick(userId: string) {
 /** Ein Lauf des Zeitplans: nie überlappend, danach steht der Zeitpunkt für `/api/health` fest. */
 export async function lauf(): Promise<void> {
   const fertig = await exklusiv(async () => {
-    // Jeder Mensch einzeln. Scheitert einer, laufen die anderen weiter.
+    // Jeder Mensch einzeln. Scheitert einer, laufen die anderen weiter, aber der Lauf gilt nicht als gelungen:
+    // `/api/health` meldet den Verzug, statt einen dauerhaft kaputten Lauf zu verstecken.
+    let fehler = 0;
     for (const { id } of await sql<{ id: string }[]>`select id from nutzer order by id`) {
-      await tick(id).catch((e) => console.error('zeitplan: Lauf für einen Menschen fehlgeschlagen', (e as Error).name));
+      await tick(id).catch((e) => { fehler++; console.error('zeitplan: Lauf für einen Menschen fehlgeschlagen', (e as Error).name); });
     }
+    if (fehler) throw new Error('zeitplan: nicht für alle Menschen gelaufen');
     await setSetting(LETZTER_LAUF, new Date().toISOString());
   });
   if (!fertig) console.warn('zeitplan: voriger Lauf noch nicht fertig, dieser fällt aus');

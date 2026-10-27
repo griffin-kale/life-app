@@ -381,6 +381,12 @@ async function grundschema(): Promise<void> {
   }
 }
 
+/**
+ * Der erste Mensch im Haushalt. Passwort und Code (Ausweichlösung), Einrichtungscode, Kurzbefehl und der
+ * iCloud-Zugang aus der .env gehören ihm, bis weitere Menschen eigene haben. Sonst kommt der Mensch aus der Sitzung.
+ */
+export const ERSTER_NUTZER = 'peter';
+
 /** Schlüssel einer Einstellung, die pro Mensch gilt: `kontext:peter`. */
 export const proNutzer = (key: string, uid: string) => `${key}:${uid}`;
 

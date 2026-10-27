@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { begrenzt } from '@/lib/ratelimit';
 import { abschliessen } from '@/lib/zweifaktor';
-import { darfEinrichten, einrichtenVerboten, ERSTER_NUTZER, sitzungSetzen } from '@/lib/sitzung';
+import { darfEinrichten, einrichtenVerboten, ERSTER_NUTZER, sitzungSetzen, nichtErsterNutzer } from '@/lib/sitzung';
 
 export async function POST(req: NextRequest) {
   const zuViel = begrenzt(req, 'einrichten'); if (zuViel) return zuViel;
   const { token, code } = await req.json().catch(() => ({}));
+  const fremd = await nichtErsterNutzer(); if (fremd) return fremd;
   const darf = await darfEinrichten(token); if (darf !== 'ok') return einrichtenVerboten(darf);
   const r = await abschliessen(String(code ?? ''));
   if (r === 'abgelaufen') return NextResponse.json({ error: 'Zeit abgelaufen. Bitte nochmal von vorn.' }, { status: 400 });

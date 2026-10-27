@@ -35,6 +35,11 @@ test('kein fester Mensch: Routen nehmen den Menschen aus der Sitzung, Bibliothek
   }
 });
 
+test('Passwort und Code richtet nur der erste Mensch ein oder ab', () => {
+  for (const p of ['code/start', 'code/fertig']) assert.match(readFileSync(`app/api/auth/${p}/route.ts`, 'utf8'), /await nichtErsterNutzer\(\); if \(fremd\) return fremd;/, p);
+  assert.match(readFileSync('app/api/auth/code/route.ts', 'utf8'), /uid !== ERSTER_NUTZER/);
+});
+
 test('Einrichten prüft die Sitzung oder den Code nur vor der Einrichtung', () => {
   for (const p of ['register-options', 'register', 'code/start', 'code/fertig']) {
     const s = readFileSync(`app/api/auth/${p}/route.ts`, 'utf8');

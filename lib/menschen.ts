@@ -1,4 +1,4 @@
-import { getSetting, ensureSchema, sql } from './db';
+import { getSetting, ensureSchema, proNutzer, sql } from './db';
 import { namenAus } from './pseudonym';
 import { heuteBerlin } from './priorisieren';
 import { bisGeburtstag, faellig, freundschaftsStufe, KREISE, TAKT, type Kreis } from './menschen-regeln';
@@ -19,7 +19,7 @@ export async function menschenStand(userId: string) {
       select person_id::text, max(tag)::text as tag, coalesce(sum(minuten), 0)::int as minuten,
         coalesce(sum(minuten) filter (where tag >= date_trunc('week', ${heute}::date)), 0)::int as woche_min, count(*)::int as anzahl
       from kontakte where user_id = ${userId} group by person_id`,
-    getSetting('namen_auto'),
+    getSetting(proNutzer('namen_auto', userId)),
   ]);
   const liste = personen.map((p) => {
     const k = letzte.find((x) => x.person_id === p.id);

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { ensureSchema, getSetting, sql } from './db';
+import { ensureSchema, ERSTER_NUTZER, getSetting, sql } from './db';
 import { cookieOptions, readSession, sameSecret, sessionCookie, signSession, type Sitzung } from './session';
 
 /**
@@ -10,11 +10,16 @@ import { cookieOptions, readSession, sameSecret, sessionCookie, signSession, typ
  * Abmelden widerruft genau diese Sitzung, „Auf allen Geräten abmelden“ alle.
  */
 
+export { ERSTER_NUTZER };
+
 /**
- * Der erste Mensch im Haushalt. Passwort und Code (Ausweichlösung) und der Einrichtungscode gehören zu ihm,
- * bis weitere Menschen eigene Passkeys haben. Sonst kommt der Mensch immer aus der Sitzung.
+ * Passwort und Code gehören nur dem ersten Menschen. Andere Menschen dürfen sie weder einrichten noch abschalten,
+ * sonst könnten sie sich als der erste Mensch anmelden.
  */
-export const ERSTER_NUTZER = 'peter';
+export async function nichtErsterNutzer(): Promise<NextResponse | null> {
+  const s = await aktuelleSitzung();
+  return s && s.userId !== ERSTER_NUTZER ? NextResponse.json({ error: 'Passwort und Code richtet nur der erste Mensch im Haushalt ein.' }, { status: 403 }) : null;
+}
 
 /** Für wen ein neuer Passkey gilt: angemeldet für den Menschen der Sitzung, beim Einrichten für den ersten. */
 export async function einrichtenFuer(): Promise<string> {

@@ -938,5 +938,19 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
   expect((await (await Z.get('/api/geld')).json()).haushalt).toBe('zweiter');
   expect((await (await P.get('/api/geld')).json()).haushalt).toBe('gneuss');
 
+  // Passwort und Code gehören dem ersten Menschen: die Zweite kann sie weder einrichten noch abschalten
+  // (Die Begrenzung fürs Einrichten ist nach dem Test oben schon ausgeschöpft, dann antwortet sie zuerst mit 429.)
+  expect([403, 429]).toContain((await Z.post('/api/auth/code/start', { headers: H, data: { password: 'x'.repeat(24) } })).status());
+  expect([403, 429]).toContain((await Z.post('/api/auth/code/fertig', { headers: H, data: { code: '000000' } })).status());
+  expect((await Z.delete('/api/auth/code', { headers: H })).status()).toBe(403);
+
+  // Der iCloud-Zugang aus der .env gilt nur für den ersten Menschen
+  expect((await (await Z.get('/api/kalender')).json()).bereit).toBe(false);
+  expect((await Z.post('/api/kalender', { headers: H })).status()).toBe(502);
+
+  // Neu einordnen geht nur für eigene Einträge
+  const peterEintrag = peterListe[0]?.id;
+  if (peterEintrag) expect((await Z.patch(`/api/items/${peterEintrag}`, { headers: H, data: { neuSortieren: true } })).status()).toBe(404);
+
   await peter.close(); await zweite.close();
 });
