@@ -1,5 +1,5 @@
 import { coachErstellen } from './coach';
-import { ensureSchema, getSetting, setSetting, sql } from './db';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import { koerperStand } from './koerper';
 import { heuteBerlin, offene } from './priorisieren';
 import { senden } from './push';
@@ -19,8 +19,8 @@ import { vielleichtAbgleichen } from './kalender';
 export type PushEinstellungen = { morgen: boolean; abend: boolean; warnung: boolean; training: boolean; verpasst: boolean; nachmittag: boolean; wochenstart: boolean; morgenZeit: string; abendZeit: string };
 export const PUSH_STANDARD: PushEinstellungen = { morgen: true, abend: true, warnung: true, training: true, verpasst: true, nachmittag: true, wochenstart: true, morgenZeit: '07:00', abendZeit: '20:30' };
 
-export async function pushEinstellungen(): Promise<PushEinstellungen> {
-  try { return { ...PUSH_STANDARD, ...JSON.parse((await getSetting('push')) || '{}') }; } catch { return PUSH_STANDARD; }
+export async function pushEinstellungen(userId: string): Promise<PushEinstellungen> {
+  try { return { ...PUSH_STANDARD, ...JSON.parse((await getSetting(proNutzer('push', userId))) || '{}') }; } catch { return PUSH_STANDARD; }
 }
 
 const jetztBerlin = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
@@ -48,7 +48,8 @@ const gesendet: EinmalSpeicher = {
   },
 };
 
-const einmal = (schluessel: string, tag: string, f: () => Promise<boolean>) => einmalMit(gesendet, schluessel, tag, f);
+/** „Schon gesendet“ gilt pro Mensch: `gesendet:peter:morgen`. */
+const einmalFuer = (userId: string) => (schluessel: string, tag: string, f: () => Promise<boolean>) => einmalMit(gesendet, `${userId}:${schluessel}`, tag, f);
 
 /** Hält die Sitzungs-Sperre auf einer eigenen Verbindung, solange `f` läuft. */
 async function mitSperre(f: () => Promise<void>): Promise<boolean> {
@@ -65,8 +66,9 @@ async function mitSperre(f: () => Promise<void>): Promise<boolean> {
 }
 const exklusiv = ohneUeberlappung(mitSperre);
 
-export async function tick(userId = 'peter') {
+export async function tick(userId: string) {
   await ensureSchema();
+  const einmal = einmalFuer(userId);
   const tag = heuteBerlin(); const uhr = jetztBerlin();
   // WHOOP alle zwei Stunden, morgens ab 6 Uhr stündlich
   if (whoopBereit() && await verbunden(userId)) {
@@ -75,7 +77,7 @@ export async function tick(userId = 'peter') {
     if (Date.now() - zuletzt > abstand) await abgleichen(userId, 3).catch(() => {});
   }
   await vielleichtAbgleichen(userId);
-  const p = await pushEinstellungen();
+  const p = await pushEinstellungen(userId);
   const [ci] = await sql<{ morgen: boolean; abend: boolean }[]>`
     select bool_or(art = 'morgen') as morgen, bool_or(art = 'abend') as abend from checkins where user_id = ${userId} and tag = ${tag}`;
   if (p.morgen && faellig(uhr, p.morgenZeit)) await einmal('morgen', tag, async () => {
@@ -90,14 +92,14 @@ export async function tick(userId = 'peter') {
   if (p.warnung && minuten(uhr) >= minuten(p.morgenZeit) + 5 && minuten(uhr) <= 21 * 60) await einmal('warnung', tag, async () => {
     const k = await koerperStand(userId);
     const g = await geldStand(userId).catch(() => null);
-    const w = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(await offene())];
+    const w = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(await offene(userId))];
     if (!w.length) return false;
     return (await senden({ title: 'Achtung', body: w[0], url: '/', tag: 'warnung' }, userId)) > 0;
   });
   // Meilensteine stündlich prüfen. Neu freigeschaltete kommen als Mitteilung.
   const stunde = uhr.slice(0, 2);
-  if ((await getSetting('kompass_stunde')) !== `${tag} ${stunde}`) {
-    await setSetting('kompass_stunde', `${tag} ${stunde}`);
+  if ((await getSetting(proNutzer('kompass_stunde', userId))) !== `${tag} ${stunde}`) {
+    await setSetting(proNutzer('kompass_stunde', userId), `${tag} ${stunde}`);
     const k = await kompassStand(userId).catch(() => null);
     if (k?.neu.length && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) await senden({ title: 'Meilenstein', body: `${k.neu.join(', ')}. Im Kompass steht, was als Nächstes kommt.`, url: '/kompass', tag: 'meilenstein' }, userId);
   }
@@ -128,7 +130,10 @@ export async function tick(userId = 'peter') {
 /** Ein Lauf des Zeitplans: nie überlappend, danach steht der Zeitpunkt für `/api/health` fest. */
 export async function lauf(): Promise<void> {
   const fertig = await exklusiv(async () => {
-    await tick();
+    // Jeder Mensch einzeln. Scheitert einer, laufen die anderen weiter.
+    for (const { id } of await sql<{ id: string }[]>`select id from nutzer order by id`) {
+      await tick(id).catch((e) => console.error('zeitplan: Lauf für einen Menschen fehlgeschlagen', (e as Error).name));
+    }
     await setSetting(LETZTER_LAUF, new Date().toISOString());
   });
   if (!fertig) console.warn('zeitplan: voriger Lauf noch nicht fertig, dieser fällt aus');

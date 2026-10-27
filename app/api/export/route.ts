@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { ensureSchema, sql, type Item } from '@/lib/db';
-import { ohneSitzung } from '@/lib/sitzung';
+import { mitNutzer } from '@/lib/sitzung';
 
 // Alle Einträge als eine Markdown-Datei. Deine Daten gehören dir, auch ohne diese App.
 export async function GET() {
-  const aus = await ohneSitzung(); if (aus) return aus;
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
   await ensureSchema();
-  const items = await sql<Item[]>`select * from items order by created_at asc`;
+  const items = await sql<Item[]>`select * from items where user_id = ${uid} order by created_at asc`;
   const fmt = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });
   const out: string[] = ['# Life – Export', '', `Stand: ${fmt.format(new Date())} · ${items.length} Einträge`, ''];
   let month = '';

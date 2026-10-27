@@ -26,6 +26,14 @@ export const MIGRATIONEN: Migration[] = [
       select key || ':peter', value from settings where key in ${tx(PRO_NUTZER as unknown as string[])}
       on conflict (key) do nothing`,
   },
+  {
+    nr: 3, name: 'Gesendete Mitteilungen pro Mensch',
+    run: (tx) => tx`
+      insert into settings (key, value)
+      select 'gesendet:peter:' || substr(key, length('gesendet:') + 1), value from settings
+      where key like 'gesendet:%' and key not like 'gesendet:peter:%'
+      on conflict (key) do nothing`,
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */

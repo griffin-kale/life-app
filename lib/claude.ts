@@ -23,11 +23,14 @@ export const claudeBereit = () => !!process.env.ANTHROPIC_API_KEY;
 export async function geschuetzteNamen(): Promise<Name[]> {
   // Fällt die Datenbank aus, bricht der Claude-Aufruf ab. Ohne Namensliste gingen Namen im Klartext raus.
   await ensureSchema();
-  const [namen, team, auto, leute] = await Promise.all([getSetting('namen'), getSetting('team'), getSetting('namen_auto'),
-    sql<{ name: string }[]>`select name from personen`]);
+  // Teamlisten gelten pro Mensch, geschützt werden die Namen aus allen Listen im Haushalt
+  const [namen, teams, auto, leute, haushalt] = await Promise.all([getSetting('namen'),
+    sql<{ value: string }[]>`select value from settings where key = 'team' or key like 'team:%'`, getSetting('namen_auto'),
+    sql<{ name: string }[]>`select name from personen`, sql<{ name: string }[]>`select name from nutzer`]);
+  const team = teams.map((t) => t.value).join('\n');
   // Peter selbst gehört dazu: Claude soll nie erfahren, um wen es geht.
   const besitzer: Name[] = [{ name: 'Peter Gneuß', art: 'Person' }, { name: 'Gneuß', art: 'Person' }, { name: 'Peter', art: 'Person' }];
-  return [...besitzer, ...namenAus(namen), ...namenAus(team), ...namenAus(auto), ...leute.map((l) => ({ name: l.name, art: 'Person' as const }))];
+  return [...besitzer, ...haushalt.map((n) => ({ name: n.name, art: 'Person' as const })), ...namenAus(namen), ...namenAus(team), ...namenAus(auto), ...leute.map((l) => ({ name: l.name, art: 'Person' as const }))];
 }
 
 /** Merkt sich Namen, die Claude in einem Eintrag gefunden hat. Ab dem nächsten Aufruf sind sie Platzhalter. */

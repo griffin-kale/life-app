@@ -11,6 +11,7 @@ export const sql: postgres.Sql = g.__sql ?? (g.__sql = postgres(process.env.DATA
 
 export type Item = {
   id: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
   status: 'neu' | 'sortiert' | 'archiv' | 'erledigt';
@@ -379,6 +380,9 @@ async function grundschema(): Promise<void> {
     }
   }
 }
+
+/** Schlüssel einer Einstellung, die pro Mensch gilt: `kontext:peter`. */
+export const proNutzer = (key: string, uid: string) => `${key}:${uid}`;
 
 export async function getSetting(key: string): Promise<string> {
   await ensureSchema();

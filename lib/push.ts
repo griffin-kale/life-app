@@ -21,17 +21,21 @@ export type Abo = { endpoint: string; keys: { p256dh: string; auth: string } };
 
 export { endpointOk } from './push-regeln';
 
-export async function abonnieren(a: Abo, userId = 'peter') {
+export async function abonnieren(a: Abo, userId: string) {
   await ensureSchema();
   await sql`insert into push_abos (user_id, endpoint, p256dh, auth) values (${userId}, ${a.endpoint}, ${a.keys.p256dh}, ${a.keys.auth})
     on conflict (endpoint) do update set p256dh = excluded.p256dh, auth = excluded.auth, user_id = excluded.user_id`;
 }
-export async function abbestellen(endpoint: string) { await sql`delete from push_abos where endpoint = ${endpoint}`; }
-export async function aboAnzahl(userId = 'peter') { const [r] = await sql<{ n: number }[]>`select count(*)::int as n from push_abos where user_id = ${userId}`; return r.n; }
+/** Abo entfernen. Mit `userId` nur das eigene, ohne nur intern, wenn der Push-Dienst das Abo als erloschen meldet. */
+export async function abbestellen(endpoint: string, userId?: string) {
+  if (userId) await sql`delete from push_abos where endpoint = ${endpoint} and user_id = ${userId}`;
+  else await sql`delete from push_abos where endpoint = ${endpoint}`;
+}
+export async function aboAnzahl(userId: string) { const [r] = await sql<{ n: number }[]>`select count(*)::int as n from push_abos where user_id = ${userId}`; return r.n; }
 
 export type Mitteilung = { title: string; body: string; url?: string; tag?: string };
 
-export async function senden(m: Mitteilung, userId = 'peter'): Promise<number> {
+export async function senden(m: Mitteilung, userId: string): Promise<number> {
   const abos = await sql<{ endpoint: string; p256dh: string; auth: string }[]>`select endpoint, p256dh, auth from push_abos where user_id = ${userId}`;
   if (!abos.length) return 0;
   const k = await vapid();

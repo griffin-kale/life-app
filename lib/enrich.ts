@@ -1,5 +1,5 @@
 import { askJson, namenLernen } from './claude';
-import { ensureSchema, getSetting, sql, type Item } from './db';
+import { ensureSchema, getSetting, proNutzer, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
 import { safeFetch } from './safefetch';
 import { kontakteAusEintrag } from './menschen';
@@ -46,6 +46,7 @@ export async function enrich(id: string): Promise<void> {
   await ensureSchema();
   const [item] = await sql<Item[]>`select * from items where id = ${id}`;
   if (!item) return;
+  const userId = item.user_id;
   try {
     const url = item.url ?? item.text.match(URL_RE)?.[0] ?? null;
     let quelle = '';
@@ -59,7 +60,7 @@ export async function enrich(id: string): Promise<void> {
       const p = await fetchPage(url).catch(() => null);
       if (p) { titel = p.title; quelle = `${p.site}\nSeitentext (Auszug): ${p.text}`; }
     }
-    const [kontext, zieleText, team] = await Promise.all([getSetting('kontext'), getSetting('ziele'), getSetting('team')]);
+    const [kontext, zieleText, team] = await Promise.all([getSetting(proNutzer('kontext', userId)), getSetting(proNutzer('ziele', userId)), getSetting(proNutzer('team', userId))]);
     const ziele = liste(zieleText);
     const heute = heuteBerlin();
     const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' }).format(new Date());
@@ -78,7 +79,7 @@ export async function enrich(id: string): Promise<void> {
     ].filter(Boolean).join('\n\n');
     const a = await askJson<Antwort>(prompt, undefined, 1500);
     await namenLernen(a.namen).catch(() => {});
-    await kontakteAusEintrag(id, item.text).catch(() => {});
+    await kontakteAusEintrag(id, item.text, userId).catch(() => {});
     const typ = (TYPEN as readonly string[]).includes(a.typ) ? a.typ : (typHint || 'gedanke');
     const kategorie = (KATEGORIEN as readonly string[]).includes(a.kategorie) ? a.kategorie : 'notiz';
     const art = (ARTEN as readonly string[]).includes(a.art) ? a.art : null;
@@ -100,20 +101,20 @@ export async function enrich(id: string): Promise<void> {
       wer = ${wer}, delegieren_an = ${an}, an_coach = ${anCoach}, fehler = null, updated_at = now() where id = ${id}`;
     if (anCoach) {
       await sql`update items set status = 'archiv', stapel = null where id = ${id}`;
-      await coachChat(item.text).catch(() => {});
+      await coachChat(item.text, userId).catch(() => {});
       return;
     }
     // Etwas zu tun? Dann gleich in die Stapel einsortieren.
-    if ((AKTIV as readonly string[]).includes(kategorie)) await sortiere('nachtrag').catch(() => {});
+    if ((AKTIV as readonly string[]).includes(kategorie)) await sortiere('nachtrag', userId).catch(() => {});
   } catch (e) {
     await sql`update items set fehler = ${oeffentlich(e, 'Einordnen hat nicht geklappt.', 'einordnen')}, updated_at = now() where id = ${id}`;
   }
 }
 
-export async function createItem(text: string): Promise<string> {
+export async function createItem(text: string, userId: string): Promise<string> {
   await ensureSchema();
   const clean = text.trim().slice(0, 8000);
   const url = clean.match(URL_RE)?.[0] ?? null;
-  const [row] = await sql`insert into items (text, url, typ) values (${clean}, ${url}, ${url && /(?:youtube\.com|youtu\.be)\//i.test(url) ? 'video' : url ? 'link' : 'gedanke'}) returning id`;
+  const [row] = await sql`insert into items (user_id, text, url, typ) values (${userId}, ${clean}, ${url}, ${url && /(?:youtube\.com|youtu\.be)\//i.test(url) ? 'video' : url ? 'link' : 'gedanke'}) returning id`;
   return row.id as string;
 }

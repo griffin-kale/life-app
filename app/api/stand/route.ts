@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getSetting } from '@/lib/db';
+import { getSetting, proNutzer } from '@/lib/db';
 import { engpassAus, offene } from '@/lib/priorisieren';
 import { standLesen, wochenziel } from '@/lib/stand';
 import { ETAPPEN, naechsteEtappe } from '@/lib/standort';
 import { aufgabe } from '@/lib/tag';
-import { ohneSitzung } from '@/lib/sitzung';
+import { mitNutzer } from '@/lib/sitzung';
 
 /** Dein Stand: Baseline, Richtung, Engpass, Woche und das Wichtigste für heute. */
 export async function GET() {
-  const aus = await ohneSitzung(); if (aus) return aus;
-  const [stand, wz, kontext, items] = await Promise.all([standLesen(), wochenziel(), getSetting('kontext'), offene().catch(() => [])]);
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  const [stand, wz, kontext, items] = await Promise.all([standLesen(uid), wochenziel(uid), getSetting(proNutzer('kontext', uid)), offene(uid).catch(() => [])]);
   const heute = items.find((i) => i.stapel === 'jetzt');
   return NextResponse.json({
     stand, wochenziel: wz, engpass: engpassAus(kontext),

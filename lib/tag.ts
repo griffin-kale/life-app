@@ -1,4 +1,4 @@
-import { ensureSchema, getSetting, sql, type Item } from './db';
+import { ensureSchema, getSetting, proNutzer, sql, type Item } from './db';
 import { koerperStand } from './koerper';
 import { menschenStand } from './menschen';
 import { heuteBerlin, offene } from './priorisieren';
@@ -14,18 +14,18 @@ const uhr = () => {
 };
 export const aufgabe = (i: Pick<Item, 'schritt' | 'titel' | 'text'>) => (i.schritt || i.titel || i.text).slice(0, 80);
 
-export async function wochenstartOffen(userId = 'peter') {
+export async function wochenstartOffen(userId: string) {
   return (await getSetting(`wochenstart:${userId}`)) !== montagVon(heuteBerlin());
 }
 
 export type Tageslage = { empfehlung: Empfehlung; offen: string[]; wochenstartOffen: boolean; standortEtappe: number | null; jetzt: { id: string; titel: string; zeit: string | null; erledigt: boolean }[] };
 
-export async function tageslage(userId = 'peter'): Promise<Tageslage> {
+export async function tageslage(userId: string): Promise<Tageslage> {
   await ensureSchema();
   const heute = heuteBerlin(); const u = uhr();
   const [k, items, erledigt, [ci], [heuteT], m, wo, standRoh] = await Promise.all([
     koerperStand(userId),
-    offene(),
+    offene(userId),
     sql<Item[]>`select * from items where user_id = ${userId} and status = 'erledigt' and (erledigt_at at time zone 'Europe/Berlin')::date = ${heute}::date and stapel = 'jetzt'`,
     sql<{ morgen: boolean; abend: boolean; erholung: number | null }[]>`select bool_or(art = 'morgen') as morgen, bool_or(art = 'abend') as abend,
       max((antworten->'erholung'->>'wert')::int) filter (where art = 'morgen') as erholung from checkins where user_id = ${userId} and tag = ${heute}`,

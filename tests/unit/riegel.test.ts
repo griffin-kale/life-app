@@ -22,7 +22,16 @@ test('jede API-Route prüft die Sitzung selbst (zweiter Riegel)', () => {
     const s = readFileSync(p, 'utf8');
     const handler = [...s.matchAll(/export async function (GET|POST|PUT|PATCH|DELETE)\([^)]*\)[^{]*\{\n(.*)\n/g)];
     assert.ok(handler.length > 0, p);
-    for (const h of handler) assert.match(h[2], /await ohneSitzung\(\); if \(aus\) return aus;/, `${p} ${h[1]}`);
+    for (const h of handler) assert.match(h[2], /(const aus = await ohneSitzung\(\)|const \{ aus, uid \} = await mitNutzer\(\)); if \(aus\) return aus;/, `${p} ${h[1]}`);
+  }
+});
+
+test('kein fester Mensch: Routen nehmen den Menschen aus der Sitzung, Bibliotheken haben keinen Standard', () => {
+  for (const p of routen()) assert.doesNotMatch(readFileSync(p, 'utf8'), /'peter'/, p);
+  for (const f of readdirSync('lib').filter((n) => n.endsWith('.ts'))) {
+    const s = readFileSync(join('lib', f), 'utf8');
+    assert.doesNotMatch(s, /userId = 'peter'/, f);
+    assert.doesNotMatch(s, /Setting\('[a-z_]+:peter'\)/, f);
   }
 });
 

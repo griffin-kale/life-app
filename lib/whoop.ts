@@ -41,13 +41,13 @@ async function speichern(t: Tokens, userId: string) {
   await setSetting(`whoop_tokens:${userId}`, zuschliessen(JSON.stringify(t), 'whoop'));
 }
 
-export async function verbunden(userId = 'peter'): Promise<boolean> { return !!(await getSetting(`whoop_tokens:${userId}`)); }
+export async function verbunden(userId: string): Promise<boolean> { return !!(await getSetting(`whoop_tokens:${userId}`)); }
 
-export async function codeTauschen(code: string, userId = 'peter'): Promise<void> {
+export async function codeTauschen(code: string, userId: string): Promise<void> {
   await speichern(await tokenAnfrage({ grant_type: 'authorization_code', code, redirect_uri: redirectUri() }), userId);
 }
 
-export async function trennen(userId = 'peter'): Promise<void> { await setSetting(`whoop_tokens:${userId}`, ''); }
+export async function trennen(userId: string): Promise<void> { await setSetting(`whoop_tokens:${userId}`, ''); }
 
 /** Gültiger Zugangsschlüssel. Erneuert ihn unter Sperre, weil WHOOP beim Erneuern beide Schlüssel tauscht. */
 async function zugang(userId: string): Promise<string> {
@@ -88,7 +88,7 @@ const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : n
 const KRAFT = /weight|strength|functional|powerlifting|crossfit|calisthenics/i;
 
 /** Zieht die letzten Tage von WHOOP in die Datenbank. Mehrfaches Abgleichen überschreibt nur. */
-export async function abgleichen(userId = 'peter', tage = 14): Promise<{ naechte: number; trainings: number }> {
+export async function abgleichen(userId: string, tage = 14): Promise<{ naechte: number; trainings: number }> {
   await ensureSchema();
   const ab = new Date(Date.now() - tage * 864e5);
   const [schlaf, erholung, workouts, zyklen] = await Promise.all([

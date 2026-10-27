@@ -10,7 +10,7 @@ import { bisGeburtstag, faellig, freundschaftsStufe, KREISE, TAKT, type Kreis } 
 
 export type Person = { id: string; name: string; kreis: Kreis; geburtstag: string | null; takt_tage: number; notiz: string | null; created_at: string };
 
-export async function menschenStand(userId = 'peter') {
+export async function menschenStand(userId: string) {
   await ensureSchema();
   const heute = heuteBerlin();
   const [personen, letzte, auto] = await Promise.all([
@@ -42,7 +42,7 @@ export async function menschenStand(userId = 'peter') {
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Findet bekannte Personen im Text eines Eintrags und hält das als Kontakt fest. Läuft lokal, ohne Claude. */
-export async function kontakteAusEintrag(itemId: string, text: string, userId = 'peter') {
+export async function kontakteAusEintrag(itemId: string, text: string, userId: string) {
   await ensureSchema();
   const personen = await sql<{ id: string; name: string }[]>`select id::text, name from personen where user_id = ${userId}`;
   for (const p of personen) {
@@ -52,7 +52,7 @@ export async function kontakteAusEintrag(itemId: string, text: string, userId = 
 }
 
 /** Für den Coach: fällige Menschen und Geburtstage. Namen werden dort ohnehin zu Platzhaltern. */
-export async function menschenKurz(userId = 'peter'): Promise<string> {
+export async function menschenKurz(userId: string): Promise<string> {
   const m = await menschenStand(userId);
   const z: string[] = [];
   if (m.faellig.length) z.push('Länger kein Kontakt: ' + m.faellig.slice(0, 4).map((p) => `${p.name} (${KREISE[p.kreis]}, seit ${p.seit} Tagen)`).join(', '));

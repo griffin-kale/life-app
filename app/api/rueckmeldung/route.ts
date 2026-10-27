@@ -2,15 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import pkg from '@/package.json';
 import { begrenzt } from '@/lib/ratelimit';
 import { ARTEN, BEREICHE, GEWICHT, githubBereit, liste, melden } from '@/lib/rueckmeldung';
-import { ohneSitzung } from '@/lib/sitzung';
+import { mitNutzer } from '@/lib/sitzung';
 
 export async function GET() {
-  const aus = await ohneSitzung(); if (aus) return aus;
-  return NextResponse.json({ liste: await liste(), github: githubBereit() });
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  return NextResponse.json({ liste: await liste(uid), github: githubBereit() });
 }
 
 export async function POST(req: NextRequest) {
-  const aus = await ohneSitzung(); if (aus) return aus;
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   if (!(b.art in ARTEN) || !(BEREICHE as readonly string[]).includes(b.bereich) || !(b.gewicht in GEWICHT))
@@ -22,6 +22,6 @@ export async function POST(req: NextRequest) {
     text: typeof b.text === 'string' ? b.text.trim().slice(0, 3000) : '',
     seite: typeof b.seite === 'string' && /^\/[\w/-]{0,60}$/.test(b.seite) ? b.seite : '/',
     version: pkg.version, geraet,
-  });
+  }, uid);
   return NextResponse.json(r);
 }
