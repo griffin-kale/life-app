@@ -1,10 +1,14 @@
 /** Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. „Jetzt dran“ und der Fragebogen bleiben immer an.
  *  Der Coach ist seit 0.18 kein Baustein mehr: Er sitzt als Leiste unten und geht als Blatt auf, auf dem Mac steht er rechts. */
-export const BAUSTEINE = ['kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
+export const BAUSTEINE = ['cockpit', 'streifen', 'konten', 'kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-export const STANDARD: Baustein[] = ['kompass', 'jetzt', 'empfohlen', 'fragebogen', 'naechste', 'erledigt'];
+/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. */
+export const STANDARD: Baustein[] = ['cockpit', 'jetzt', 'streifen', 'fragebogen', 'konten', 'naechste', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
+  cockpit: ['Cockpit', 'Erholung, freie Zeit und Woche auf einen Blick'],
+  streifen: ['Als Nächstes', 'Die nächsten drei Blöcke des Tages'],
+  konten: ['Konten heute', 'Je Konto eine Zeile, was heute zählt'],
   kompass: ['Wochenringe', 'Klein neben dem Titel'],
   schnell: ['Schnellzugriffe', 'Zusätzlich zum Plus in der Mitte der Leiste'],
   empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
@@ -31,7 +35,7 @@ export function bausteineAus(roh: unknown): Baustein[] {
 
 /** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
 const NEU: [number, Baustein, string][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
-export const STAND = 7;
+export const STAND = 8;
 
 /** Umbau 0.18 (Peter, 26.10.2026): Ringe nach oben, Jetzt dran früh, Kalender, Festhalten-Feld und Tagespunkte runter von Heute. */
 const WEG_5: string[] = ['kalender', 'festhalten', 'woche'];
@@ -60,5 +64,13 @@ export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein
   }
   // 0.20 (Peter, 26.10.2026): Empfohlen ist wieder Standard, direkt unter der einen Sache. Schnellzugriffe sitzen jetzt in der Mitte der Leiste.
   if (stand < 7 && !neu.includes('empfohlen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'empfohlen');
+  // 0.25 Life 2.0 (Peter, 27.10.2026): Cockpit statt Wochenringen, Tagesstreifen unter der einen Sache, Konten statt Empfohlen.
+  if (stand < 8) {
+    const k = neu.indexOf('kompass');
+    if (k >= 0) neu.splice(k, 1, 'cockpit'); else if (!neu.includes('cockpit')) neu.unshift('cockpit');
+    neu = neu.filter((b) => b !== 'empfohlen');
+    if (!neu.includes('streifen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'streifen');
+    if (!neu.includes('konten')) { const f = neu.indexOf('fragebogen'); neu.splice(f >= 0 ? f + 1 : neu.indexOf('streifen') + 1, 0, 'konten'); }
+  }
   return { liste: neu, stand: STAND };
 }

@@ -12,9 +12,10 @@ import { hhmm } from '@/lib/kalender-regeln';
 import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
 import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
+import { CockpitKacheln, KontenHeute, Tagesstreifen, useCockpit } from './cockpit';
 
 /** Auf iPad und Mac stehen diese Bausteine rechts unter dem Coach, alles zum Tun links. */
-const RECHTS: Baustein[] = ['empfohlen', 'kalender', 'koerper', 'geld', 'menschen'];
+const RECHTS: Baustein[] = ['streifen', 'konten', 'empfohlen', 'kalender', 'koerper', 'geld', 'menschen'];
 const uhrBerlin = (iso: string) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
@@ -41,6 +42,13 @@ export default function Heute() {
   const breit = useBreit(768);
   useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
   const kurz = useKurz(bausteine);
+  const { c: cockpit, laden: cockpitLaden } = useCockpit();
+  // Uhrzeit erst im Browser setzen, damit Server und Browser dasselbe zeichnen
+  const [minuten, setMinuten] = useState<number | null>(null);
+  useEffect(() => {
+    const setzen = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':'); setMinuten(Number(p[0]) * 60 + Number(p[1])); };
+    setzen(); const t = setInterval(setzen, 60_000); return () => clearInterval(t);
+  }, []);
   const sprache = useSprache(text, setText, (m) => setToast(m, 'err'));
 
   const load = useCallback(async () => { setSt(await api<Stand>('/api/heute')); }, []);
@@ -57,7 +65,7 @@ export default function Heute() {
     return api<Item & { verdraengt?: string | null }>(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
   }
   async function act(fn: () => Promise<unknown>) {
-    try { await fn(); } catch (e) { setToast((e as Error).message, 'err'); } finally { await load().catch(() => {}); }
+    try { await fn(); } catch (e) { setToast((e as Error).message, 'err'); } finally { await Promise.all([load().catch(() => {}), cockpitLaden().catch(() => {})]); }
   }
   const pause = () => new Promise((r) => setTimeout(r, 320));
 
@@ -154,6 +162,9 @@ export default function Heute() {
   const eins = [...jetzt].sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99))[0] ?? null;
   const danach = jetzt.filter((x) => x !== eins);
   const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
+    cockpit: <CockpitKacheln c={cockpit} />,
+    streifen: <Tagesstreifen c={cockpit} jetzt={minuten} />,
+    konten: <KontenHeute c={cockpit} />,
     fragebogen: (
 ci.zeige ? (
         <section className="gsec" aria-label="Fragebogen">
