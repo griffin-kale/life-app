@@ -1,4 +1,5 @@
 import postgres from 'postgres';
+import { offeneSchritte } from './migrationen';
 
 const g = globalThis as unknown as { __sql?: postgres.Sql; __schema?: Promise<void> };
 
@@ -49,9 +50,37 @@ export type Item = {
   energie?: number | null;
 };
 
+/** Fester Schlüssel für `pg_advisory_lock`: Startet Life zweimal gleichzeitig, wartet die zweite Instanz. */
+const SCHEMA_SPERRE = 7_316_001;
+
 export function ensureSchema(): Promise<void> {
   if (!g.__schema) {
     g.__schema = (async () => {
+      const r = await sql.reserve();
+      try {
+        await r`select pg_advisory_lock(${SCHEMA_SPERRE})`;
+        await grundschema();
+        await r`create table if not exists schema_version (nr integer primary key, name text not null, am timestamptz not null default now())`;
+        const fertig = (await r<{ nr: number }[]>`select nr from schema_version`).map((x) => x.nr);
+        for (const m of offeneSchritte(fertig)) {
+          await sql.begin(async (tx) => {
+            await m.run(tx);
+            await tx`insert into schema_version (nr, name) values (${m.nr}, ${m.name})`;
+          });
+        }
+      } finally {
+        await r`select pg_advisory_unlock(${SCHEMA_SPERRE})`.catch(() => {});
+        r.release();
+      }
+    })().catch((e) => { g.__schema = undefined; throw e; });
+  }
+  return g.__schema;
+}
+
+/** Grundschema bis 0.23: idempotent, läuft bei jedem Start. Neues kommt als Schritt nach `lib/migrationen.ts`. */
+async function grundschema(): Promise<void> {
+  {
+    {
       await sql`create extension if not exists pgcrypto`;
       await sql`
         create table if not exists items (
@@ -347,9 +376,8 @@ export function ensureSchema(): Promise<void> {
           endpoint text not null unique, p256dh text not null, auth text not null,
           created_at timestamptz not null default now()
         )`;
-    })().catch((e) => { g.__schema = undefined; throw e; });
+    }
   }
-  return g.__schema;
 }
 
 export async function getSetting(key: string): Promise<string> {
