@@ -2,6 +2,29 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.25.0] – 2026-10-27
+
+Phase 1 von Life 2.0: Heute als Cockpit, Woche mit Kalender, vier Tabs (Peter, 27.10.2026: „B Cockpit mit Tagesstreifen“, „Vier Tabs + Festhalten“).
+
+### Neu
+- **Heute ist ein Cockpit.** Oben drei Kacheln: Erholung mit Schlaf aus WHOOP, freie Zeit heute aus dem Kalender, Erledigtes dieser Woche. Darunter die eine Sache, dann der **Tagesstreifen** mit den nächsten drei Blöcken aus Terminen und Aufgaben, dann **Konten heute**: je Konto eine Zeile, was heute zählt (zum Beispiel „Protein-Ziel heute 150 g“). Wo Daten fehlen, steht, was fehlt, nie eine nackte Null.
+- **Woche zeigt den Kalender.** Auf dem iPhone ein Streifen mit sieben Tagen und darunter die Termine des gewählten Tags, ab 900 px ein Wochenraster. Darunter fünf **Rhythmen** der Woche (Erledigt, Bewegung, Ruhe, Menschen, Geld) statt Serien. Parkplatz, Zeit kaufen und Energie-Bilanz stehen unter „Mehr zur Woche“.
+- **Vier Tabs: Heute · Woche · Ziele · Ich**, Festhalten in der Mitte. Ein Tipp hält einen Gedanken fest, Halten öffnet die sechs schnellen Wege (Gedanke, Ausgabe, Essen, Training, Ruhe, Coach).
+- **Ziele** hat eine eigene Seite: Wochenziel, deine Ziele mit Fortschritt, Kompass und Dein Stand.
+- **Ich** bündelt die fünf Konten Körper, Ruhe, Geld, Menschen, Logbuch und die Einstellungen. „Mehr“ leitet dorthin weiter, alte Lesezeichen gehen also nicht kaputt.
+
+### Geändert
+- **Design-Token 2.0:** tieferes Nachtblau, Flächen in zwei Stufen, besser lesbares Grau in Hell und Dunkel. Imperial Blue bleibt.
+- Heute zeigt keine Wochenringe und kein „Empfohlen“ mehr, der Kompass steht unter Ziele. Eine gespeicherte Heute-Reihenfolge wird beim ersten Öffnen nachgerüstet.
+- Auf der Woche steht der WHO-5-Hinweis nicht mehr, WHO-5 hat einen festen Ort.
+
+### Technik
+- `lib/cockpit.ts` und `GET /api/heute/cockpit`, `lib/woche.ts` und `GET /api/woche`, reine Regeln in `lib/cockpit-regeln.ts`, `lib/woche-regeln.ts` und `lib/kalender-regeln.ts` (`wochenTag`, `freiAm`).
+
+### Tests
+- Unit-Tests für Tagesstreifen, Konten heute, Wochentage, Rhythmen und freie Zeit. Ende-zu-Ende: Cockpit, Woche mit Kalender und Rhythmen, vier Tabs, Halten öffnet sechs Wege, Ich und Ziele ohne waagerechtes Scrollen auf 390 px.
+- Der Coach-Schritt im großen Ablauf wackelt nicht mehr, wenn die Sortierung die beiden KGSt-Einträge schon zusammengeführt hat.
+
 ## [0.24.0] – 2026-10-27
 
 Phase 0 von Life 2.0: Fundament (Peter, 27.10.2026). Für dich sieht Life gleich aus. Darunter ist es bereit für einen zweiten Menschen und für den Umbau von Heute und Woche.
