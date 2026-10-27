@@ -51,12 +51,13 @@ export async function abgleichen(userId: string): Promise<{ kalender: number; te
 }
 
 /** Termine der eingeschalteten Kalender von heute bis in sieben Tagen. */
-export async function termine(userId: string): Promise<Termin[]> {
+/** Termine ab `von` (Standard heute) für `tage` Tage. Gespeichert sind gestern bis in acht Tagen. */
+export async function termine(userId: string, von = heuteBerlin(), tage = 8): Promise<Termin[]> {
   await ensureSchema();
-  const heute = heuteBerlin();
+  const heute = von;
   const rows = await sql<{ beginn: Date; ende: Date; ganztag: boolean; titel: string; art: KalenderArt }[]>`
     select t.beginn, t.ende, t.ganztag, t.titel, k.art from termine t join kalender k on k.user_id = t.user_id and k.href = t.kalender
-    where t.user_id = ${userId} and k.an and t.ende >= ${tagesbeginn(heute)} and t.beginn < ${tagesbeginn(plusTage(heute, 8))}
+    where t.user_id = ${userId} and k.an and t.ende >= ${tagesbeginn(heute)} and t.beginn < ${tagesbeginn(plusTage(heute, tage))}
     order by t.beginn limit 500`;
   return rows.map((r) => ({ beginn: new Date(r.beginn).toISOString(), ende: new Date(r.ende).toISOString(), ganztag: r.ganztag, titel: r.titel, art: r.art }));
 }
