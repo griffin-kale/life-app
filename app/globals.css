@@ -1038,9 +1038,15 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .chat-mehr { justify-self: center; min-height: 36px; padding: 0 12px; border: 0; background: none; color: var(--hero-muted); font: inherit; font-size: .8125rem; cursor: pointer; }
 
 /* iPad quer und Mac: Coach fest in der rechten Spalte */
-.coach-panel { position: sticky; top: 64px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; }
+.coach-panel { position: sticky; top: 64px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0;
+  /* Ruhiger Verlauf ohne Leuchten unten: endet genau in der Farbe des Felds, so gibt es keine Kante und keinen Streifen */
+  background: radial-gradient(120% 60% at 85% -10%, rgb(86 156 255 / .45), transparent 60%), linear-gradient(180deg, #0C3A8A 0%, #001D51 50%, #04112E 100%); }
 .coach-panel .chat { max-height: none; overflow: visible; }
-.coach-panel .coach-eingabe { margin: 2px -16px -18px; padding-bottom: 16px; }
+.coach-panel .coach-eingabe { margin: 2px -16px 0; padding-bottom: 16px; box-shadow: none; }
+/* Text läuft weich unter das Feld statt an einer harten Linie abzureißen */
+.coach-panel .coach-eingabe::before { content: ''; position: absolute; left: 0; right: 0; top: -32px; height: 32px; background: linear-gradient(rgb(4 17 46 / 0), #04112E); pointer-events: none; }
+/* Auf dem Mac ist Platz: Vorschläge brechen um, statt aus dem Rahmen zu laufen */
+.coach-panel .chat-vorschlaege { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
 
 /* ---------- 0.19: The ONE Thing – eine Sache, der Rest eine Ebene tiefer ---------- */
 .titel-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }

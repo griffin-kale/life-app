@@ -6,6 +6,7 @@ Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https:
 
 ### Behoben
 - **Der Zeitplan bleibt nicht mehr stehen.** Am 27.10. um 5:25 Uhr kam in einem Lauf ein Schritt nie zurück. Seitdem fiel jeder weitere Lauf aus: keine Mitteilungen, kein WHOOP- und Kalenderabgleich, `/api/health` meldete Verzug. Jetzt gibt der nächste Lauf einen hängenden nach zehn Minuten frei. Doppelte Arbeit verhindert weiter die Sperre in der Datenbank.
+- **Coach auf dem Mac sieht ruhig aus.** Der Text reißt nicht mehr an einer harten Kante unter dem Feld ab, unten leuchtet kein heller Streifen mehr, und die Vorschläge brechen um, statt aus dem Rahmen zu laufen.
 - **Das Log nennt den Schritt, an dem ein Lauf hängt** (zum Beispiel „whoop“ oder „kalender“), nie einen Inhalt. So lässt sich die eigentliche Ursache beim nächsten Mal finden.
 
 ## [0.25.0] – 2026-10-27
