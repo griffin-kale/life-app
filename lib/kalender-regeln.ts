@@ -124,3 +124,28 @@ export function hostErlaubt(raw: string, testBasis?: string): boolean {
     return u.protocol === 'https:' && (u.port === '' || u.port === '443') && /^(p\d{1,3}-)?caldav\.icloud\.com$/.test(u.hostname);
   } catch { return false; }
 }
+
+/* ===== Woche (Life 2.0): ein Tag mit Blöcken und freier Zeit ===== */
+const WT_KURZ = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as const;
+export type TagBlock = { von: number; bis: number; titel: string; art: string };
+export type WochenTag = { tag: string; wt: (typeof WT_KURZ)[number]; nr: number; ganztag: string[]; bloecke: TagBlock[]; frei: number };
+
+/** Freie Minuten zwischen `von` und `bis`, überlappende Termine zählen einmal. */
+export function freiAm(bloecke: { von: number; bis: number }[], von = 8 * 60, bis = 19 * 60): number {
+  let belegt = 0, ende = von;
+  for (const b of [...bloecke].sort((x, y) => x.von - y.von)) {
+    const a = Math.max(b.von, ende), e = Math.min(b.bis, bis);
+    if (e > a) { belegt += e - a; ende = e; }
+  }
+  return Math.max(0, bis - von - belegt);
+}
+
+/** Ein Tag der Woche: Termine mit Uhrzeit als Blöcke, ganztägige als Titel, freie Zeit von 8 bis 19 Uhr. */
+export function wochenTag(termine: Termin[], tag: string, i: number): WochenTag {
+  const am = amTag(termine, tag);
+  const bloecke = am.filter((t) => !t.ganztag)
+    .map((t) => ({ von: minutenAm(t.beginn, tag), bis: minutenAm(t.ende, tag), titel: t.titel, art: t.art }))
+    .filter((b) => b.bis > b.von).sort((a, b) => a.von - b.von);
+  return { tag, wt: WT_KURZ[i], nr: Number(tag.slice(8, 10)), ganztag: am.filter((t) => t.ganztag).map((t) => t.titel), bloecke, frei: freiAm(bloecke) };
+}
+

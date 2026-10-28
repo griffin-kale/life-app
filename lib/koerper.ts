@@ -7,7 +7,7 @@ import { ausgefalleneTrainings, schlafWarnung, type Nacht } from './coach-regeln
 export type KoerperTag = { tag: string; schlaf_min: number | null; schlaf_leistung: number | null; erholung: number | null; hrv: number | null; ruhepuls: number | null; belastung: number | null };
 
 /** Trainingsstand laden. Nach Woche 5 beginnt automatisch ein neuer Block. */
-export async function trainingStand(userId = 'peter'): Promise<Stand> {
+export async function trainingStand(userId: string): Promise<Stand> {
   await ensureSchema();
   const heute = heuteBerlin();
   const [row] = await sql<{ stand: Stand }[]>`select stand from training_stand where user_id = ${userId}`;
@@ -18,19 +18,19 @@ export async function trainingStand(userId = 'peter'): Promise<Stand> {
   return s;
 }
 
-export async function standSpeichern(s: Stand, userId = 'peter') {
+export async function standSpeichern(s: Stand, userId: string) {
   await sql`insert into training_stand (user_id, stand) values (${userId}, ${sql.json(s as never)})
     on conflict (user_id) do update set stand = excluded.stand, updated_at = now()`;
 }
 
-export async function proteinZiel(userId = 'peter'): Promise<{ ziel: number; gewicht: number | null }> {
+export async function proteinZiel(userId: string): Promise<{ ziel: number; gewicht: number | null }> {
   const [n] = await sql<{ gewicht_kg: string | null }[]>`select gewicht_kg from nutzer where id = ${userId}`;
   const kg = n?.gewicht_kg ? Number(n.gewicht_kg) : null;
   return { ziel: Math.round((kg ?? 80) * 1.6), gewicht: kg };
 }
 
 /** Alles für den Körper-Bildschirm und den Coach. */
-export async function koerperStand(userId = 'peter') {
+export async function koerperStand(userId: string) {
   await ensureSchema();
   const heute = heuteBerlin();
   const montag = wochenTag(heute);

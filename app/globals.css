@@ -1,5 +1,6 @@
 /* Life – Peters App für Gedanken, Prioritäten und Wissen.
-   Nachtblau (Imperial Blue, Pantone 2768 C) mit Creme. Serife nur für Titel und Kernaussagen, Systemschrift für alles andere.
+   Designsystem 2.0 (Life 2.0, 0.25): Flächen in Navy-Stufen statt Grau, Hell als kühles Papier mit Imperial-Blue-Tinte,
+   leise Texte mit genug Kontrast (WCAG AA). Nachtblau (Imperial Blue, Pantone 2768 C) mit Creme. Serife nur für Titel und Kernaussagen, Systemschrift für alles andere.
    Größen in rem: auf dem iPhone folgt die Schrift der eingestellten Textgröße (Dynamic Type). */
 /* Farben in zwei Sätzen. Dunkel ist Standard, Hell und „Wie das iPhone“ wählt Peter in den Einstellungen.
    Zahlen mit -rgb sind Kanäle für Transparenzen: rgb(var(--tint-rgb) / .1). */
@@ -18,20 +19,20 @@
   --hero-muted: rgb(246 243 234 / .72);
 }
 :root, :root[data-theme="dark"], .immer-dunkel {
-  --night: #0A1326;
-  --night-rgb: 10 19 38;
-  --panel: #111C33;
-  --panel-2: #18253F;
+  --night: #070F22;
+  --night-rgb: 7 15 34;
+  --panel: #0E1A35;
+  --panel-2: #15264A;
   --ink: #F3F0E6;
   --ink-rgb: 243 240 230;
   --muted: #A9B4C8;
-  --faint: #76839A;
+  --faint: #7E8BA2;
   --tint-rgb: 169 193 232;
   --line: rgb(169 193 232 / .13);
   --hair: rgb(169 193 232 / .16);
   --press: rgb(169 193 232 / .10);
   --field: rgb(0 0 0 / .22);
-  --material: rgb(10 19 38 / .78);
+  --material: rgb(7 15 34 / .74);
   --shadow-rgb: 0 0 0;
   --card-shadow: none;
   --sky: #8FB4F0;
@@ -52,20 +53,20 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --night: #F2F1EC;
-  --night-rgb: 242 241 236;
+  --night: #EEF1F6;
+  --night-rgb: 238 241 246;
   --panel: #FFFFFF;
-  --panel-2: #E8E7E0;
+  --panel-2: #E4E9F2;
   --ink: #0D1A33;
   --ink-rgb: 13 26 51;
   --muted: #566076;
-  --faint: #8790A2;
+  --faint: #5F6A80;
   --tint-rgb: 0 29 81;
   --line: rgb(0 29 81 / .09);
   --hair: rgb(0 29 81 / .12);
   --press: rgb(0 29 81 / .06);
   --field: rgb(0 29 81 / .045);
-  --material: rgb(246 245 241 / .82);
+  --material: rgb(246 248 252 / .8);
   --shadow-rgb: 16 28 56;
   --card-shadow: 0 1px 2px rgb(16 28 56 / .05), 0 10px 28px -16px rgb(16 28 56 / .18);
   --sky: #1D5DC2;
@@ -82,25 +83,25 @@
   --k-sozial: #E2643A;
   --k-mental: #7A59D6;
   --k-koerper: #1C9C62;
-  --k-geld: #C2930A;
+  --k-geld: #8F6A00;
   color-scheme: light;
 }
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] {
-    --night: #F2F1EC;
-    --night-rgb: 242 241 236;
+    --night: #EEF1F6;
+    --night-rgb: 238 241 246;
     --panel: #FFFFFF;
-    --panel-2: #E8E7E0;
+    --panel-2: #E4E9F2;
     --ink: #0D1A33;
     --ink-rgb: 13 26 51;
     --muted: #566076;
-    --faint: #8790A2;
+    --faint: #5F6A80;
     --tint-rgb: 0 29 81;
     --line: rgb(0 29 81 / .09);
     --hair: rgb(0 29 81 / .12);
     --press: rgb(0 29 81 / .06);
     --field: rgb(0 29 81 / .045);
-    --material: rgb(246 245 241 / .82);
+    --material: rgb(246 248 252 / .8);
     --shadow-rgb: 16 28 56;
     --card-shadow: 0 1px 2px rgb(16 28 56 / .05), 0 10px 28px -16px rgb(16 28 56 / .18);
     --sky: #1D5DC2;
@@ -117,7 +118,7 @@
     --k-sozial: #E2643A;
     --k-mental: #7A59D6;
     --k-koerper: #1C9C62;
-    --k-geld: #C2930A;
+    --k-geld: #8F6A00;
     color-scheme: light;
   }
 }
@@ -532,9 +533,8 @@ code { font-family: var(--mono); font-size: .8125rem; background: var(--field); 
 /* ---------- 0.12: Design – Hell und Dunkel, Farbe pro Bereich ---------- */
 /* Jeder Bereich hat seine Kontenfarbe: Punkt hinter dem Titel, aktive Leiste unten, Balken */
 .wrap { --c: var(--k-zeit); }
-.wrap:has(.tabbar a[href="/koerper"][aria-current="page"]) { --c: var(--k-koerper); }
-.wrap:has(.tabbar a[href="/geld"][aria-current="page"]) { --c: var(--k-geld); }
-.wrap:has(.tabbar a[href="/mehr"][aria-current="page"]) { --c: var(--k-mental); }
+.wrap:has(.tabbar a[href="/ziele"][aria-current="page"]) { --c: var(--k-geld); }
+.wrap:has(.tabbar a[href="/ich"][aria-current="page"]) { --c: var(--k-mental); }
 .wrap:has(.ruhekarte) { --c: var(--k-mental); }
 .title i { color: var(--c); }
 .tabbar a[aria-current="page"] { color: var(--c); }
@@ -1093,7 +1093,6 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .tabbar { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 15; max-width: 440px; margin: 0 auto; height: 66px; padding: 0 10px; align-items: center; justify-content: space-around; border-radius: 33px; box-shadow: inset 0 0 0 1px var(--hair), 0 14px 30px -12px rgb(var(--shadow-rgb) / .6); -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .tabbar a.tb-tab { flex: 0 0 auto; width: 52px; height: 52px; min-height: 0; max-width: none; border-radius: 50%; display: grid; place-items: center; }
 .tabbar a.tb-tab svg { width: 25px; height: 25px; }
-.tb-tab.gehalten { background: rgb(var(--tint-rgb) / .16); }
 .tb-mitte { width: 58px; height: 58px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); box-shadow: 0 0 0 5px rgb(var(--ink-rgb) / .12); cursor: pointer; text-decoration: none; }
 .tb-mitte svg { width: 26px; height: 26px; transition: transform 220ms var(--ease-out); }
 .tb-mitte.offen svg { transform: rotate(45deg); }
@@ -1104,15 +1103,8 @@ body:has(.coach-leiste) .toast { bottom: calc(130px + env(safe-area-inset-bottom
 .tb-weg .sz-symbol { width: 58px; height: 58px; border-radius: 20px; color: #0A1326; }
 .tb-weg .sz-symbol svg { width: 26px; height: 26px; }
 .tb-weg:active { opacity: .6; }
-.tb-halten { position: fixed; z-index: 14; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: 240px; display: grid; border-radius: 20px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--hair), 0 20px 40px -10px rgb(0 0 0 / .6); overflow: hidden; }
-.tb-halten.links { left: 24px; }
-.tb-halten.rechts { right: 24px; }
-.tb-halten-titel { padding: 12px 16px 4px; font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.tb-halten-weg { display: flex; align-items: center; min-height: 48px; padding: 0 16px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .9375rem; }
-.tb-halten-weg:first-of-type { border-top: 0; }
-.tb-halten-weg:active { background: var(--press); }
 @media (prefers-reduced-motion: no-preference) {
-  .tb-schnell, .tb-halten { animation: tb-rein 240ms var(--ease-out) both; }
+  .tb-schnell { animation: tb-rein 240ms var(--ease-out) both; }
   @keyframes tb-rein { from { transform: translateY(16px); opacity: 0; } }
 }
 body { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
@@ -1122,7 +1114,7 @@ body:has(.coach-leiste) .toast { bottom: calc(146px + env(safe-area-inset-bottom
 @media (min-width: 768px) { body { padding-bottom: 56px; } .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); } }
 .tabbar a.tb-mitte { flex: 0 0 auto; width: 58px; height: 58px; min-height: 0; max-width: none; display: grid; place-items: center; color: var(--on-ink); }
 .tabbar a.tb-mitte svg, .tabbar button.tb-mitte svg { width: 26px; height: 26px; }
-body:has(.coach-leiste) .tb-schnell, body:has(.coach-leiste) .tb-halten { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+body:has(.coach-leiste) .tb-schnell { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 .tb-scrim { background: rgb(4 10 24 / .8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 
 /* ---------- 0.21: Datenschutz – Bon zuschneiden ---------- */
@@ -1162,3 +1154,109 @@ body:has(.coach-leiste) .tb-schnell, body:has(.coach-leiste) .tb-halten { bottom
 @keyframes ziehen-dreh { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ziehen.laedt svg { animation: none; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ===== Cockpit 0.25 (Life 2.0, Richtung B mit Tagesstreifen) ===== */
+.ck-kacheln { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ck-kachel { position: relative; display: grid; align-content: start; gap: 2px; min-height: 6.4rem; padding: 12px 12px 11px; border-radius: 18px; background: var(--panel); box-shadow: var(--card-shadow); color: var(--ink); text-decoration: none; transition: transform 120ms ease-out; }
+.ck-kachel:active { transform: scale(.97); }
+.ck-kachel b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.75rem; line-height: 1.05; letter-spacing: -.01em; margin-top: auto; }
+.ck-kachel b small { font-family: var(--sans); font-size: .8125rem; color: var(--muted); margin-left: 1px; letter-spacing: 0; }
+.ck-name { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.ck-fuss { font-size: .75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-ring { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; }
+.ck-kachel.skel { background: var(--panel); opacity: .55; }
+.ck-liste { display: grid; text-decoration: none; color: var(--ink); }
+.ck-block { position: relative; display: grid; grid-template-columns: 3.1rem 1fr; gap: 10px; align-items: center; padding: 11px 16px 11px 18px; }
+.ck-block::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 3px 3px 0; background: var(--c, var(--sky)); }
+.ck-block + .ck-block::after { content: ''; position: absolute; top: 0; left: 18px; right: 0; border-top: 1px solid var(--line); }
+.ck-block time { font-size: .875rem; color: var(--muted); }
+.ck-block.laeuft time { color: var(--bad); font-weight: 700; }
+.ck-block.leer { grid-template-columns: 1fr; }
+.ck-block.leer::before { display: none; }
+.ck-text { display: grid; min-width: 0; }
+.ck-text b { font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-text small { font-size: .8125rem; color: var(--muted); }
+.ck-mehr { display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 9px 14px 11px; border-top: 1px solid var(--line); color: var(--sky); font-size: .875rem; }
+.ck-mehr svg { width: 14px; height: 14px; }
+.ck-konto .lbl { display: grid; white-space: normal; }
+.ck-konto .lbl b { font-weight: 600; }
+.ck-konto .lbl small { font-size: .8125rem; color: var(--muted); line-height: 1.35; }
+.ck-punkt { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+@media (prefers-reduced-motion: reduce) { .ck-kachel { transition: none; } }
+
+/* ===== Leiste 0.25 (Life 2.0): vier Tabs mit Namen, Festhalten in der Mitte ===== */
+.tabbar a.tb-tab { width: 60px; height: 56px; border-radius: 18px; display: flex; flex-direction: column; gap: 2px; }
+.tabbar a.tb-tab svg { width: 24px; height: 24px; }
+.tb-name { font-size: 10.5px; font-weight: 600; letter-spacing: .01em; line-height: 1; }
+.tabbar a.tb-tab[aria-current="page"] { color: var(--ink); }
+.tabbar a.tb-tab[aria-current="page"] svg { color: var(--sky); }
+.tb-mitte:active { transform: scale(.93); }
+
+/* ===== Ich und Ziele 0.25 ===== */
+.ich-konten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ich-konto { display: grid; align-content: start; gap: 6px; min-height: 7.5rem; padding: 14px; border-radius: 18px; background: var(--panel); box-shadow: var(--card-shadow); color: var(--ink); text-decoration: none; transition: transform 120ms ease-out; }
+.ich-konto:first-child { grid-column: 1 / -1; min-height: 0; }
+.ich-konto:active { transform: scale(.98); }
+.ich-konto .ck-name { color: var(--c); }
+.ich-konto b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 2rem; line-height: 1; }
+.ich-konto b small { font-family: var(--sans); font-size: .8125rem; color: var(--muted); margin-left: 4px; }
+.ich-text { font-size: .875rem; color: var(--muted); line-height: 1.35; margin-top: auto; }
+@media (min-width: 768px) { .ich-konten { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ich-konto:first-child { grid-column: span 2; } }
+.zl-woche { color: var(--ink); text-decoration: none; gap: 4px; }
+.zl-woche b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.375rem; line-height: 1.2; }
+.zl-woche small, .zl-ziel small { color: var(--muted); font-size: .8125rem; }
+.zl-liste { display: grid; gap: 10px; }
+@media (min-width: 768px) { .zl-liste { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.zl-ziel { gap: 8px; }
+.zl-ziel b { font-weight: 600; font-size: 1.0625rem; }
+.zl-balken { display: block; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.zl-balken i { display: block; height: 100%; background: var(--k-geld); border-radius: 3px; }
+.zl-leer p { margin: 0; color: var(--muted); }
+
+/* ===== Woche 0.25 (Life 2.0): sieben Tage, Wochenraster, Rhythmen ===== */
+.wk-tage { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.wk-tag { display: grid; justify-items: center; gap: 5px; padding: 8px 0 9px; border: 1px solid transparent; border-radius: 14px; background: none; color: var(--muted); cursor: pointer; font: inherit; }
+.wk-tag[aria-selected="true"] { background: var(--panel); border-color: var(--line); box-shadow: var(--card-shadow); }
+.wk-wt { font-size: .75rem; font-weight: 600; }
+.wk-nr { font-family: var(--serif); font-size: 1.25rem; line-height: 1; color: var(--ink); }
+.wk-tag.heute .wk-nr { color: var(--sky); }
+.wk-mini { position: relative; width: 14px; height: 84px; border-radius: 7px; background: var(--panel-2); overflow: hidden; }
+.wk-mini i { position: absolute; left: 0; right: 0; border-radius: 3px; }
+.wk-frei { font-size: .6875rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+.wk-tageskopf .lbl b { font-weight: 600; }
+.wk-zeile { gap: 12px; justify-content: flex-start; }
+.wk-zeile::after { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 3px 3px 0; background: var(--c); }
+.wk-zeile time { width: 3rem; color: var(--muted); font-size: .875rem; flex: none; }
+.wk-zeile .lbl { display: grid; white-space: normal; }
+.wk-zeile .lbl small { color: var(--muted); font-size: .8125rem; }
+.wk-raster { position: relative; display: grid; grid-template-columns: 2.4rem repeat(7, minmax(0, 1fr)); grid-template-rows: auto 600px; border-radius: 18px; overflow: hidden; background: var(--panel); box-shadow: var(--card-shadow); }
+.wk-ecke, .wk-kopf { border-bottom: 1px solid var(--line); }
+.wk-kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; padding: 10px 10px 9px; border-left: 1px solid var(--line); font-size: .8125rem; color: var(--muted); }
+.wk-kopf b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.125rem; color: var(--ink); }
+.wk-kopf.heute b { color: var(--sky); }
+.wk-kopf small { width: 100%; font-size: .6875rem; color: var(--faint); }
+.wk-stunden { position: relative; }
+.wk-stunden i { position: absolute; right: 6px; transform: translateY(-50%); font-style: normal; font-size: .6875rem; color: var(--faint); }
+.wk-spalte { position: relative; border-left: 1px solid var(--line); background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% 40px; }
+.wk-spalte.heute { background-color: rgb(var(--tint-rgb) / .05); }
+.wk-ganztag { position: absolute; top: 2px; left: 3px; right: 3px; z-index: 1; padding: 2px 6px; border-radius: 6px; background: var(--panel-2); font-size: .6875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-block { position: absolute; left: 3px; right: 3px; overflow: hidden; padding: 4px 6px; border-radius: 7px; border-left: 3px solid var(--c); background: color-mix(in srgb, var(--panel) 72%, var(--c) 28%); font-size: .75rem; line-height: 1.2; color: var(--ink); }
+.wk-block small { display: block; color: var(--muted); font-size: .6875rem; }
+.rh-kopf { padding-block: 8px 0; min-height: 0; }
+.rh-kopf + .cell::before { display: none; }
+.rh-punkte { display: grid; grid-template-columns: repeat(7, 11px); gap: 6px; flex: none; }
+.rh-punkte b { font-size: .625rem; font-weight: 600; color: var(--faint); text-align: center; }
+.rh-punkte i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--hair); }
+.rh-punkte i.an { background: var(--c); border-color: var(--c); }
+.rh-punkte i.heute { box-shadow: 0 0 0 2px var(--night), 0 0 0 3.5px var(--hair); }
+.rh-punkte i.spaeter { border-style: dashed; opacity: .6; }
+.rh-zeile .lbl { display: grid; white-space: normal; }
+.rh-zeile .lbl b { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.rh-zeile .lbl small { color: var(--muted); font-size: .8125rem; }
+.cell.ck-konto .lbl, .cell.ck-konto .lbl small, .cell.rh-zeile .lbl, .cell.rh-zeile .lbl small, .cell.wk-zeile .lbl small { white-space: normal; overflow: visible; text-overflow: clip; }
+.cell.wk-tageskopf .lbl { flex: none; }
+
+/* Mehr zur Woche und Tageskopf: die Bezeichnung bleibt ganz, der Wert darf kürzen */
+section[aria-label="Mehr zur Woche"] .cell .lbl, .wk-tageskopf .lbl { flex: none; }
+section[aria-label="Mehr zur Woche"] .cell .val { min-width: 0; }
+section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

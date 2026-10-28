@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { ensureSchema, getSetting, sql } from './db';
+import { ensureSchema, ERSTER_NUTZER, getSetting, sql } from './db';
 import { cookieOptions, readSession, sameSecret, sessionCookie, signSession, type Sitzung } from './session';
 
 /**
@@ -10,8 +10,24 @@ import { cookieOptions, readSession, sameSecret, sessionCookie, signSession, typ
  * Abmelden widerruft genau diese Sitzung, „Auf allen Geräten abmelden“ alle.
  */
 
+export { ERSTER_NUTZER };
+
+/**
+ * Passwort und Code gehören nur dem ersten Menschen. Andere Menschen dürfen sie weder einrichten noch abschalten,
+ * sonst könnten sie sich als der erste Mensch anmelden.
+ */
+export async function nichtErsterNutzer(): Promise<NextResponse | null> {
+  const s = await aktuelleSitzung();
+  return s && s.userId !== ERSTER_NUTZER ? NextResponse.json({ error: 'Passwort und Code richtet nur der erste Mensch im Haushalt ein.' }, { status: 403 }) : null;
+}
+
+/** Für wen ein neuer Passkey gilt: angemeldet für den Menschen der Sitzung, beim Einrichten für den ersten. */
+export async function einrichtenFuer(): Promise<string> {
+  return (await aktuelleSitzung())?.userId ?? ERSTER_NUTZER;
+}
+
 /** Legt eine Sitzung an und setzt das Cookie auf der Antwort. */
-export async function sitzungSetzen(res: NextResponse, userId = 'peter'): Promise<NextResponse> {
+export async function sitzungSetzen(res: NextResponse, userId: string): Promise<NextResponse> {
   await ensureSchema();
   const sid = randomBytes(24).toString('base64url');
   await sql`insert into sitzungen (id, user_id) values (${sid}, ${userId})`;
@@ -38,7 +54,17 @@ export async function aktuelleSitzung(): Promise<Sitzung | null> {
   return pruefeSitzung((await cookies()).get(sessionCookie())?.value);
 }
 
-/** Zweiter Riegel in jeder API-Route: `const aus = await ohneSitzung(); if (aus) return aus;` */
+/**
+ * Zweiter Riegel mit dem Menschen aus der Sitzung:
+ * `const { aus, uid } = await mitNutzer(); if (aus) return aus;`
+ * Danach ist `uid` sicher gesetzt. Jede Abfrage filtert nach diesem `uid`, nie nach einem festen Namen.
+ */
+export async function mitNutzer(): Promise<{ aus: NextResponse; uid: null } | { aus: null; uid: string }> {
+  const s = await aktuelleSitzung();
+  return s ? { aus: null, uid: s.userId } : { aus: NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 }), uid: null };
+}
+
+/** Zweiter Riegel in API-Routen, die keinen Menschen brauchen: `const aus = await ohneSitzung(); if (aus) return aus;` */
 export async function ohneSitzung(): Promise<NextResponse | null> {
   return (await aktuelleSitzung()) ? null : NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
 }

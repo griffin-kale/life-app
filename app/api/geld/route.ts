@@ -4,25 +4,25 @@ import { betragAus } from '@/lib/geld-regeln';
 import { bonLesen, geldStand, haushalt, topfVorschlag } from '@/lib/geld';
 import { heuteBerlin } from '@/lib/priorisieren';
 import { begrenzt } from '@/lib/ratelimit';
-import { ohneSitzung } from '@/lib/sitzung';
+import { mitNutzer } from '@/lib/sitzung';
 import { oeffentlich } from '@/lib/fehler';
 import { jpegSaeubern } from '@/lib/jpeg';
 
-const USER = 'peter';
+
 const cent = (x: unknown, max = 100_000_000) => { const n = Math.round(Number(x)); return Number.isFinite(n) && n >= 0 && n <= max ? n : null; };
 const name = (x: unknown) => (typeof x === 'string' ? x.trim().slice(0, 60) : '');
 
 export async function GET() {
-  const aus = await ohneSitzung(); if (aus) return aus;
-  return NextResponse.json(await geldStand(USER));
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  return NextResponse.json(await geldStand(uid));
 }
 
 export async function POST(req: NextRequest) {
-  const aus = await ohneSitzung(); if (aus) return aus;
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   await ensureSchema();
   const b = await req.json().catch(() => ({}));
-  const h = await haushalt(USER);
+  const h = await haushalt(uid);
   const tag = heuteBerlin();
   const eigenerTopf = async (id: unknown) => {
     const n = Number(id); if (!Number.isInteger(n)) return null;
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         if (!c) return NextResponse.json({ error: 'Kein Betrag erkannt. Zum Beispiel: 12,50 Bäcker' }, { status: 400 });
         let topf = (await eigenerTopf(b.topf_id))?.id ?? null;
         if (!topf) { const woche = await sql<{ id: string; name: string }[]>`select id::text, name from geld_toepfe where haushalt_id = ${h} and art = 'woche' and aktiv order by sortierung, id`; topf = await topfVorschlag(was, woche); }
-        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${USER}, ${tag}, ${c}, ${topf}, ${was}, ${b.quelle === 'hand' ? 'hand' : 'sprache'})`;
+        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${uid}, ${tag}, ${c}, ${topf}, ${was}, ${b.quelle === 'hand' ? 'hand' : 'sprache'})`;
         return NextResponse.json({ ok: true, cent: c, was });
       }
       case 'bon': {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         const woche = await sql<{ id: string; name: string }[]>`select id::text, name from geld_toepfe where haushalt_id = ${h} and art = 'woche' and aktiv order by sortierung, id`;
         const r = await bonLesen(bild, woche.map((t) => t.name));
         const topf = (await eigenerTopf(b.topf_id))?.id ?? woche.find((t) => t.name === r.topf)?.id ?? woche[0]?.id ?? null;
-        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${USER}, ${tag}, ${r.cent}, ${topf}, ${r.laden}, 'bon')`;
+        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${uid}, ${tag}, ${r.cent}, ${topf}, ${r.laden}, 'bon')`;
         return NextResponse.json({ ok: true, cent: r.cent, was: r.laden });
       }
       case 'topf': {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       case 'taschengeld': {
         const t = await eigenerTopf(b.topf_id); const c = cent(b.cent, 100_000);
         if (!t || t.art !== 'kind' || !c) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
-        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${USER}, ${tag}, ${c}, ${t.id}, ${name(b.was) || 'Taschengeld ausgegeben'}, 'hand')`;
+        await sql`insert into geld_buchungen (haushalt_id, user_id, tag, cent, topf_id, was, quelle) values (${h}, ${uid}, ${tag}, ${c}, ${t.id}, ${name(b.was) || 'Taschengeld ausgegeben'}, 'hand')`;
         return NextResponse.json({ ok: true });
       }
       case 'posten': {
@@ -89,18 +89,18 @@ export async function POST(req: NextRequest) {
 
 /** Wochenbetrag eines Topfs ändern. */
 export async function PATCH(req: NextRequest) {
-  const aus = await ohneSitzung(); if (aus) return aus;
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
-  const h = await haushalt(USER); const c = cent(b.betrag_cent); const id = Number(b.id);
+  const h = await haushalt(uid); const c = cent(b.betrag_cent); const id = Number(b.id);
   if (!Number.isInteger(id) || c === null) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
   await sql`update geld_toepfe set betrag_cent = ${c} where id = ${id} and haushalt_id = ${h}`;
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {
-  const aus = await ohneSitzung(); if (aus) return aus;
-  const h = await haushalt(USER);
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  const h = await haushalt(uid);
   const art = req.nextUrl.searchParams.get('art'); const id = Number(req.nextUrl.searchParams.get('id'));
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'ungültig' }, { status: 400 });
   if (art === 'buchung') await sql`delete from geld_buchungen where id = ${id} and haushalt_id = ${h}`;

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const challenge = await readChallenge(req.cookies.get(challengeCookie())?.value, 'login');
   if (!challenge || !response?.id) return NextResponse.json({ error: 'Zeit abgelaufen. Bitte nochmal.' }, { status: 400 });
   await ensureSchema();
-  const rows = await sql`select id, public_key, counter, transports from credentials where id = ${response.id}`;
+  const rows = await sql`select id, public_key, counter, transports, user_id from credentials where id = ${response.id}`;
   const cred = rows[0];
   if (!cred) return NextResponse.json({ error: 'Dieser Passkey ist hier nicht bekannt.' }, { status: 403 });
   const { rpID, origin } = rp(req);
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     console.warn('[auth] Anmeldung abgelehnt', (e as Error).name);
     return NextResponse.json({ error: 'Anmeldung fehlgeschlagen. Bitte nochmal.' }, { status: 403 });
   }
-  const res = await sitzungSetzen(NextResponse.json({ ok: true }));
+  const res = await sitzungSetzen(NextResponse.json({ ok: true }), cred.user_id as string);
   res.cookies.delete(challengeCookie());
   return res;
 }

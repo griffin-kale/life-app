@@ -1,6 +1,6 @@
 import { askJson, askJsonTief, geschuetzteNamen, MODEL } from './claude';
 import { AKTIONEN_TEXT, aktionPruefen, bestaetigung, entscheidend, type CoachAktion } from './coach-aktion';
-import { ensureSchema, getSetting, sql } from './db';
+import { ensureSchema, getSetting, proNutzer, sql } from './db';
 import { BOEGEN, who5, type Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { koerperZusammenfassung, warnsignale } from './coach-regeln';
@@ -42,8 +42,8 @@ const zeile = (c: Checkin) => {
 async function grundlage(userId: string) {
   await ensureSchema();
   const [items, kontext, checkins, namen, k, geld, g, menschenText] = await Promise.all([
-    offene(),
-    getSetting('kontext'),
+    offene(userId),
+    getSetting(proNutzer('kontext', userId)),
     sql<Checkin[]>`select art, tag::text as tag, antworten from checkins where user_id = ${userId} and tag >= (current_date - 8) order by tag, art`,
     geschuetzteNamen(),
     koerperStand(userId),
@@ -84,7 +84,7 @@ async function grundlage(userId: string) {
   return { zeilen, warnungen };
 }
 
-export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'): Promise<CoachAntwort> {
+export async function coachErstellen(art: 'morgen' | 'abend', userId: string): Promise<CoachAntwort> {
   const tag = heuteBerlin();
   const { zeilen, warnungen } = await grundlage(userId);
   const prompt = [
@@ -113,7 +113,7 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId = 'peter'):
 export type ChatZeile = { rolle: 'ich' | 'coach'; text: string; zeit: string };
 
 /** Gespräch mit dem Coach. Gilt für den Tag: Life schickt Claude die Lage und den Verlauf von heute, beides pseudonymisiert. */
-export async function coachChat(nachricht: string, userId = 'peter'): Promise<ChatZeile[]> {
+export async function coachChat(nachricht: string, userId: string): Promise<ChatZeile[]> {
   const tag = heuteBerlin();
   const text = nachricht.replace(/\s+/g, ' ').trim().slice(0, 1000);
   await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'ich', ${text})`;
@@ -156,7 +156,7 @@ async function ausfuehren(a: CoachAktion, h: string): Promise<void> {
   else await sql`update geld_profil set sparrate_cent = ${a.cent}, updated_at = now() where haushalt_id = ${h}`;
 }
 
-export async function chatVerlauf(userId = 'peter'): Promise<ChatZeile[]> {
+export async function chatVerlauf(userId: string): Promise<ChatZeile[]> {
   await ensureSchema();
   return sql<ChatZeile[]>`select rolle, text, to_char(created_at at time zone 'Europe/Berlin', 'HH24:MI') as zeit from coach_chat where user_id = ${userId} and tag = ${heuteBerlin()} order by id`;
 }

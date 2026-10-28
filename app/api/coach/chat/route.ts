@@ -1,19 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { chatVerlauf, coachChat } from '@/lib/coach';
 import { begrenzt } from '@/lib/ratelimit';
-import { ohneSitzung } from '@/lib/sitzung';
+import { mitNutzer } from '@/lib/sitzung';
 
 /** Gespräch mit dem Coach für heute. */
 export async function GET() {
-  const aus = await ohneSitzung(); if (aus) return aus;
-  return NextResponse.json({ verlauf: await chatVerlauf() });
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  return NextResponse.json({ verlauf: await chatVerlauf(uid) });
 }
 
 export async function POST(req: NextRequest) {
-  const aus = await ohneSitzung(); if (aus) return aus;
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
   const zuViel = begrenzt(req, 'schreiben'); if (zuViel) return zuViel;
   const b = await req.json().catch(() => ({}));
   const text = typeof b.text === 'string' ? b.text.trim() : '';
   if (!text) return NextResponse.json({ error: 'Nachricht fehlt' }, { status: 400 });
-  return NextResponse.json({ verlauf: await coachChat(text) });
+  return NextResponse.json({ verlauf: await coachChat(text, uid) });
 }

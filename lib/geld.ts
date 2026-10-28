@@ -7,15 +7,16 @@ import { Hinweis } from './fehler';
 
 /** Geld des Haushalts. Beträge bleiben auf dem Server. Claude sieht nur Ladenname und Text einer Ausgabe oder ein Bon-Foto. */
 
-export async function haushalt(userId = 'peter'): Promise<string> {
+export async function haushalt(userId: string): Promise<string> {
   await ensureSchema();
   const [n] = await sql<{ haushalt_id: string }[]>`select haushalt_id from nutzer where id = ${userId}`;
-  return n?.haushalt_id ?? 'gneuss';
+  if (!n) throw new Error('Kein Haushalt für diesen Menschen');
+  return n.haushalt_id;
 }
 
 type Topf = { id: string; name: string; art: 'woche' | 'spar' | 'kind'; betrag_cent: number; stand_cent: number; start: string; sortierung: number };
 
-export async function geldStand(userId = 'peter') {
+export async function geldStand(userId: string) {
   const h = await haushalt(userId);
   const heute = heuteBerlin(); const montag = wochenTag(heute);
   const vorher = new Date(Date.parse(montag + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10);
@@ -54,7 +55,7 @@ export async function geldStand(userId = 'peter') {
 }
 
 /** Für den Coach: nur Zählungen, keine Beträge. */
-export async function geldKurz(userId = 'peter'): Promise<string> {
+export async function geldKurz(userId: string): Promise<string> {
   const g = await geldStand(userId);
   if (!g.woche.length) return '';
   const im = g.woche.filter((t) => !t.ueber).length;

@@ -17,7 +17,7 @@ export default function StandSeite() {
   const leer = (t: string) => <span className="st-leer">{t}</span>;
   return (
     <main className="wrap">
-      <TopBar title="Dein Stand" back={{ label: 'Mehr', href: '/mehr' }} />
+      <TopBar title="Dein Stand" back={{ label: 'Ziele', href: '/ziele' }} />
       <header className="head"><span className="eyebrow">{b ? `Baseline vom ${datum(b.tag)}` : 'Standortbestimmung'}</span><h1 className="title">Dein Stand<i>.</i></h1></header>
       {!r ? <p className="loading">Lädt …</p> : <>
         {r.naechste ? (

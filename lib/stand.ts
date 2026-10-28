@@ -1,5 +1,5 @@
 import { askJsonTief } from './claude';
-import { ensureSchema, getSetting, setSetting, sql } from './db';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import type { Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { engpassSetzen, montagVon } from './tagesregeln';
@@ -10,17 +10,17 @@ import { aufgabe } from './tag';
 
 const KEY = (u: string) => `stand:${u}`;
 
-export async function standLesen(userId = 'peter'): Promise<Stand> { return standAus(await getSetting(KEY(userId))); }
+export async function standLesen(userId: string): Promise<Stand> { return standAus(await getSetting(KEY(userId))); }
 async function standSchreiben(s: Stand, userId: string) { await setSetting(KEY(userId), JSON.stringify(s).slice(0, 20000)); }
 
-export async function wochenziel(userId = 'peter'): Promise<string> {
+export async function wochenziel(userId: string): Promise<string> {
   try { const w = JSON.parse((await getSetting(`wochenziel:${userId}`)) || '{}'); return w.montag === montagVon(heuteBerlin()) && typeof w.text === 'string' ? w.text : ''; } catch { return ''; }
 }
-export async function wochenzielSetzen(text: string, userId = 'peter') {
+export async function wochenzielSetzen(text: string, userId: string) {
   await setSetting(`wochenziel:${userId}`, JSON.stringify({ montag: montagVon(heuteBerlin()), text: text.replace(/\s+/g, ' ').trim().slice(0, 200) }));
 }
 
-export async function standZeilenLesen(userId = 'peter'): Promise<string[]> {
+export async function standZeilenLesen(userId: string): Promise<string[]> {
   const [s, w] = await Promise.all([standLesen(userId), wochenziel(userId)]);
   return standZeilen(s, heuteBerlin(), w);
 }
@@ -41,7 +41,7 @@ const ANWEISUNG: Record<number, string> = {
 };
 
 /** Speichert die Antworten einer Etappe, setzt bei Etappe 1 die Baseline und lässt Claude auswerten. */
-export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, Antwort>, userId = 'peter'): Promise<{ id: number; auswertung: Auswertung }> {
+export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, Antwort>, userId: string): Promise<{ id: number; auswertung: Auswertung }> {
   await ensureSchema();
   const tag = heuteBerlin();
   let s = await standLesen(userId);
@@ -50,7 +50,7 @@ export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, A
   await standSchreiben(s, userId);
   const [{ id }] = await sql<{ id: number }[]>`insert into standort (user_id, etappe, antworten) values (${userId}, ${nr}, ${sql.json(antworten)}) returning id`;
 
-  const [kontext, ziele, items] = await Promise.all([getSetting('kontext'), getSetting('ziele'), offene().catch(() => [])]);
+  const [kontext, ziele, items] = await Promise.all([getSetting(proNutzer('kontext', userId)), getSetting(proNutzer('ziele', userId)), offene(userId).catch(() => [])]);
   const e = etappe(nr)!;
   const prompt = [
     `STANDORT ETAPPE ${nr}`,
@@ -73,25 +73,25 @@ export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, A
 }
 
 /** Wertet die zuletzt gespeicherte Etappe nochmal aus, zum Beispiel wenn Claude vorher nicht erreichbar war. */
-export async function neuAuswerten(nr: 1 | 2 | 3, userId = 'peter') {
+export async function neuAuswerten(nr: 1 | 2 | 3, userId: string) {
   const [r] = await sql<{ antworten: Record<string, Antwort> }[]>`select antworten from standort where user_id = ${userId} and etappe = ${nr} order by id desc limit 1`;
   if (!r) return null;
   return etappeAuswerten(nr, r.antworten, userId);
 }
 
-export async function letzteAuswertung(nr: number, userId = 'peter'): Promise<{ id: number; auswertung: Auswertung | null; antworten: Record<string, Antwort> } | null> {
+export async function letzteAuswertung(nr: number, userId: string): Promise<{ id: number; auswertung: Auswertung | null; antworten: Record<string, Antwort> } | null> {
   await ensureSchema();
   const [r] = await sql<{ id: number; auswertung: Auswertung | null; antworten: Record<string, Antwort> }[]>`select id, auswertung, antworten from standort where user_id = ${userId} and etappe = ${nr} order by id desc limit 1`;
   return r ?? null;
 }
 
 /** Übernimmt einen Vorschlag. Engpass geht in den Kontext, das Wochenziel in die Woche, alles andere in den Stand. */
-export async function vorschlagUebernehmen(nr: number, v: Vorschlag, userId = 'peter'): Promise<Stand> {
+export async function vorschlagUebernehmen(nr: number, v: Vorschlag, userId: string): Promise<Stand> {
   const geprueft = pruefeAuswertung(nr, { vorschlaege: [v] }).vorschlaege[0];
   if (!geprueft) throw new Error('Vorschlag ungültig');
   const s = uebernehmen(await standLesen(userId), geprueft, heuteBerlin());
   await standSchreiben(s, userId);
-  if (geprueft.art === 'engpass') await setSetting('kontext', engpassSetzen(await getSetting('kontext'), geprueft.text).slice(0, 8000));
+  if (geprueft.art === 'engpass') await setSetting(proNutzer('kontext', userId), engpassSetzen(await getSetting(proNutzer('kontext', userId)), geprueft.text).slice(0, 8000));
   if (geprueft.art === 'wochenziel') await wochenzielSetzen(geprueft.text, userId);
   return s;
 }

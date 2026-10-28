@@ -11,7 +11,7 @@ const WOCHEN = 8;
 type Zahl = Record<string, number>;
 const nachWoche = <T extends { w: string }>(rows: T[]) => new Map(rows.map((r) => [r.w, r]));
 
-export async function kompassStand(userId = 'peter') {
+export async function kompassStand(userId: string) {
   await ensureSchema();
   const heute = heuteBerlin();
   const montag = wochenTag(heute);

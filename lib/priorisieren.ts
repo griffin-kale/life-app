@@ -1,7 +1,7 @@
 import { standAus, standZeilen } from './standort';
 import { montagVon } from './tagesregeln';
 import { askJson, MODEL } from './claude';
-import { ensureSchema, getSetting, setSetting, sql, type Item } from './db';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql, type Item } from './db';
 import { oeffentlich } from './fehler';
 
 export const STAPEL = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
@@ -19,11 +19,11 @@ export const liste = (s: string) => s.split('\n').map((z) => z.replace(/^[-•*\
 export const engpassAus = (kontext: string) => kontext.match(/engpass\s*:\s*(.+)/i)?.[1]?.trim() ?? '';
 
 /** Alles, was gerade offen ist und eine Priorität braucht. Ideen erst nach ihren 72 Stunden. */
-export async function offene(): Promise<Item[]> {
+export async function offene(uid: string): Promise<Item[]> {
   await ensureSchema();
   return sql<Item[]>`
     select * from items
-    where status = 'sortiert' and merged_into is null
+    where user_id = ${uid} and status = 'sortiert' and merged_into is null
       and (kategorie in ${sql([...AKTIV])} or (kategorie = 'idee' and parken_bis < now()))
     order by created_at desc limit 80`;
 }
@@ -34,11 +34,11 @@ const AUFWAND = (m: number | null) => (m ? (m <= 20 ? '15 Min' : m <= 90 ? '1 St
 const VERB: Record<string, string> = { jetzt: 'nach Jetzt geholt', woche: 'in die Woche geschoben', delegieren: 'zum Delegieren gelegt', geparkt: 'geparkt', streichen: 'zum Streichen gelegt', archiv: 'gestrichen', 'eine-sache': 'zur einen Sache des Tages gemacht' };
 
 /** Ein Sortierlauf. "tag" denkt den Tag neu, "nachtrag" ordnet Neues ein und hält die Jetzt-Liste stabil. */
-async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
-  const items = await offene();
+async function lauf(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
+  const items = await offene(uid);
   const tag = heuteBerlin();
   if (!items.length) return;
-  const [kontext, ziele, team, fokusRoh, standRoh, wzRoh] = await Promise.all([getSetting('kontext'), getSetting('ziele'), getSetting('team'), getSetting('fokus:peter'), getSetting('stand:peter'), getSetting('wochenziel:peter')]);
+  const [kontext, ziele, team, fokusRoh, standRoh, wzRoh] = await Promise.all([getSetting(proNutzer('kontext', uid)), getSetting(proNutzer('ziele', uid)), getSetting(proNutzer('team', uid)), getSetting(proNutzer('fokus', uid)), getSetting(proNutzer('stand', uid)), getSetting(proNutzer('wochenziel', uid))]);
   let wz = ''; try { const w = JSON.parse(wzRoh || '{}'); if (w.montag === montagVon(tag) && typeof w.text === 'string') wz = w.text; } catch { wz = ''; }
   const stand = standZeilen(standAus(standRoh), tag, wz).filter((z) => !z.startsWith('Selbsteinschätzung'));
   // Drei Dinge der Woche aus dem Wochenstart: nur für die laufende Woche
@@ -46,9 +46,9 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   try { const f = JSON.parse(fokusRoh || '{}'); if (f.montag === montagVon(tag) && Array.isArray(f.ids)) fokus = f.ids; } catch { fokus = []; }
   const korr = await sql<{ von: string | null; zu: string; text: string; titel: string | null; schritt: string | null }[]>`
     select k.von, k.zu, i.text, i.titel, i.schritt from korrekturen k join items i on i.id = k.item_id
-    order by k.created_at desc limit 20`;
+    where i.user_id = ${uid} order by k.created_at desc limit 20`;
   const [abend] = modus === 'tag' ? await sql<{ p: { aufgabe?: string; zeit?: string; notiz?: string } | null }[]>`
-    select antworten->'plan' as p from checkins where art = 'abend' and tag = (${tag}::date - 1)` : [];
+    select antworten->'plan' as p from checkins where user_id = ${uid} and art = 'abend' and tag = (${tag}::date - 1)` : [];
   const gestern = abend?.p ? [abend.p.aufgabe, abend.p.notiz].filter(Boolean).join(' / ') : '';
   const alter = (d: string) => Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 864e5));
   const zeilen = items.map((it, n) => {
@@ -109,10 +109,10 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
   await sql.begin(async (tx) => {
     for (const [n, z] of zuordnung) {
       if (weg.has(n)) continue;
-      await tx`update items set stapel = ${z.stapel}, rang = ${z.rang}, grund = ${z.grund || null}, sortiert_am = now() where id = ${items[n].id}`;
+      await tx`update items set stapel = ${z.stapel}, rang = ${z.rang}, grund = ${z.grund || null}, sortiert_am = now() where id = ${items[n].id} and user_id = ${uid}`;
     }
     for (const [w, b] of weg) {
-      await tx`update items set merged_into = ${items[b].id}, status = 'archiv', stapel = null, updated_at = now() where id = ${items[w].id}`;
+      await tx`update items set merged_into = ${items[b].id}, status = 'archiv', stapel = null, updated_at = now() where id = ${items[w].id} and user_id = ${uid}`;
     }
   });
 }
@@ -121,40 +121,41 @@ async function lauf(modus: 'tag' | 'nachtrag'): Promise<void> {
  * Sortiert, ohne dass zwei Läufe gleichzeitig arbeiten. Kommt währenddessen etwas Neues,
  * läuft direkt danach ein Nachtrag.
  */
-export async function sortiere(modus: 'tag' | 'nachtrag'): Promise<void> {
+export async function sortiere(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
+  const k = (s: string) => proNutzer(s, uid);
   await ensureSchema();
   const conn = await sql.reserve();
   try {
-    const [{ ok }] = await conn`select pg_try_advisory_lock(4711) as ok`;
-    if (!ok) { await setSetting('sort_nochmal', '1'); return; }
+    const [{ ok }] = await conn`select pg_try_advisory_lock(4711, hashtext(${uid})) as ok`;
+    if (!ok) { await setSetting(k('sort_nochmal'), '1'); return; }
     try {
-      await setSetting('sort_laeuft', new Date().toISOString());
+      await setSetting(k('sort_laeuft'), new Date().toISOString());
       let m = modus;
       for (let i = 0; i < 3; i++) {
-        await setSetting('sort_nochmal', '');
-        try { await lauf(m); await setSetting('sort_fehler', ''); }
-        catch (e) { await setSetting('sort_fehler', oeffentlich(e, 'Claude hat einen Fehler gemeldet. Versuch es später noch einmal.', 'sortieren')); }
-        if ((await getSetting('sort_nochmal')) !== '1') break;
+        await setSetting(k('sort_nochmal'), '');
+        try { await lauf(m, uid); await setSetting(k('sort_fehler'), ''); }
+        catch (e) { await setSetting(k('sort_fehler'), oeffentlich(e, 'Claude hat einen Fehler gemeldet. Versuch es später noch einmal.', 'sortieren')); }
+        if ((await getSetting(k('sort_nochmal'))) !== '1') break;
         m = 'nachtrag';
       }
-      await setSetting('sort_am', new Date().toISOString());
+      await setSetting(k('sort_am'), new Date().toISOString());
     } finally {
-      await setSetting('sort_laeuft', '');
-      await conn`select pg_advisory_unlock(4711)`;
+      await setSetting(k('sort_laeuft'), '');
+      await conn`select pg_advisory_unlock(4711, hashtext(${uid}))`;
     }
   } finally { conn.release(); }
 }
 
 /** Beim ersten Öffnen des Tages einmal neu denken. Gibt true zurück, wenn ein Lauf ansteht. */
-export async function tagesStartNoetig(): Promise<boolean> {
+export async function tagesStartNoetig(uid: string): Promise<boolean> {
   const tag = heuteBerlin();
-  if ((await getSetting('sort_tag')) === tag) return false;
-  await setSetting('sort_tag', tag);
+  if ((await getSetting(proNutzer('sort_tag', uid))) === tag) return false;
+  await setSetting(proNutzer('sort_tag', uid), tag);
   return true;
 }
 
 /** Ein Lauf gilt nach 3 Minuten als hängengeblieben. */
-export async function laeuftGerade(): Promise<boolean> {
-  const t = await getSetting('sort_laeuft');
+export async function laeuftGerade(uid: string): Promise<boolean> {
+  const t = await getSetting(proNutzer('sort_laeuft', uid));
   return !!t && Date.now() - new Date(t).getTime() < 180_000;
 }

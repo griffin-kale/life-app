@@ -12,23 +12,27 @@ type Ziel = { href: string; name: string; farbe: string; pfad: string };
 const BEREICHE: Ziel[] = [
   { href: '/', name: 'Heute', farbe: 'var(--k-zeit)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 10.2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6z' },
   { href: '/woche', name: 'Woche', farbe: 'var(--k-zeit)', pfad: 'M6.5 5h11A2.5 2.5 0 0 1 20 7.5v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-10A2.5 2.5 0 0 1 6.5 5zM4 10h16M8 3v4M16 3v4' },
+  { href: '/ziele', name: 'Ziele', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
+  { href: '/ich', name: 'Ich', farbe: 'var(--k-mental)', pfad: 'M12 12a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2zM4.8 20c.9-3.6 3.8-5.6 7.2-5.6s6.3 2 7.2 5.6' },
+];
+/** Die fünf Konten, auf dem Mac immer einen Klick entfernt. Auf dem iPhone liegen sie unter „Ich“. */
+const UEBERBLICK: Ziel[] = [
   { href: '/koerper', name: 'Körper', farbe: 'var(--k-koerper)', pfad: 'M3 12h4l2.5-6 4 12 2.5-6H21' },
   { href: '/koerper/ruhe', name: 'Ruhe', farbe: 'var(--k-mental)', pfad: 'M12 4a8 8 0 1 0 8 8 6 6 0 0 1-8-8z' },
   { href: '/geld', name: 'Geld', farbe: 'var(--k-geld)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
-];
-const UEBERBLICK: Ziel[] = [
-  { href: '/stand', name: 'Dein Stand', farbe: 'var(--k-mental)', pfad: 'M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z' },
-  { href: '/kompass', name: 'Kompass', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
   { href: '/menschen', name: 'Menschen', farbe: 'var(--k-sozial)', pfad: 'M9 11.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19c.9-2.8 3-4.3 5.5-4.3s4.6 1.5 5.5 4.3M16.5 12a2.5 2.5 0 1 0 0-5M17 14.6c1.8.3 3 1.6 3.5 3.9' },
   { href: '/archiv', name: 'Logbuch', farbe: 'var(--k-zeit)', pfad: 'M6.5 3.5h8l3 3v14h-11zM9 10h6M9 14h6' },
 ];
 const EINST: Ziel = { href: '/einstellungen', name: 'Einstellungen', farbe: 'var(--faint)', pfad: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8' };
-const PILLE: [string, string, string[]][] = [['/', 'Heute', []], ['/woche', 'Woche', []], ['/koerper', 'Körper', []], ['/geld', 'Geld', []], ['/mehr', 'Mehr', ['/kompass', '/menschen', '/archiv', '/einstellungen', '/eintrag']]];
+const PILLE: [string, string, string[]][] = [['/', 'Heute', []], ['/woche', 'Woche', ['/wochenstart']], ['/ziele', 'Ziele', ['/kompass', '/stand']], ['/ich', 'Ich', ['/koerper', '/geld', '/menschen', '/archiv', '/einstellungen', '/eintrag', '/mehr']]];
 const ALLE = [...BEREICHE, ...UEBERBLICK, EINST];
 
 /** Der Bereich mit dem längsten passenden Pfad ist aktiv: /koerper/ruhe gehört zu Ruhe, nicht zu Körper. */
 export function aktiverBereich(pfad: string): string {
   if (pfad.startsWith('/eintrag')) return '/archiv';
+  if (pfad.startsWith('/kompass') || pfad.startsWith('/stand')) return '/ziele';
+  if (pfad.startsWith('/wochenstart')) return '/woche';
+  if (pfad === '/mehr') return '/ich';
   let best = '/';
   for (const z of ALLE) if (z.href !== '/' && (pfad === z.href || pfad.startsWith(z.href + '/')) && z.href.length > best.length) best = z.href;
   return pfad === '/' || best !== '/' ? best : '';
@@ -88,8 +92,8 @@ export function Navigation() {
           Life
         </Link>
         <nav className="sl-gruppe" aria-label="Jeden Tag">{BEREICHE.map((z) => <Zeile key={z.href} z={z} an={an === z.href} onWahl={() => setOffen(false)} />)}</nav>
-        <span className="sl-titel">Überblick</span>
-        <nav className="sl-gruppe" aria-label="Überblick">{UEBERBLICK.map((z) => <Zeile key={z.href} z={z} an={an === z.href} onWahl={() => setOffen(false)} />)}</nav>
+        <span className="sl-titel">Konten</span>
+        <nav className="sl-gruppe" aria-label="Konten">{UEBERBLICK.map((z) => <Zeile key={z.href} z={z} an={an === z.href} onWahl={() => setOffen(false)} />)}</nav>
         <nav className="sl-gruppe sl-fuss" aria-label="Einstellungen"><Zeile z={EINST} an={an === EINST.href} onWahl={() => setOffen(false)} /></nav>
       </aside>
       <div className="werkzeugleiste" role="toolbar" aria-label="Werkzeuge">

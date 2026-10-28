@@ -49,11 +49,30 @@ export async function einmalMit(speicher: EinmalSpeicher, schluessel: string, ta
  * Lässt `f` nie überlappen: erst ein Merker im Prozess, dann die Sperre über alle Prozesse (`sperre`).
  * Gibt false zurück, wenn schon ein Lauf unterwegs ist.
  */
-export function ohneUeberlappung(sperre: (f: () => Promise<void>) => Promise<boolean>) {
-  let laeuft = false;
+/** Nach so langer Laufzeit gilt ein Lauf als hängend und blockiert die folgenden nicht mehr. */
+export const HAENGT_MS = 10 * 60_000;
+
+/**
+ * Lässt nie zwei Läufe in diesem Prozess gleichzeitig zu. Hängt ein Lauf länger als `maxMs`
+ * (ein `await`, das nie zurückkommt), gibt der nächste Lauf ihn frei und meldet das über `haengt`.
+ * Gegen doppelte Arbeit schützt dann weiter die Sperre in der Datenbank (`sperre`).
+ */
+export function ohneUeberlappung(
+  sperre: (f: () => Promise<void>) => Promise<boolean>,
+  o: { maxMs?: number; jetzt?: () => number; haengt?: (ms: number) => void } = {},
+) {
+  const maxMs = o.maxMs ?? HAENGT_MS;
+  const jetzt = o.jetzt ?? Date.now;
+  let seit: number | null = null;
+  let nr = 0;
   return async (f: () => Promise<void>): Promise<boolean> => {
-    if (laeuft) return false;
-    laeuft = true;
-    try { return await sperre(f); } finally { laeuft = false; }
+    const t = jetzt();
+    if (seit !== null) {
+      if (t - seit < maxMs) return false;
+      o.haengt?.(t - seit);
+    }
+    const meins = ++nr;
+    seit = t;
+    try { return await sperre(f); } finally { if (nr === meins) seit = null; }
   };
 }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { begrenzt } from '@/lib/ratelimit';
 import { hit, voll } from '@/lib/ratelimit-core';
-import { sitzungSetzen } from '@/lib/sitzung';
+import { ERSTER_NUTZER, sitzungSetzen } from '@/lib/sitzung';
 import { anmelden } from '@/lib/zweifaktor';
 
 const FEHLER = 'Anmeldung fehlgeschlagen.';
@@ -18,5 +18,5 @@ export async function POST(req: NextRequest) {
     hit(GLOBAL.key, GLOBAL.max, GLOBAL.windowMs);
     return NextResponse.json({ error: FEHLER }, { status: 401 });
   }
-  return sitzungSetzen(NextResponse.json({ ok: true }));
+  return sitzungSetzen(NextResponse.json({ ok: true }), ERSTER_NUTZER);
 }

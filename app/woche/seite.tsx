@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useToast, type Item, type Stand } from '../ui';
+import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useBreit, useToast, type Item, type Stand } from '../ui';
 import { Fragebogen } from '../fragebogen';
 import { useCheckins } from '../coach';
 import { ZeitKaufen } from '../zeit-kaufen';
-import { UeberKarte } from '../ueberkarte';
+import { Rhythmen, WochenKalender, useWoche } from '../woche-kalender';
 import { MitInspektor } from '../inspektor';
 import Link from 'next/link';
 
@@ -20,12 +20,16 @@ function kw(d = new Date()) {
 
 export const TEILE: Record<string, string> = { ziele: 'Ziele', energie: 'Energie-Bilanz', 'zeit-kaufen': 'Zeit kaufen', parkplatz: 'Parkplatz' };
 
-/** Woche: oben der Wochenbogen und vier Karten, darunter die Stapel. Ziele, Energie, Zeit kaufen und Parkplatz haben eigene Seiten. */
+/** Woche (Life 2.0): Wofür ist diese Woche da? Drei Dinge der Woche, sieben Tage mit Terminen, Rhythmen, darunter die Stapel.
+ *  Energie, Zeit kaufen und Parkplatz haben eigene Seiten, Ziele stehen unter dem Tab Ziele. */
 export function WocheSeite({ teil }: { teil?: string }) {
   const [st, setSt] = useState<Stand | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
   const [toast, setToast] = useToast();
   const ci = useCheckins(true);
+  const w = useWoche();
+  const breit = useBreit(900);
+  const mac = useBreit(1100);
   const load = useCallback(async () => { setSt(await api<Stand>('/api/heute')); }, []);
   useEffect(() => { load().catch((e) => setToast((e as Error).message, 'err')); }, [load, setToast]);
   useEffect(() => {
@@ -109,11 +113,6 @@ export function WocheSeite({ teil }: { teil?: string }) {
         <span className="eyebrow">KW {kw()}{st && !teil ? ` · ${st.erledigtWoche} erledigt` : ''}</span>
         <h1 className="title">{teil ? TEILE[teil] : 'Woche'}<i>.</i></h1>
       </header>
-      {teil ? null : ci.zeige === 'woche' ? (
-        <section className="gsec" aria-label="Wochenbogen">
-          <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
-        </section>
-      ) : ci.who5 !== null && ci.who5 < 51 ? <p className="gnote">Wohlbefinden diese Woche {ci.who5} von 100. Unter 51 lohnt ein genauerer Blick, gern auch mit ärztlichem Rat.</p> : null}
 
       {!teil && ws?.offen ? (
         <Link href="/wochenstart" className="ws-banner">
@@ -132,12 +131,11 @@ export function WocheSeite({ teil }: { teil?: string }) {
         </section>
       ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p> : null}
 
-      {!teil && st ? (
-        <section className="ueber" aria-label="Bereiche">
-          <UeberKarte c={{ href: '/woche/ziele', titel: 'Ziele', farbe: 'var(--k-zeit)', zahl: `${st.ziele.reduce((a, z) => a + z.offen, 0)} offen` }} />
-          <UeberKarte c={{ href: '/woche/energie', titel: 'Energie', farbe: 'var(--k-koerper)', zahl: st.kraft ? `+${st.kraft.gab.length} / −${st.kraft.kostete.length}` : '–' }} />
-          <UeberKarte c={{ href: '/woche/zeit-kaufen', titel: 'Zeit kaufen', farbe: 'var(--k-geld)', zahl: zk === null ? '–' : `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` }} />
-          <UeberKarte c={{ href: '/woche/parkplatz', titel: 'Parkplatz', farbe: 'var(--k-mental)', zahl: `${nach('geparkt').length}` }} />
+      {!teil && w ? <WochenKalender w={w} breit={breit} /> : null}
+      {!teil && w && !mac ? <Rhythmen w={w} /> : null}
+      {!teil && ci.zeige === 'woche' ? (
+        <section className="gsec" aria-label="Wochenbogen">
+          <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
         </section>
       ) : null}
 
@@ -152,7 +150,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
         </section>
       ) : null}
 
-      {teil ? liste : <MitInspektor back={{ label: 'Woche', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={<div className="empty"><b>Wähl links eine Aufgabe.</b></div>}>{liste}</MitInspektor>}
+      {teil ? liste : <MitInspektor back={{ label: 'Woche', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={w ? <Rhythmen w={w} /> : <div className="empty"><b>Lädt …</b></div>}>{liste}</MitInspektor>}
       {teil === 'energie' && st?.kraft && !(st.kraft.gab.length || st.kraft.kostete.length) ? <div className="empty"><b>Noch keine Bilanz.</b></div> : null}
       {teil === 'energie' && st?.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? (
         <section className="gsec" aria-label="Energie-Bilanz">
@@ -182,6 +180,15 @@ export function WocheSeite({ teil }: { teil?: string }) {
           {st.laeuft ? <span className="working">Claude sortiert …</span> : st.sortiertAm ? `Sortiert um ${fTime(st.sortiertAm)}` : 'Noch nicht sortiert'}
           {' · '}<button type="button" className="linkbtn" disabled={st.laeuft} onClick={() => { setSt((x) => x && { ...x, laeuft: true }); act(null, () => api('/api/heute', { method: 'POST' })); }}>Neu sortieren</button>
         </p>
+      ) : null}
+      {!teil && st ? (
+        <section className="gsec" aria-label="Mehr zur Woche">
+          <div className="group">
+            <Link className="cell" href="/woche/parkplatz"><span className="lbl">Parkplatz</span><span className="val"><span>{nach('geparkt').length ? `${nach('geparkt').length} geparkt` : 'Ablenkungen parken'}</span>{Icon.chevronRight}</span></Link>
+            <Link className="cell" href="/woche/zeit-kaufen"><span className="lbl">Zeit kaufen</span><span className="val"><span>{zk ? `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` : 'Abgeben'}</span>{Icon.chevronRight}</span></Link>
+            <Link className="cell" href="/woche/energie"><span className="lbl">Energie-Bilanz</span><span className="val"><span>{st.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? `+${st.kraft.gab.length} / −${st.kraft.kostete.length}` : 'Noch leer'}</span>{Icon.chevronRight}</span></Link>
+          </div>
+        </section>
       ) : null}
       {toast}
       <TabBar />

@@ -36,7 +36,7 @@ async function issue(m: Meldung, id: number): Promise<number | null> {
   return Number((await r.json() as { number?: number }).number) || null;
 }
 
-export async function melden(m: Meldung, userId = 'peter'): Promise<{ id: number; github: number | null }> {
+export async function melden(m: Meldung, userId: string): Promise<{ id: number; github: number | null }> {
   await ensureSchema();
   const [row] = await sql<{ id: number }[]>`insert into rueckmeldungen (user_id, art, bereich, gewicht, text, seite, version, geraet)
     values (${userId}, ${m.art}, ${m.bereich}, ${m.gewicht}, ${m.text || null}, ${m.seite}, ${m.version}, ${m.geraet}) returning id`;
@@ -45,7 +45,7 @@ export async function melden(m: Meldung, userId = 'peter'): Promise<{ id: number
   return { id: row.id, github: nr };
 }
 
-export async function liste(userId = 'peter') {
+export async function liste(userId: string) {
   await ensureSchema();
   return sql<{ id: number; art: string; bereich: string; gewicht: string; text: string | null; status: string; github_nr: number | null; created_at: string }[]>`
     select id, art, bereich, gewicht, text, status, github_nr, created_at from rueckmeldungen where user_id = ${userId} order by created_at desc limit 30`;

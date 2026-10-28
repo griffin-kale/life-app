@@ -2,6 +2,59 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.25.1] – 2026-10-28
+
+### Behoben
+- **Der Zeitplan bleibt nicht mehr stehen.** Am 27.10. um 5:25 Uhr kam in einem Lauf ein Schritt nie zurück. Seitdem fiel jeder weitere Lauf aus: keine Mitteilungen, kein WHOOP- und Kalenderabgleich, `/api/health` meldete Verzug. Jetzt gibt der nächste Lauf einen hängenden nach zehn Minuten frei. Doppelte Arbeit verhindert weiter die Sperre in der Datenbank.
+- **Das Log nennt den Schritt, an dem ein Lauf hängt** (zum Beispiel „whoop“ oder „kalender“), nie einen Inhalt. So lässt sich die eigentliche Ursache beim nächsten Mal finden.
+
+## [0.25.0] – 2026-10-27
+
+Phase 1 von Life 2.0: Heute als Cockpit, Woche mit Kalender, vier Tabs (Peter, 27.10.2026: „B Cockpit mit Tagesstreifen“, „Vier Tabs + Festhalten“).
+
+### Neu
+- **Heute ist ein Cockpit.** Oben drei Kacheln: Erholung mit Schlaf aus WHOOP, freie Zeit heute aus dem Kalender, Erledigtes dieser Woche. Darunter die eine Sache, dann der **Tagesstreifen** mit den nächsten drei Blöcken aus Terminen und Aufgaben, dann **Konten heute**: je Konto eine Zeile, was heute zählt (zum Beispiel „Protein-Ziel heute 150 g“). Wo Daten fehlen, steht, was fehlt, nie eine nackte Null.
+- **Woche zeigt den Kalender.** Auf dem iPhone ein Streifen mit sieben Tagen und darunter die Termine des gewählten Tags, ab 900 px ein Wochenraster. Darunter fünf **Rhythmen** der Woche (Erledigt, Bewegung, Ruhe, Menschen, Geld) statt Serien. Parkplatz, Zeit kaufen und Energie-Bilanz stehen unter „Mehr zur Woche“.
+- **Vier Tabs: Heute · Woche · Ziele · Ich**, Festhalten in der Mitte. Ein Tipp hält einen Gedanken fest, Halten öffnet die sechs schnellen Wege (Gedanke, Ausgabe, Essen, Training, Ruhe, Coach).
+- **Ziele** hat eine eigene Seite: Wochenziel, deine Ziele mit Fortschritt, Kompass und Dein Stand.
+- **Ich** bündelt die fünf Konten Körper, Ruhe, Geld, Menschen, Logbuch und die Einstellungen. „Mehr“ leitet dorthin weiter, alte Lesezeichen gehen also nicht kaputt.
+
+### Geändert
+- **Design-Token 2.0:** tieferes Nachtblau, Flächen in zwei Stufen, besser lesbares Grau in Hell und Dunkel. Imperial Blue bleibt.
+- Heute zeigt keine Wochenringe und kein „Empfohlen“ mehr, der Kompass steht unter Ziele. Eine gespeicherte Heute-Reihenfolge wird beim ersten Öffnen nachgerüstet.
+- Auf der Woche steht der WHO-5-Hinweis nicht mehr, WHO-5 hat einen festen Ort.
+
+### Technik
+- `lib/cockpit.ts` und `GET /api/heute/cockpit`, `lib/woche.ts` und `GET /api/woche`, reine Regeln in `lib/cockpit-regeln.ts`, `lib/woche-regeln.ts` und `lib/kalender-regeln.ts` (`wochenTag`, `freiAm`).
+
+### Tests
+- Unit-Tests für Tagesstreifen, Konten heute, Wochentage, Rhythmen und freie Zeit. Ende-zu-Ende: Cockpit, Woche mit Kalender und Rhythmen, vier Tabs, Halten öffnet sechs Wege, Ich und Ziele ohne waagerechtes Scrollen auf 390 px.
+- Der Coach-Schritt im großen Ablauf wackelt nicht mehr, wenn die Sortierung die beiden KGSt-Einträge schon zusammengeführt hat.
+
+## [0.24.0] – 2026-10-27
+
+Phase 0 von Life 2.0: Fundament (Peter, 27.10.2026). Für dich sieht Life gleich aus. Darunter ist es bereit für einen zweiten Menschen und für den Umbau von Heute und Woche.
+
+### Sicherheit
+- **Der Mensch kommt aus der Sitzung.** Keine Route und keine Bibliothek setzt mehr fest „peter“ ein. Einträge, Korrekturen, Sortierlauf, Suche und Export filtern nach dem Menschen der Sitzung. Fremde Einträge lassen sich auch per ID weder lesen noch ändern noch löschen.
+- **Kein stiller Rückfall auf Peters Haushalt.** Hat ein Mensch keinen Haushalt, bricht Geld mit einem Fehler ab, statt Peters Zahlen zu zeigen.
+- **Mitteilungen abbestellen** geht nur für die eigenen Abos.
+- **Namen zum Schützen** umfassen jetzt auch die Teamlisten aller Menschen und die Namen im Haushalt. Von Claude gelernte Namen gehören dem Menschen, aus dessen Eintrag sie kommen (Schritt 4), geschützt werden sie bei allen.
+- **Passwort und Code gehören dem ersten Menschen.** Ein anderer Mensch kann sie weder einrichten noch abschalten und sich so nie als Peter anmelden.
+- **Der iCloud-Zugang aus der .env gilt nur für den ersten Menschen.** Ohne diese Grenze hätte der Zeitplan Peters Termine auch bei weiteren Menschen eingetragen.
+- **Neu einordnen** geht nur für eigene Einträge. Ein Abo für Mitteilungen wechselt nicht still den Menschen.
+- **Zeitplan:** Scheitert der Lauf für einen Menschen, meldet `/api/health` den Verzug, statt den Fehler zu verstecken.
+
+### Technik
+- **Nummerierte Migrationen** in `lib/migrationen.ts` mit Tabelle `schema_version`, Sperre gegen zwei gleichzeitige Starts und einer Transaktion pro Schritt. Schritt 1: fehlende Indizes `korrekturen(item_id)` und `ruhe(user_id, tag)`. Schritt 2: Engpass, Ziele, Team, Mitteilungen und Sortierstand gelten pro Mensch, Peters Werte werden übernommen. Schritt 3: „schon gesendet“ für Mitteilungen pro Mensch, damit nach dem Update keine Mitteilung doppelt kommt.
+- **Zeitplan für jeden Menschen einzeln.** Scheitert der Lauf für einen, laufen die anderen weiter.
+- **Anmeldung:** Ein Passkey meldet den Menschen an, dem er gehört. Passwort und Code, Einrichtungscode und Kurzbefehl gehören dem ersten Menschen.
+- README und `.env.example` beschreiben die Anthropic-API statt Bedrock.
+
+### Tests
+- Neu: zwei Menschen sehen nur ihre eigenen Einträge, Einstellungen und ihr Geld (Ende-zu-Ende). Statisch: kein `'peter'` in Routen, keine Standard-Menschen in `lib`. Migrationen in der richtigen Reihenfolge. Version in `package.json`, CHANGELOG und UEBERGABE stimmt überein.
+- Der Trainingsschritt im großen Ablauf läuft jetzt an jedem Wochentag.
+
 ## [0.23.0] – 2026-10-26
 
 Coach mit Händen, Opus für entscheidende Momente, Ziehen zum Neuladen (Peter, 26.10.2026).
