@@ -2,6 +2,14 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.25.2] – 2026-10-28
+
+### Behoben
+- **Coach auf dem Mac sieht ruhig aus.** Der Text reißt nicht mehr an einer harten Kante unter dem Feld ab, unten leuchtet kein heller Streifen mehr, und die Vorschläge brechen um, statt aus dem Rahmen zu laufen.
+
+### Technik
+- Anthropic-SDK 0.137.0 und Playwright 1.64.1 (Dependabot, #27), geprüft mit Typecheck, Unit-Tests, Build und e2e.
+
 ## [0.25.1] – 2026-10-28
 
 ### Behoben

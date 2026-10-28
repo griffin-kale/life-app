@@ -2,9 +2,9 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 28. Oktober 2026, Version 0.25.1.
+Stand: 28. Oktober 2026, Version 0.25.2.
 
-**Life 2.0 (ab 27.10.2026):** Konzept-Doc „Life 2.0 – Analyse und Konzept“ und klickbarer Prototyp „Life 2.0 Prototyp“ (Artefakte, Kurzfassung im Projekt unter `claude/LIFE-2-KONZEPT.md`). Peters Wahl: Heute als Cockpit (Richtung B) mit Tagesstreifen, vier Tabs Heute · Woche · Ziele · Ich mit Festhalten in der Mitte, Ernährung mit Protein zuerst und Gewichtstrend, Reihenfolge Fundament → Heute und Woche → Ziele und Rituale → Körper → Ruhe und Geist → Geld und Menschen → Familie. Phase 0 Fundament ist mit 0.24.0 gebaut, Phase 1 Heute und Woche mit 0.25.0. Als Nächstes: Phase 2 Ziele und Rituale (Saison, Wochenrunde, Morgen, Abschluss).
+**Life 2.0 (ab 27.10.2026):** Konzept-Doc „Life 2.0 – Analyse und Konzept“ und klickbarer Prototyp „Life 2.0 Prototyp“ (Artefakte, Kurzfassung im Projekt unter `claude/LIFE-2-KONZEPT.md`). Peters Wahl: Heute als Cockpit (Richtung B) mit Tagesstreifen, vier Tabs Heute · Woche · Ziele · Ich mit Festhalten in der Mitte, Ernährung mit Protein zuerst und Gewichtstrend, Reihenfolge Fundament → Heute und Woche → Ziele und Rituale → Körper → Ruhe und Geist → Geld und Menschen → Familie. Phase 0 Fundament ist mit 0.24.0 gebaut, Phase 1 Heute und Woche mit 0.25.0, live seit 28.10.2026 (0.25.1). Als Nächstes: Phase 2 Ziele und Rituale (Saison, Wochenrunde, Morgen, Abschluss).
 
 Der Plan für die nächsten Schritte steht in `docs/VERBESSERUNG.md` (fünf Phasen). Phase 1 Sicherheit ist mit 0.16.0 erledigt. Phase 2 Betrieb ist mit 0.17.0 zur Hälfte erledigt (Sicherung, Health, Zeitplan, CI). Offen sind SSH über Tailscale, Uptime Kuma und fertige Images, dafür braucht es zuerst Schritte von Peter. Aus Phase 4 ist mit 0.18.0 der Umbau von Heute vorgezogen (Punkte 1, 3 und 4), Phase 3 Datenschutz ist mit 0.21.0 erledigt.
 
