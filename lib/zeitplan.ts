@@ -64,22 +64,28 @@ async function mitSperre(f: () => Promise<void>): Promise<boolean> {
     v.release();
   }
 }
-const exklusiv = ohneUeberlappung(mitSperre);
+/** Welcher Teil des Laufs gerade dran ist. Hängt ein Lauf, steht der Teil im Log, nie ein Inhalt. */
+let schritt = 'start';
+const exklusiv = ohneUeberlappung(mitSperre, {
+  haengt: (ms) => console.error(`zeitplan: Lauf hängt seit ${Math.round(ms / 60_000)} Min. bei „${schritt}“, gebe frei`),
+});
 
 export async function tick(userId: string) {
-  await ensureSchema();
+  schritt = 'schema'; await ensureSchema();
   const einmal = einmalFuer(userId);
   const tag = heuteBerlin(); const uhr = jetztBerlin();
   // WHOOP alle zwei Stunden, morgens ab 6 Uhr stündlich
+  schritt = 'whoop';
   if (whoopBereit() && await verbunden(userId)) {
     const zuletzt = Date.parse((await getSetting(`whoop_abgleich:${userId}`)) || '0');
     const abstand = minuten(uhr) >= 360 && minuten(uhr) <= 600 ? 3600_000 : 7200_000;
     if (Date.now() - zuletzt > abstand) await abgleichen(userId, 3).catch(() => {});
   }
-  await vielleichtAbgleichen(userId);
-  const p = await pushEinstellungen(userId);
+  schritt = 'kalender'; await vielleichtAbgleichen(userId);
+  schritt = 'einstellungen'; const p = await pushEinstellungen(userId);
   const [ci] = await sql<{ morgen: boolean; abend: boolean }[]>`
     select bool_or(art = 'morgen') as morgen, bool_or(art = 'abend') as abend from checkins where user_id = ${userId} and tag = ${tag}`;
+  schritt = 'morgen';
   if (p.morgen && faellig(uhr, p.morgenZeit)) await einmal('morgen', tag, async () => {
     if (ci?.morgen) {
       const c = await coachErstellen('morgen', userId).catch(() => null);
@@ -87,8 +93,10 @@ export async function tick(userId: string) {
     }
     return (await senden({ title: 'Guten Morgen', body: 'Wie erholt fühlst du dich? Eine Frage, zehn Sekunden.', url: '/', tag: 'morgen' }, userId)) > 0;
   });
+  schritt = 'abend';
   if (p.abend && faellig(uhr, p.abendZeit) && !ci?.abend) await einmal('abend', tag, async () =>
     (await senden({ title: 'Der Tag', body: 'Drei Fragen, eine Minute. Dann ist der Plan für morgen fertig.', url: '/', tag: 'abend' }, userId)) > 0);
+  schritt = 'warnung';
   if (p.warnung && minuten(uhr) >= minuten(p.morgenZeit) + 5 && minuten(uhr) <= 21 * 60) await einmal('warnung', tag, async () => {
     const k = await koerperStand(userId);
     const g = await geldStand(userId).catch(() => null);
@@ -96,6 +104,7 @@ export async function tick(userId: string) {
     if (!w.length) return false;
     return (await senden({ title: 'Achtung', body: w[0], url: '/', tag: 'warnung' }, userId)) > 0;
   });
+  schritt = 'kompass';
   // Meilensteine stündlich prüfen. Neu freigeschaltete kommen als Mitteilung.
   const stunde = uhr.slice(0, 2);
   if ((await getSetting(proNutzer('kompass_stunde', userId))) !== `${tag} ${stunde}`) {
@@ -103,6 +112,7 @@ export async function tick(userId: string) {
     const k = await kompassStand(userId).catch(() => null);
     if (k?.neu.length && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) await senden({ title: 'Meilenstein', body: `${k.neu.join(', ')}. Im Kompass steht, was als Nächstes kommt.`, url: '/kompass', tag: 'meilenstein' }, userId);
   }
+  schritt = 'coach';
   // Coach von selbst: verpasste Uhrzeit, Nachmittags-Check, Wochenstart am Montag
   if ((p.verpasst || p.nachmittag || p.wochenstart) && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) {
     const lage = await tageslage(userId).catch(() => null);
@@ -120,6 +130,7 @@ export async function tick(userId: string) {
         (await senden({ title: 'Wochenstart', body: 'Zehn Minuten für die Woche: Rückblick, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
     }
   }
+  schritt = 'training';
   if (p.training) {
     const k = await koerperStand(userId);
     if (k.trainingstagHeute && faellig(uhr, k.stand.uhrzeit)) await einmal('training', tag, async () =>
@@ -136,6 +147,7 @@ export async function lauf(): Promise<void> {
     for (const { id } of await sql<{ id: string }[]>`select id from nutzer order by id`) {
       await tick(id).catch((e) => { fehler++; console.error('zeitplan: Lauf für einen Menschen fehlgeschlagen', (e as Error).name); });
     }
+    schritt = 'fertig';
     if (fehler) throw new Error('zeitplan: nicht für alle Menschen gelaufen');
     await setSetting(LETZTER_LAUF, new Date().toISOString());
   });

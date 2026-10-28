@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { einmalMit, ohneUeberlappung, zeitplanStatus, VERZUG_MS, type EinmalSpeicher } from '../../lib/zeitplan-schutz.ts';
+import { einmalMit, HAENGT_MS, ohneUeberlappung, zeitplanStatus, VERZUG_MS, type EinmalSpeicher } from '../../lib/zeitplan-schutz.ts';
 
 /** Speicher wie die Datenbank: beanspruchen ist atomar, weil JavaScript zwischen den Zeilen nicht wechselt. */
 function speicher(): EinmalSpeicher & { werte: Map<string, string> } {
@@ -69,4 +69,19 @@ test('Gesundheit: 503 erst ab fünf Minuten Verzug, nicht direkt nach dem Start'
   assert.equal(zeitplanStatus({ letzter: null, jetzt, laeuftSeitMs: 30_000, aus: false }), 'startet');
   assert.equal(zeitplanStatus({ letzter: null, jetzt, laeuftSeitMs: VERZUG_MS + 1, aus: false }), 'verzug');
   assert.equal(zeitplanStatus({ letzter: null, jetzt, laeuftSeitMs: 3_600_000, aus: true }), 'aus');
+});
+
+test('Zeitplan: ein hängender Lauf blockiert nur bis zur Grenze, dann geht es weiter und das Log sagt es', async () => {
+  let t = 0;
+  const gemeldet: number[] = [];
+  const lauf = ohneUeberlappung(async (f) => { await f(); return true; }, { jetzt: () => t, haengt: (ms) => gemeldet.push(ms) });
+  void lauf(() => new Promise<void>(() => {})); // kommt nie zurück
+  t = 60_000;
+  assert.equal(await lauf(async () => {}), false, 'kurz danach wartet der nächste');
+  t = HAENGT_MS;
+  assert.equal(await lauf(async () => {}), true, 'nach der Grenze läuft er');
+  assert.deepEqual(gemeldet, [HAENGT_MS]);
+  t = HAENGT_MS + 60_000;
+  assert.equal(await lauf(async () => {}), true, 'der alte Hänger blockiert nicht mehr');
+  assert.equal(gemeldet.length, 1);
 });
