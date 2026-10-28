@@ -2,6 +2,12 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.25.1] – 2026-10-28
+
+### Behoben
+- **Der Zeitplan bleibt nicht mehr stehen.** Am 27.10. um 5:25 Uhr kam in einem Lauf ein Schritt nie zurück. Seitdem fiel jeder weitere Lauf aus: keine Mitteilungen, kein WHOOP- und Kalenderabgleich, `/api/health` meldete Verzug. Jetzt gibt der nächste Lauf einen hängenden nach zehn Minuten frei. Doppelte Arbeit verhindert weiter die Sperre in der Datenbank.
+- **Das Log nennt den Schritt, an dem ein Lauf hängt** (zum Beispiel „whoop“ oder „kalender“), nie einen Inhalt. So lässt sich die eigentliche Ursache beim nächsten Mal finden.
+
 ## [0.25.0] – 2026-10-27
 
 Phase 1 von Life 2.0: Heute als Cockpit, Woche mit Kalender, vier Tabs (Peter, 27.10.2026: „B Cockpit mit Tagesstreifen“, „Vier Tabs + Festhalten“).
