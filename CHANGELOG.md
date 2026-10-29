@@ -2,6 +2,23 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.26.0] – 2026-10-29
+
+Phase 2 von Life 2.0, erster Teil: Saison und Ziele (Peter, 29.10.2026: „A Zielkarten“, „Eins pro Bereich“, „Blatt in drei Schritten“, „Ringe bleiben, Punkte gehen“).
+
+### Neu
+- **Saison mit zwölf Wochen.** Unter Ziele legst du eine Saison an: Start an einem Montag, ein Leitsatz, höchstens ein Ziel pro Bereich (Geschäft, Zeit, Körper, Ruhe und Geist, Menschen, Geld), je bis zu drei Hebel und ein Wenn-dann-Plan.
+- **Blatt „Neue Saison“ zum Antippen.** Vorschläge kommen aus „Dein Stand“, aus deiner bisherigen Zielliste und aus festen Ideen pro Bereich. Claude schlägt pro Ziel drei Hebel und einen Dann-Satz vor und sieht dabei nur Platzhalter. Eigene Worte gehen überall.
+- **Zielkarten.** Jede Karte zeigt Bereich, Ziel, Stand mit Zählern (+1, −1) und ob du im Plan bist, die Hebel mit ihrer letzten Bewertung und den Wenn-dann-Satz. Karten ohne Handlungsbedarf klappen zu.
+- **Die Saison gilt überall.** Einordnen, Sortieren, Coach und die Ziel-Auswahl im Eintrag nehmen die Saisonziele. Benennst du ein Ziel um, ziehen die Einträge mit. Die Einstellungen zeigen die Saisonziele statt des Textfelds.
+
+### Technik
+- Datenbank-Schritt 5: Tabellen `saisons`, `saison_ziele`, `hebel`, `hebel_wochen`, alle mit `user_id`.
+- `lib/saison-regeln.ts` (reine Regeln), `lib/saison.ts`, `GET`/`POST /api/saison`, `POST /api/saison/hebel`, `PATCH /api/saison/ziele/[id]`.
+
+### Tests
+- Unit-Tests für Zeitraum, Prüfung des Blatts, Wenn-dann-Satz, Vorschläge und Claudes Hebel. Ende-zu-Ende: Blatt durchklicken, Zielkarten, Zähler, Umbenennen, zweite Saison abgelehnt, die Zweite sieht Peters Saison nicht.
+
 ## [0.25.2] – 2026-10-28
 
 ### Behoben
