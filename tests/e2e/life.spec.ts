@@ -195,10 +195,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.ttitle', { hasText: 'KGSt' })).toHaveCount(1);
     await page.goto('/woche/ziele');
     await expect(page.locator('main')).toContainText('Plattform');
-    // Ziele als eigener Tab: Ziele mit Fortschritt, Kompass und Dein Stand
+    // Ziele als eigener Tab: ohne Saison die bisherigen Ziele mit Fortschritt, Kompass und Dein Stand
     await page.locator('.tabbar').getByRole('link', { name: 'Ziele' }).click();
     await page.waitForURL('/ziele');
-    await expect(page.locator('section[aria-label="Deine Ziele"]')).toContainText('Plattform');
+    await expect(page.locator('section[aria-label="Neue Saison"]')).toContainText('Plattform');
     await expect(page.locator('main')).toContainText('Dein Stand');
     expect((await page.request.get('/woche/gibtsnicht')).status()).toBe(404);
   });
@@ -224,7 +224,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/ich', '/ziele', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/ich', '/ziele', '/ziele/neu', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -775,6 +775,66 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(await (await page.request.post('/api/wochenstart', { headers: H, data: { aktion: 'fokus', ids: ['x; drop table'] } })).json()).toMatchObject({ ids: [] });
   });
 
+  await test.step('Saison: Blatt mit Zeitraum, Zielen, Hebeln von Claude und Wenn-dann, danach Zielkarten', async () => {
+    await page.goto('/ziele');
+    // Ohne Saison: Einstieg ins Blatt, die bisherige Liste steht darunter
+    await expect(page.locator('main')).toContainText('Bisherige Ziele');
+    await page.getByRole('link', { name: /Neue Saison anlegen/ }).click();
+    await expect(page).toHaveURL(/\/ziele\/neu$/);
+    const blatt = page.getByRole('group', { name: 'Neue Saison' });
+    const weiter = () => blatt.getByRole('button', { name: 'Weiter' }).click();
+    // 1 Zeitraum und Leitsatz: der nächste Montag ist vorgewählt
+    await expect(blatt.getByRole('radiogroup', { name: 'Start' }).getByRole('radio').first()).toHaveAttribute('aria-checked', 'true');
+    await blatt.getByRole('radio', { name: 'Weniger, aber besser.' }).click();
+    await weiter();
+    // 2 Ziele: Vorschläge aus der alten Liste, feste Ideen, eigene Worte
+    await blatt.getByRole('radiogroup', { name: 'Geschäft' }).getByRole('radio', { name: 'Plattform' }).click();
+    await blatt.getByLabel('Zielzahl Geschäft').fill('8');
+    await blatt.getByRole('radiogroup', { name: 'Körper' }).getByRole('radio', { name: 'Dreimal pro Woche Kraft' }).click();
+    await blatt.getByLabel('Eigenes Ziel Menschen').fill('Erfundener Spieleabend im Monat');
+    await blatt.getByLabel('Eigenes Ziel Menschen').press('Enter');
+    await expect(blatt.getByRole('radiogroup', { name: 'Menschen' }).getByRole('radio', { name: 'Erfundener Spieleabend im Monat' })).toHaveAttribute('aria-checked', 'true');
+    await weiter();
+    // 3 Hebel: Claudes Vorschläge sind vorgewählt, höchstens drei, eigener Dann-Satz geht
+    const hebel = blatt.getByRole('group', { name: 'Hebel für Dreimal pro Woche Kraft' });
+    await expect(hebel.getByRole('button', { name: 'Montags koerper-Block' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(hebel.getByRole('button', { name: 'Freitags koerper-Rückblick' })).toHaveAttribute('aria-pressed', 'true');
+    await hebel.getByRole('button', { name: 'Freitags koerper-Rückblick' }).click();
+    await blatt.getByLabel('Eigener Hebel für Dreimal pro Woche Kraft').fill('Sonntags Mobility');
+    await blatt.getByLabel('Eigener Hebel für Dreimal pro Woche Kraft').press('Enter');
+    await expect(blatt.getByLabel('Dann-Plan für Plattform')).toHaveValue('Mache ich zehn Minuten direkt nach dem Mittag');
+    await expect(blatt.locator('.sz-wenn').first()).toContainText('Wenn der Tag zu voll wird, dann mache ich zehn Minuten direkt nach dem Mittag.');
+    await weiter();
+    // 4 Fertig
+    await blatt.getByRole('button', { name: 'Saison anlegen' }).click();
+    await expect(page).toHaveURL(/\/ziele$/);
+    await expect(page.locator('.sz-saison')).toContainText('Weniger, aber besser.');
+    await expect(page.locator('.sz-ziel')).toHaveCount(3);
+    const kraft = page.locator('details[aria-label="Dreimal pro Woche Kraft"]');
+    await expect(kraft.locator('.sz-hebel li')).toHaveText([/Montags koerper-Block/, /Mittwochs koerper-Block/, /Sonntags Mobility/]);
+    await expect(page.locator('.sz-leer')).toContainText('Zeit, Ruhe und Geist, Geld');
+    const platt = page.locator('details[aria-label="Plattform"]');
+    await expect(platt).toContainText('0 von 8');
+    await platt.getByRole('button', { name: 'Plattform: einen mehr' }).click();
+    await expect(platt).toContainText('1 von 8');
+    // Die Saison gilt jetzt für Claude und die Auswahl im Eintrag, die Einstellungen zeigen sie statt des Textfelds
+    expect((await (await page.request.get('/api/settings')).json()).saisonZiele).toEqual(['Plattform', 'Dreimal pro Woche Kraft', 'Erfundener Spieleabend im Monat']);
+    await page.goto('/einstellungen');
+    await expect(page.locator('#ziele')).toHaveCount(0);
+    await expect(page.locator('main')).toContainText('Deine Ziele kommen jetzt aus der Saison');
+    // Umbenennen zieht Einträge mit, eine zweite Saison und kaputte Eingaben lehnt Life ab
+    const sa = (await (await page.request.get('/api/saison')).json()).saison;
+    const pId = sa.ziele.find((z: { titel: string }) => z.titel === 'Plattform').id;
+    expect((await page.request.patch(`/api/saison/ziele/${pId}`, { headers: H, data: { titel: 'Plattform wächst' } })).status()).toBe(200);
+    expect((await page.request.patch('/api/saison/ziele/999999', { headers: H, data: { delta: 1 } })).status()).toBe(404);
+    expect((await page.request.post('/api/saison', { headers: H, data: { start: sa.start, ziele: [{ bereich: 'zeit', titel: 'Zweite Saison' }] } })).status()).toBe(409);
+    expect((await page.request.post('/api/saison', { headers: H, data: { start: '2026-11-03', ziele: [{ bereich: 'zeit', titel: 'Kein Montag' }] } })).status()).toBe(400);
+    if (process.env.SCREENSHOTS) for (const [p2, n] of [['/ziele', 'ziele-saison']] as const) {
+      await page.goto(p2); await page.waitForTimeout(400);
+      await page.screenshot({ path: `test-results/design/${n}.png`, fullPage: true });
+    }
+  });
+
   await test.step('Abmelden sperrt die Daten, auch für ein kopiertes Cookie, Face ID öffnet sie wieder', async () => {
     const alt = (await context.cookies()).find((c) => c.name === 'life_session')?.value;
     expect(alt).toBeTruthy();
@@ -944,6 +1004,11 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
   expect((await Z.put('/api/settings', { headers: H, data: { kontext: 'Engpass: Zweitengpass ohne Bezug' } })).status()).toBe(200);
   expect((await (await P.get('/api/settings')).json()).kontext).not.toContain('Zweitengpass');
   expect((await (await Z.get('/api/settings')).json()).kontext).toContain('Zweitengpass');
+
+  // Die Saison gehört dem eigenen Menschen: die Zweite sieht keine und kann Peters Ziele nicht zählen
+  const ps = (await (await P.get('/api/saison')).json()).saison;
+  expect((await (await Z.get('/api/saison')).json()).saison).toBeNull();
+  if (ps) expect((await Z.patch(`/api/saison/ziele/${ps.ziele[0].id}`, { headers: H, data: { delta: 1 } })).status()).toBe(404);
 
   // Geld hängt am eigenen Haushalt
   expect((await (await Z.get('/api/geld')).json()).haushalt).toBe('zweiter');
