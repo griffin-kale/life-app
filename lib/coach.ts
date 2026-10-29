@@ -9,6 +9,7 @@ import { geldKurz, geldStand, haushalt } from './geld';
 import { menschenKurz } from './menschen';
 import { tageslage } from './tag';
 import { standZeilenLesen } from './stand';
+import { saisonZeilen } from './saison';
 import { kalenderKurz } from './kalender';
 import { oeffentlich } from './fehler';
 import { fristRelativ, jetztBerlin } from './zeit';
@@ -51,7 +52,7 @@ async function grundlage(userId: string) {
     geldStand(userId).catch(() => null),
     menschenKurz(userId).catch(() => ''),
   ]);
-  const [lage, stand, kalender] = await Promise.all([tageslage(userId).catch(() => null), standZeilenLesen(userId).catch(() => [] as string[]), kalenderKurz(userId).catch(() => [] as string[])]);
+  const [lage, stand, kalender, saison] = await Promise.all([tageslage(userId).catch(() => null), standZeilenLesen(userId).catch(() => [] as string[]), kalenderKurz(userId).catch(() => [] as string[]), saisonZeilen(userId).catch(() => [] as string[])]);
   const zk = await sql<{ was: string }[]>`select was from zeit_kaufen where user_id = ${userId} and status = 'idee' limit 5`.catch(() => [] as { was: string }[]);
   const warnungen = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)];
   const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
@@ -68,6 +69,7 @@ async function grundlage(userId: string) {
     `Heute ist ${wtag}.`,
     'Engpass: ' + (engpassAus(kontext) || 'nicht festgelegt'),
     stand.length ? 'Peters Stand aus der Standortbestimmung:\n' + stand.join('\n') : '',
+    saison.length ? 'Peters Saison (zwölf Wochen, Ziele mit Hebeln und Wenn-dann-Plänen). Bezieh Rat auf diese Ziele, wenn es passt:\n' + saison.join('\n') : '',
     lage?.standortEtappe ? `Peter hat die Standortbestimmung noch nicht abgeschlossen (Etappe ${lage.standortEtappe} von 3 ist offen). Geht es um Richtung, Prioritäten oder den Engpass, schlag ihm diese Etappe vor: zwölf Minuten, frei erzählt.` : '',
     ...kalender,
     jetzt.length ? 'Heute dran:\n' + jetzt.map((i) => `- ${i.schritt || i.titel || i.text.slice(0, 80)}${i.frist ? ` (Frist ${fristRelativ(i.frist)})` : ''}${i.wenn ? ` | Plan: ${i.wenn}` : ''}`).join('\n') : 'Heute ist noch nichts gesetzt.',

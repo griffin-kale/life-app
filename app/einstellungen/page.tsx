@@ -13,6 +13,7 @@ const LEER: S = { kontext: '', ziele: '', team: '', namen: '', namen_auto: '' };
 export default function Einstellungen() {
   const [v, setV] = useState<S>(LEER);
   const [saved, setSaved] = useState<S>(LEER);
+  const [saisonZiele, setSaisonZiele] = useState<string[] | null>(null);
   const [origin, setOrigin] = useState('');
   const [claude, setClaude] = useState<boolean | null>(null);
   const [toast, setToast] = useToast();
@@ -21,7 +22,7 @@ export default function Einstellungen() {
     setOrigin(window.location.origin);
     api<{ aktiv: boolean }>('/api/auth/code').then((r) => setCode(r.aktiv)).catch(() => {});
     // Hat Peter schon getippt, bevor die Werte da sind, bleibt sein Text stehen.
-    api<S & { claude: boolean }>('/api/settings').then(({ claude: c, ...s }) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); setClaude(c); }).catch(() => {});
+    api<S & { claude: boolean; saisonZiele: string[] | null }>('/api/settings').then(({ claude: c, saisonZiele: sz, ...s }) => { setV((cur) => (cur === LEER ? s : cur)); setSaved(s); setClaude(c); setSaisonZiele(sz); }).catch(() => {});
   }, []);
   const dirty = (Object.keys(LEER) as (keyof S)[]).some((k) => v[k] !== saved[k]);
   const set = (k: keyof S) => (e: React.ChangeEvent<HTMLTextAreaElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
@@ -49,8 +50,13 @@ export default function Einstellungen() {
         <div className="group pad">
           <div className="field"><label htmlFor="ktx">Engpass, Prioritäten, Leitsatz</label>
             <textarea id="ktx" rows={5} value={v.kontext} onChange={set('kontext')} placeholder={'Engpass: …\nPrioritäten diese Woche: …\nLeitsatz: …'} /></div>
-          <div className="field"><label htmlFor="ziele">Ziele, eins pro Zeile</label>
-            <textarea id="ziele" rows={4} value={v.ziele} onChange={set('ziele')} placeholder={'Projekte\nPlattform\nBoutique\nPrivat'} /></div>
+          {saisonZiele ? (
+            <div className="field"><span className="fld-label">Ziele</span>
+              <p className="muted small">Deine Ziele kommen jetzt aus der Saison: {saisonZiele.join(' · ')}. <Link href="/ziele" className="linkbtn">Zur Saison</Link></p></div>
+          ) : (
+            <div className="field"><label htmlFor="ziele">Ziele, eins pro Zeile</label>
+              <textarea id="ziele" rows={4} value={v.ziele} onChange={set('ziele')} placeholder={'Projekte\nPlattform\nBoutique\nPrivat'} /></div>
+          )}
           <div className="field"><label htmlFor="team">Wem du etwas geben kannst, eine Person pro Zeile</label>
             <textarea id="team" rows={3} value={v.team} onChange={set('team')} placeholder={'Name: wofür sie oder er gut ist'} /></div>
           <button type="button" className="btn primary" onClick={save} disabled={!dirty}>{dirty ? 'Speichern' : <>{Icon.check}Gespeichert</>}</button>

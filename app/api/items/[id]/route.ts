@@ -5,6 +5,7 @@ import { AKTIV, JETZT_MAX, STAPEL, heuteBerlin, liste, sortiere } from '@/lib/pr
 import { getSetting } from '@/lib/db';
 import { begrenzt } from '@/lib/ratelimit';
 import { mitNutzer } from '@/lib/sitzung';
+import { zieleText } from '@/lib/saison';
 
 type Ctx = { params: Promise<{ id: string }> };
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -63,7 +64,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (b.erledigt === false && vorher.status === 'erledigt') { set.status = 'sortiert'; set.erledigt_at = null; }
   if (typeof b.zeit === 'string' && (b.zeit === '' || /^\d{2}:\d{2}$/.test(b.zeit))) { set.zeit = b.zeit || null; set.zeit_tag = b.zeit ? tag : null; }
   if (typeof b.ziel === 'string') {
-    const ziele = liste(await getSetting(proNutzer('ziele', uid)));
+    const ziele = liste(await zieleText(uid));
     if (b.ziel === '' || ziele.includes(b.ziel)) set.ziel = b.ziel || null;
   }
   if (typeof b.text === 'string' && b.text.trim()) set.text = b.text.trim().slice(0, 8000);

@@ -3,6 +3,7 @@ import { begrenzt } from '@/lib/ratelimit';
 import { ensureSchema, getSetting, sql, type Item, proNutzer } from '@/lib/db';
 import { AKTIV, engpassAus, heuteBerlin, laeuftGerade, liste, offene, sortiere, tagesStartNoetig } from '@/lib/priorisieren';
 import { mitNutzer } from '@/lib/sitzung';
+import { zieleText as saisonZieleText } from '@/lib/saison';
 
 /** Alles für Heute und Woche: offene Stapel, heute Erledigtes, Ziele mit Fortschritt dieser Woche. */
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
     sql<Item[]>`select * from items where user_id = ${uid} and status = 'erledigt' and erledigt_at >= date_trunc('week', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin' order by erledigt_at desc`,
     // Was heute festgehalten wurde, für die Spur im Coach-Gespräch
     sql<Item[]>`select * from items where user_id = ${uid} and status <> 'archiv' and created_at >= date_trunc('day', now() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin' order by created_at desc limit 50`,
-    getSetting(proNutzer('kontext', uid)), getSetting(proNutzer('ziele', uid)), getSetting(proNutzer('sort_am', uid)), getSetting(proNutzer('sort_fehler', uid)), laeuftGerade(uid),
+    getSetting(proNutzer('kontext', uid)), saisonZieleText(uid), getSetting(proNutzer('sort_am', uid)), getSetting(proNutzer('sort_fehler', uid)), laeuftGerade(uid),
     sql<{ n: number }[]>`select count(*)::int as n from items where user_id = ${uid} and status = 'neu' and fehler is null and created_at > now() - interval '5 minutes'`,
   ]);
   const ziele = liste(zieleText);

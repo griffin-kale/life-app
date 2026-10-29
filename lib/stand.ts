@@ -5,6 +5,7 @@ import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { engpassSetzen, montagVon } from './tagesregeln';
 import { BEREICH_NAME, baselineSetzen, etappe, pruefeAuswertung, standAus, standZeilen, uebernehmen, type Auswertung, type Stand, type Vorschlag } from './standort';
 import { aufgabe } from './tag';
+import { zieleText } from './saison';
 
 /** Stand lesen und schreiben, Etappen auswerten. Claude bekommt alles pseudonymisiert über askJson. */
 
@@ -50,7 +51,7 @@ export async function etappeAuswerten(nr: 1 | 2 | 3, antworten: Record<string, A
   await standSchreiben(s, userId);
   const [{ id }] = await sql<{ id: number }[]>`insert into standort (user_id, etappe, antworten) values (${userId}, ${nr}, ${sql.json(antworten)}) returning id`;
 
-  const [kontext, ziele, items] = await Promise.all([getSetting(proNutzer('kontext', userId)), getSetting(proNutzer('ziele', userId)), offene(userId).catch(() => [])]);
+  const [kontext, ziele, items] = await Promise.all([getSetting(proNutzer('kontext', userId)), zieleText(userId), offene(userId).catch(() => [])]);
   const e = etappe(nr)!;
   const prompt = [
     `STANDORT ETAPPE ${nr}`,

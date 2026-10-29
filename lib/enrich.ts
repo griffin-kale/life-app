@@ -1,6 +1,7 @@
 import { askJson, namenLernen } from './claude';
 import { ensureSchema, getSetting, proNutzer, sql, type Item } from './db';
 import { AKTIV, heuteBerlin, liste, sortiere } from './priorisieren';
+import { zieleText as saisonZieleText } from './saison';
 import { safeFetch } from './safefetch';
 import { kontakteAusEintrag } from './menschen';
 import { oeffentlich } from './fehler';
@@ -60,7 +61,7 @@ export async function enrich(id: string): Promise<void> {
       const p = await fetchPage(url).catch(() => null);
       if (p) { titel = p.title; quelle = `${p.site}\nSeitentext (Auszug): ${p.text}`; }
     }
-    const [kontext, zieleText, team] = await Promise.all([getSetting(proNutzer('kontext', userId)), getSetting(proNutzer('ziele', userId)), getSetting(proNutzer('team', userId))]);
+    const [kontext, zieleText, team] = await Promise.all([getSetting(proNutzer('kontext', userId)), saisonZieleText(userId), getSetting(proNutzer('team', userId))]);
     const ziele = liste(zieleText);
     const heute = heuteBerlin();
     const wtag = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long' }).format(new Date());

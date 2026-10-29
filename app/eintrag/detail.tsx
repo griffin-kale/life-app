@@ -13,7 +13,7 @@ export function EintragDetail({ id, back, eingebettet, onGeaendert }: { id: stri
   const [confirmDel, setConfirmDel] = useState(false);
   const [toast, setToast] = useToast();
   const [ziele, setZiele] = useState<string[]>([]);
-  useEffect(() => { api<{ ziele: string }>('/api/settings').then((s) => setZiele(s.ziele.split('\n').map((z) => z.replace(/^[-•*\s]+/, '').trim()).filter(Boolean))).catch(() => {}); }, []);
+  useEffect(() => { api<{ ziele: string; saisonZiele: string[] | null }>('/api/settings').then((s) => setZiele(s.saisonZiele ?? s.ziele.split('\n').map((z) => z.replace(/^[-•*\s]+/, '').trim()).filter(Boolean))).catch(() => {}); }, []);
 
   const load = useCallback(() => api<Item>(`/api/items/${id}`).then(setIt), [id]);
   useEffect(() => { load().catch((e) => setErr(e.message)); }, [load]);

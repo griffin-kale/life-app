@@ -3,6 +3,7 @@ import { montagVon } from './tagesregeln';
 import { askJson, MODEL } from './claude';
 import { ensureSchema, getSetting, proNutzer, setSetting, sql, type Item } from './db';
 import { oeffentlich } from './fehler';
+import { saisonZeilen, zieleText } from './saison';
 
 export const STAPEL = ['jetzt', 'woche', 'delegieren', 'geparkt', 'streichen'] as const;
 export type Stapel = (typeof STAPEL)[number];
@@ -38,7 +39,7 @@ async function lauf(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
   const items = await offene(uid);
   const tag = heuteBerlin();
   if (!items.length) return;
-  const [kontext, ziele, team, fokusRoh, standRoh, wzRoh] = await Promise.all([getSetting(proNutzer('kontext', uid)), getSetting(proNutzer('ziele', uid)), getSetting(proNutzer('team', uid)), getSetting(proNutzer('fokus', uid)), getSetting(proNutzer('stand', uid)), getSetting(proNutzer('wochenziel', uid))]);
+  const [kontext, ziele, team, fokusRoh, standRoh, wzRoh] = await Promise.all([getSetting(proNutzer('kontext', uid)), zieleText(uid), getSetting(proNutzer('team', uid)), getSetting(proNutzer('fokus', uid)), getSetting(proNutzer('stand', uid)), getSetting(proNutzer('wochenziel', uid))]);
   let wz = ''; try { const w = JSON.parse(wzRoh || '{}'); if (w.montag === montagVon(tag) && typeof w.text === 'string') wz = w.text; } catch { wz = ''; }
   const stand = standZeilen(standAus(standRoh), tag, wz).filter((z) => !z.startsWith('Selbsteinschätzung'));
   // Drei Dinge der Woche aus dem Wochenstart: nur für die laufende Woche
@@ -51,6 +52,7 @@ async function lauf(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
     select antworten->'plan' as p from checkins where user_id = ${uid} and art = 'abend' and tag = (${tag}::date - 1)` : [];
   const gestern = abend?.p ? [abend.p.aufgabe, abend.p.notiz].filter(Boolean).join(' / ') : '';
   const alter = (d: string) => Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 864e5));
+  const saison = await saisonZeilen(uid).catch(() => [] as string[]);
   const zeilen = items.map((it, n) => {
     const manuell = it.manuell_tag === tag ? ` | HEUTE VON PETER GESETZT: ${it.manuell_stapel} (nicht ändern)` : '';
     return `${n}. ${it.schritt || it.titel || it.text.slice(0, 120)}${fokus.includes(it.id) ? ' | DREI DINGE DER WOCHE (Peter)' : ''} | Eintrag: ${it.text.slice(0, 220).replace(/\n/g, ' ')} | Kategorie: ${it.kategorie} | Ziel: ${it.ziel || '-'} | Hebel: ${it.hebel ?? '-'} | Aufwand: ${AUFWAND(it.aufwand_min)} | Frist: ${fristRelativ(it.frist, tag)} | Wer: ${it.wer === 'delegieren' ? `delegieren${it.delegieren_an ? ' an ' + it.delegieren_an : ''}` : 'Peter'} | Bisher: ${it.stapel || 'neu'} | Alter: ${alter(it.created_at)} Tage${manuell}`;
@@ -61,6 +63,7 @@ async function lauf(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
     `Heute ist ${wochentag()}.`,
     'Was gerade zählt (von Peter, mit Engpass, Prioritäten, Leitsatz):\n' + (kontext || 'nicht angegeben'),
     'Peters Ziele:\n' + (ziele || 'nicht angegeben'),
+    saison.length ? 'Peters Saison (zwölf Wochen, Ziele mit Hebeln). Was einen Hebel trägt, kommt nach vorn:\n' + saison.join('\n') : '',
     stand.length ? 'Aus Peters Standortbestimmung (Quartalsziele, Wochenziel, was liegen bleibt):\n' + stand.join('\n') : '',
     team ? 'Wem Peter etwas geben kann:\n' + team : 'Team: nicht angegeben. Schlage "delegieren" nur vor, wenn der Eintrag selbst eine Person nennt.',
     [
