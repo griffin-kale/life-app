@@ -43,6 +43,27 @@ export const MIGRATIONEN: Migration[] = [
       select key || ':peter', value from settings where key in ${tx(PRO_NUTZER_2 as unknown as string[])}
       on conflict (key) do nothing`,
   },
+  {
+    nr: 5, name: 'Saison mit Zielen, Hebeln und Wochenbewertung (Life 2.0, Phase 2)',
+    run: async (tx) => {
+      await tx`create table if not exists saisons (
+        id bigserial primary key, user_id text not null, start date not null, ende date not null,
+        leitsatz text not null default '', erstellt timestamptz not null default now())`;
+      await tx`create index if not exists saisons_user on saisons (user_id, ende desc)`;
+      await tx`create table if not exists saison_ziele (
+        id bigserial primary key, saison_id bigint not null references saisons(id) on delete cascade, user_id text not null,
+        bereich text not null, titel text not null, zielwert int, stand int not null default 0,
+        wenn text not null default '', dann text not null default '', unique (saison_id, bereich))`;
+      await tx`create index if not exists saison_ziele_user on saison_ziele (user_id)`;
+      await tx`create table if not exists hebel (
+        id bigserial primary key, ziel_id bigint not null references saison_ziele(id) on delete cascade, user_id text not null,
+        titel text not null, art text not null default 'kalender', pos int not null default 0)`;
+      await tx`create index if not exists hebel_ziel on hebel (ziel_id)`;
+      await tx`create table if not exists hebel_wochen (
+        hebel_id bigint not null references hebel(id) on delete cascade, user_id text not null,
+        montag date not null, bewertung text not null, primary key (hebel_id, montag))`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */
