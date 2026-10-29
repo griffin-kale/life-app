@@ -1266,3 +1266,37 @@ body:has(.coach-leiste) .tb-schnell { bottom: calc(150px + env(safe-area-inset-b
 section[aria-label="Mehr zur Woche"] .cell .lbl, .wk-tageskopf .lbl { flex: none; }
 section[aria-label="Mehr zur Woche"] .cell .val { min-width: 0; }
 section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Saison und Zielkarten (Life 2.0, Phase 2, 0.26): Saison als dunkle Karte, Ziele als aufklappbare Karten mit Hebeln */
+.sz-saison { display: grid; gap: 10px; padding: 16px; border-radius: 22px; background: var(--hero); color: var(--hero-ink); box-shadow: 0 20px 40px -26px rgb(0 40 120 / .7); }
+.sz-zeile { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--hero-muted); }
+.sz-wochen { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.sz-wochen i { height: 8px; border-radius: 4px; background: rgb(255 255 255 / .16); }
+.sz-wochen i.vorbei { background: rgb(255 255 255 / .55); }
+.sz-wochen i.jetzt { background: var(--k-geld); }
+.sz-leitsatz { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.1875rem; line-height: 1.3; text-wrap: balance; }
+.sz-ziele { display: grid; gap: 10px; }
+.sz-ziel { background: var(--panel); border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); }
+.sz-ziel summary { display: grid; gap: 6px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.sz-ziel summary::-webkit-details-marker { display: none; }
+.sz-ziel summary:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; border-radius: 20px; }
+.sz-ziel summary small, .sz-items { color: var(--muted); font-size: .8125rem; }
+.sz-bereich { display: inline-flex; align-items: center; gap: 7px; font-size: .6875rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--k); }
+.sz-bereich::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--k); }
+.sz-titel { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.25rem; line-height: 1.18; overflow-wrap: anywhere; }
+.sz-mehr { display: grid; gap: 10px; padding: 0 16px 14px; }
+.sz-hebel { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.sz-hebel li { display: grid; grid-template-columns: 16px 1fr auto; gap: 9px; align-items: center; font-size: .9375rem; }
+.sz-ht { min-width: 0; overflow-wrap: anywhere; }
+.sz-hebel small { color: var(--faint); font-size: .75rem; }
+.sz-punkt { width: 14px; height: 14px; border-radius: 50%; }
+.sz-punkt.ok { background: var(--ok); }
+.sz-punkt.an { background: var(--warn, #F2B552); }
+.sz-punkt.da { background: var(--bad); }
+.sz-punkt.offen { box-shadow: inset 0 0 0 2px var(--line); }
+.sz-wenn { margin: 0; padding: 10px 12px; border-radius: 14px; background: rgb(var(--tint-rgb) / .07); font-size: .875rem; line-height: 1.4; }
+.sz-zaehler { display: flex; gap: 8px; }
+.sz-leer { margin: 10px 2px 0; color: var(--muted); font-size: .875rem; }
+.sz-blatt-bereich { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.sz-zahl { display: grid; gap: 6px; font-size: .8125rem; color: var(--muted); }
+.sz-zahl input { width: 9em; background: var(--field); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 1rem; color: var(--ink); }
