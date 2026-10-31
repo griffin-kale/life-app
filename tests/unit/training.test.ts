@@ -176,16 +176,19 @@ test('Heute-Bausteine: unbekannte raus, doppelte raus, feste immer dabei, leer h
   assert.deepEqual(bausteineAus(['woche', 'jetzt', 'fragebogen', 'koerper']), ['jetzt', 'fragebogen', 'koerper']);
   const { nachruesten, STAND } = await import('../../lib/heute-bausteine.ts');
   // Umbau 0.18: Ringe nach oben, Jetzt dran früh, Kalender, Feld und Tagespunkte raus, eigene Bausteine bleiben
-  assert.deepEqual(nachruesten(['woche', 'schnell', 'empfohlen', 'kalender', 'kompass', 'fragebogen', 'festhalten', 'jetzt', 'naechste', 'erledigt'], 4)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt']);
-  assert.deepEqual(nachruesten(['erledigt', 'koerper', 'jetzt', 'fragebogen'], 4)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'koerper', 'erledigt']);
-  assert.deepEqual(nachruesten(['woche', 'jetzt', 'fragebogen'] as never, 1)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten']);
+  assert.deepEqual(nachruesten(['woche', 'schnell', 'empfohlen', 'kalender', 'kompass', 'fragebogen', 'festhalten', 'jetzt', 'naechste', 'erledigt'], 4)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt']);
+  assert.deepEqual(nachruesten(['erledigt', 'koerper', 'jetzt', 'fragebogen'], 4)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'koerper', 'erledigt']);
+  assert.deepEqual(nachruesten(['woche', 'jetzt', 'fragebogen'] as never, 1)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten']);
   // Umbau 0.19 (The ONE Thing): Empfohlen und Schnellzugriffe runter, Opt-ins bleiben
-  assert.deepEqual(nachruesten(['kompass', 'fragebogen', 'jetzt', 'empfohlen', 'schnell', 'naechste', 'geld', 'erledigt'], 5)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'geld', 'erledigt']);
+  assert.deepEqual(nachruesten(['kompass', 'fragebogen', 'jetzt', 'empfohlen', 'schnell', 'naechste', 'geld', 'erledigt'], 5)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'geld', 'erledigt']);
   assert.equal(nachruesten(['jetzt', 'fragebogen'], STAND), null);
   // 0.27: wer Danach hatte, bekommt die Liste an seiner Stelle unter dem Tagesstreifen
-  assert.deepEqual(nachruesten(['cockpit', 'jetzt', 'streifen', 'fragebogen', 'konten', 'naechste', 'erledigt'], 8)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt']);
+  assert.deepEqual(nachruesten(['cockpit', 'jetzt', 'streifen', 'fragebogen', 'konten', 'naechste', 'erledigt'], 8)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt']);
+  // 0.28: Deep Work und die schnellen Wege kommen einmal unter das Cockpit, wer sie danach ausschaltet, behält das
+  assert.deepEqual(nachruesten(['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt'], 9)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt']);
+  assert.deepEqual(nachruesten(['jetzt', 'liste', 'fragebogen'], 9)?.liste, ['schnell', 'jetzt', 'liste', 'fragebogen']);
   // 0.20: Empfohlen kommt einmal zurück unter die eine Sache, wer es danach ausschaltet, behält das
-  assert.deepEqual(nachruesten(['kompass', 'jetzt', 'fragebogen', 'naechste'], 6)?.liste, ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten']);
+  assert.deepEqual(nachruesten(['kompass', 'jetzt', 'fragebogen', 'naechste'], 6)?.liste, ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten']);
 });
 
 test('Tagesregeln: Empfehlung, offene Punkte, Engpass, Montag', async () => {
