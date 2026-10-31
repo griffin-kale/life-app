@@ -1,6 +1,6 @@
 import { askJson, askJsonTief, geschuetzteNamen, MODEL } from './claude';
-import { AKTIONEN_TEXT, aktionPruefen, bestaetigung, entscheidend, type CoachAktion } from './coach-aktion';
-import { ensureSchema, getSetting, proNutzer, sql } from './db';
+import { AKTIONEN_TEXT, aktionenPruefen, bestaetigung, entscheidend, type CoachAktion } from './coach-aktion';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import { BOEGEN, who5, type Antwort } from './fragen';
 import { engpassAus, heuteBerlin, offene } from './priorisieren';
 import { koerperZusammenfassung, warnsignale } from './coach-regeln';
@@ -8,8 +8,9 @@ import { koerperStand } from './koerper';
 import { geldKurz, geldStand, haushalt } from './geld';
 import { menschenKurz } from './menschen';
 import { tageslage } from './tag';
-import { standZeilenLesen } from './stand';
-import { saisonZeilen } from './saison';
+import { standZeilenLesen, wochenzielSetzen } from './stand';
+import { aktuelleSaison, saisonZeilen } from './saison';
+import { createItem, enrich } from './enrich';
 import { kalenderKurz } from './kalender';
 import { oeffentlich } from './fehler';
 import { fristRelativ, jetztBerlin } from './zeit';
@@ -54,6 +55,7 @@ async function grundlage(userId: string) {
   ]);
   const [lage, stand, kalender, saison] = await Promise.all([tageslage(userId).catch(() => null), standZeilenLesen(userId).catch(() => [] as string[]), kalenderKurz(userId).catch(() => [] as string[]), saisonZeilen(userId).catch(() => [] as string[])]);
   const zk = await sql<{ was: string }[]>`select was from zeit_kaufen where user_id = ${userId} and status = 'idee' limit 5`.catch(() => [] as { was: string }[]);
+  const merk = await merkzettel(userId).catch(() => [] as Merkpunkt[]);
   const warnungen = [...k.warnungen, ...(g?.warnungen ?? []), ...warnsignale(items)];
   const koerper = koerperZusammenfassung({ naechte: k.naechte.slice(0, 7), erholung: k.tage.slice(0, 7).map((t) => t.erholung), ruhepuls: k.tage.slice(0, 14).map((t) => t.ruhepuls),
     kraft: k.kraft, kraftSoll: k.stand.einheitenSoll, zone2: k.zone2, intervall: k.intervall, proteinGestern: k.proteinGestern, proteinZiel: k.proteinZiel, ruheMin: k.ruheMin, ruheTage: k.ruheTage });
@@ -67,6 +69,7 @@ async function grundlage(userId: string) {
     'Ton je nach Lage: Liegt ein Warnsignal vor oder geht es ihm schlecht, sprich direkt und konkret wie ein Trainer. Sonst ruhig, warm, ohne Pathos. Du-Form, Deutsch.',
     'Schreibregeln: aktive Sätze mit konkretem Subjekt, keine Floskeln, keine rhetorischen Fragen, keine Konstruktion „nicht X, sondern Y“, kein Lob ohne Anlass, keine Diagnosen. Bei körperlichen Warnzeichen, die über Wochen anhalten, rätst du zu ärztlicher Abklärung.',
     `Heute ist ${wtag}.`,
+    merk.length ? 'Dein Merkzettel (was Peter dir früher gesagt hat und weiter gilt, nummeriert; nutze es, ohne es aufzuzählen):\n' + merk.map((m, i) => `${i + 1}. ${m.text}`).join('\n') : 'Dein Merkzettel ist noch leer.',
     'Engpass: ' + (engpassAus(kontext) || 'nicht festgelegt'),
     stand.length ? 'Peters Stand aus der Standortbestimmung:\n' + stand.join('\n') : '',
     saison.length ? 'Peters Saison (zwölf Wochen, Ziele mit Hebeln und Wenn-dann-Plänen). Bezieh Rat auf diese Ziele, wenn es passt:\n' + saison.join('\n') : '',
@@ -83,7 +86,7 @@ async function grundlage(userId: string) {
     lage?.offen.length ? 'Heute noch offen (von Life berechnet):\n' + lage.offen.map((o) => '- ' + o).join('\n') : '',
     lage ? `Empfehlung von Life für jetzt: ${lage.empfehlung.titel}. ${lage.empfehlung.grund}` : '',
   ].filter(Boolean);
-  return { zeilen, warnungen };
+  return { zeilen, warnungen, merk };
 }
 
 export async function coachErstellen(art: 'morgen' | 'abend', userId: string): Promise<CoachAntwort> {
@@ -112,42 +115,84 @@ export async function coachErstellen(art: 'morgen' | 'abend', userId: string): P
   return antwort;
 }
 
-export type ChatZeile = { rolle: 'ich' | 'coach'; text: string; zeit: string };
+export type ChatZeile = { rolle: 'ich' | 'coach'; text: string; zeit: string; experte?: boolean };
+export type Merkpunkt = { id: number; text: string; erstellt: string };
 
-/** Gespräch mit dem Coach. Gilt für den Tag: Life schickt Claude die Lage und den Verlauf von heute, beides pseudonymisiert. */
-export async function coachChat(nachricht: string, userId: string): Promise<ChatZeile[]> {
+/** Der Merkzettel des Coachs (0.29, Peter 31.10.2026): was Peter ihm gesagt hat und über heute hinaus gilt. Älteste zuerst. */
+export async function merkzettel(userId: string): Promise<Merkpunkt[]> {
+  await ensureSchema();
+  return sql<Merkpunkt[]>`select id::int as id, text, to_char(erstellt at time zone 'Europe/Berlin', 'YYYY-MM-DD') as erstellt from coach_merken where user_id = ${userId} order by id`;
+}
+export async function merkpunktWeg(id: number, userId: string): Promise<boolean> {
+  const r = await sql`delete from coach_merken where id = ${id} and user_id = ${userId}`;
+  return r.count > 0;
+}
+
+/** Das Gespräch der letzten sieben Tage für Claude, ohne Datum: „gestern“, „vor 3 Tagen“. */
+async function gespraechWoche(userId: string): Promise<string> {
+  const z = await sql<{ tag: string; rolle: string; text: string }[]>`
+    select tag::text as tag, rolle, text from (
+      select id, tag, rolle, text from coach_chat where user_id = ${userId} and tag >= (${heuteBerlin()}::date - 7) order by id desc limit 40
+    ) x order by id`;
+  let tag = ''; const aus: string[] = [];
+  for (const r of z) {
+    if (r.tag !== tag) {
+      tag = r.tag;
+      const t = Math.round((Date.parse(heuteBerlin()) - Date.parse(r.tag)) / 864e5);
+      aus.push(t <= 0 ? '[heute]' : t === 1 ? '[gestern]' : `[vor ${t} Tagen]`);
+    }
+    aus.push(`${r.rolle === 'ich' ? 'Peter' : 'Coach'}: ${r.text}`);
+  }
+  return aus.join('\n');
+}
+
+/**
+ * Gespräch mit dem Coach. Life schickt Claude die Lage, den Merkzettel und das Gespräch der letzten sieben Tage, alles pseudonymisiert.
+ * `experte`: Peter will eine Expertenmeinung, dann antwortet Opus gründlicher und länger.
+ */
+export async function coachChat(nachricht: string, userId: string, experte = false): Promise<ChatZeile[]> {
   const tag = heuteBerlin();
-  const text = nachricht.replace(/\s+/g, ' ').trim().slice(0, 1000);
-  await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'ich', ${text})`;
+  const text = nachricht.replace(/\s+/g, ' ').trim().slice(0, experte ? 4000 : 1000);
+  await sql`insert into coach_chat (user_id, tag, rolle, text, experte) values (${userId}, ${tag}, 'ich', ${text}, ${experte})`;
   const h = await haushalt(userId);
-  const [{ zeilen }, verlauf, spar] = await Promise.all([grundlage(userId), chatVerlauf(userId),
-    sql<{ name: string }[]>`select name from geld_toepfe where haushalt_id = ${h} and art = 'spar' and aktiv order by sortierung, id`.catch(() => [] as { name: string }[])]);
+  const [{ zeilen, merk }, gespraech, spar, saison] = await Promise.all([grundlage(userId), gespraechWoche(userId),
+    sql<{ name: string }[]>`select name from geld_toepfe where haushalt_id = ${h} and art = 'spar' and aktiv order by sortierung, id`.catch(() => [] as { name: string }[]),
+    aktuelleSaison(userId).catch(() => null)]);
   const sparziele = spar.map((x) => x.name);
   const prompt = [
-    'COACH CHAT',
+    experte ? 'COACH EXPERTENMEINUNG' : 'COACH CHAT',
     ...zeilen,
-    'Peter schreibt dir direkt. Antworte wie ein guter Coach im Gespräch: 1 bis 4 Sätze, konkret, mit einem nächsten Schritt, wenn es passt. Keine Listen, keine Überschriften. Bei Fragen zu Gesundheit gibst du keine Diagnosen und rätst bei anhaltenden Beschwerden zu ärztlichem Rat.',
-    'Gespräch von heute:\n' + verlauf.slice(-12).map((z) => `${z.rolle === 'ich' ? 'Peter' : 'Coach'}: ${z.text}`).join('\n'),
+    experte
+      ? 'Peter bittet ausdrücklich um eine Expertenmeinung. Denk gründlich nach wie ein erfahrener Berater: Lage einordnen, die zwei, drei entscheidenden Punkte abwägen, eine klare Empfehlung mit Begründung und dem nächsten Schritt. Bis zu 10 Sätze, kurze Absätze mit Leerzeile erlaubt, keine Überschriften. Sag offen, wo du unsicher bist oder was du nicht weißt. Bei Gesundheit keine Diagnosen, bei Geld und Recht kein Ersatz für Fachleute.'
+      : 'Peter schreibt dir direkt. Antworte wie ein guter Coach im Gespräch: 1 bis 4 Sätze, konkret, mit einem nächsten Schritt, wenn es passt. Keine Listen, keine Überschriften. Bei Fragen zu Gesundheit gibst du keine Diagnosen und rätst bei anhaltenden Beschwerden zu ärztlichem Rat.',
+    'Gespräch der letzten Tage (das Letzte ist Peters neue Nachricht):\n' + gespraech,
     sparziele.length ? 'Sparziele (nur Namen): ' + sparziele.join(', ') : 'Sparziele: noch keine angelegt.',
+    saison ? 'Eine Saison läuft gerade, saison_vorschlag geht nicht.' : 'Gerade läuft keine Saison.',
     AKTIONEN_TEXT,
-    'Antworte nur mit JSON: {"text": string (deine Antwort, höchstens 500 Zeichen), "aktion": Objekt oder null}',
+    `Antworte nur mit JSON: {"text": string (deine Antwort, höchstens ${experte ? 1500 : 500} Zeichen), "aktionen": Liste (höchstens drei, sonst leer)}`,
   ].join('\n\n');
-  let antwort = ''; let nachtrag = '';
+  let antwort = ''; const nachtraege: string[] = [];
   try {
-    type A = { text?: unknown; aktion?: unknown };
-    const a = entscheidend(text) ? await askJsonTief<A>(prompt, 700) : await askJson<A>(prompt, MODEL(), 700);
-    antwort = typeof a.text === 'string' ? a.text.trim().slice(0, 600) : '';
-    const ak = aktionPruefen(a.aktion, sparziele);
-    if (ak && 'fehler' in ak) nachtrag = `Nicht geändert: ${ak.fehler}`;
-    else if (ak) nachtrag = await ausfuehren(ak, h).then(() => bestaetigung(ak)).catch(() => 'Nicht geändert: Das Speichern hat nicht geklappt. Bitte unter Geld nachtragen.');
+    type A = { text?: unknown; aktionen?: unknown; aktion?: unknown };
+    const a = experte ? await askJsonTief<A>(prompt, 2000) : entscheidend(text) ? await askJsonTief<A>(prompt, 900) : await askJson<A>(prompt, MODEL(), 900);
+    antwort = typeof a.text === 'string' ? a.text.trim().slice(0, experte ? 1800 : 600) : '';
+    for (const ak of aktionenPruefen(a, sparziele, { merkzettel: merk.length, saisonLaeuft: !!saison })) {
+      if ('fehler' in ak) { nachtraege.push(`Nicht geändert: ${ak.fehler}`); continue; }
+      nachtraege.push(await ausfuehren(ak, h, userId, merk).then(() => bestaetigung(ak)).catch(() => 'Nicht geändert: Das Speichern hat nicht geklappt.'));
+    }
   } catch (e) { antwort = `Ich komme gerade nicht an Claude ran (${oeffentlich(e, 'keine Verbindung', 'coach')}). Versuch es gleich nochmal.`; }
-  if (antwort) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${antwort})`;
-  if (nachtrag) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${nachtrag})`;
+  if (antwort) await sql`insert into coach_chat (user_id, tag, rolle, text, experte) values (${userId}, ${tag}, 'coach', ${antwort}, ${experte})`;
+  for (const n of nachtraege) await sql`insert into coach_chat (user_id, tag, rolle, text) values (${userId}, ${tag}, 'coach', ${n})`;
   return chatVerlauf(userId);
 }
 
-/** Führt eine geprüfte Aktion aus. Nur im eigenen Haushalt, nur aktive Sparziele. */
-async function ausfuehren(a: CoachAktion, h: string): Promise<void> {
+/** Führt eine geprüfte Aktion aus. Geld nur im eigenen Haushalt, alles andere nur für den Menschen der Sitzung. */
+async function ausfuehren(a: CoachAktion, h: string, userId: string, merk: Merkpunkt[]): Promise<void> {
+  if (a.art === 'merken') { await sql`insert into coach_merken (user_id, text) values (${userId}, ${a.text})`; return; }
+  if (a.art === 'vergessen') { const p = merk[a.nr - 1]; if (!p || !(await merkpunktWeg(p.id, userId))) throw new Error('kein Punkt'); return; }
+  if (a.art === 'festhalten') { const id = await createItem(a.text, userId); enrich(id).catch(() => {}); return; }
+  if (a.art === 'wochenziel') { await wochenzielSetzen(a.text, userId); return; }
+  if (a.art === 'saison_vorschlag') { await setSetting(proNutzer('saison_coach', userId), JSON.stringify(a.ziele)); return; }
   if (a.art === 'sparziel_ziel') {
     const r = await sql`update geld_toepfe set betrag_cent = ${a.cent} where haushalt_id = ${h} and art = 'spar' and aktiv and lower(name) = lower(${a.ziel})`;
     if (!r.count) throw new Error('kein Sparziel');
@@ -160,5 +205,5 @@ async function ausfuehren(a: CoachAktion, h: string): Promise<void> {
 
 export async function chatVerlauf(userId: string): Promise<ChatZeile[]> {
   await ensureSchema();
-  return sql<ChatZeile[]>`select rolle, text, to_char(created_at at time zone 'Europe/Berlin', 'HH24:MI') as zeit from coach_chat where user_id = ${userId} and tag = ${heuteBerlin()} order by id`;
+  return sql<ChatZeile[]>`select rolle, text, to_char(created_at at time zone 'Europe/Berlin', 'HH24:MI') as zeit, experte from coach_chat where user_id = ${userId} and tag = ${heuteBerlin()} order by id`;
 }

@@ -6,6 +6,7 @@ import { Mitteilungen } from '../mitteilungen';
 import { KalenderEinstellungen } from '../kalender';
 import { Rueckmeldung } from '../rueckmeldung';
 import { Darstellung } from '../darstellung';
+import { Merkzettel } from '../merkzettel';
 
 type S = { kontext: string; ziele: string; team: string; namen: string; namen_auto: string };
 const LEER: S = { kontext: '', ziele: '', team: '', namen: '', namen_auto: '' };
@@ -64,6 +65,7 @@ export default function Einstellungen() {
         <p className="gnote">Die Zeile mit „Engpass:“ steht oben auf Heute. Claude ordnet jeden Eintrag einem Ziel zu und sortiert jeden Morgen danach.</p>
       </section>
 
+      <Merkzettel onToast={(t, k) => setToast(t, k)} />
       <Mitteilungen onToast={(t, k) => setToast(t, k)} />
       <KalenderEinstellungen onToast={(t, k) => setToast(t, k)} />
 

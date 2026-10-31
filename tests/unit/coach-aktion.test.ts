@@ -28,3 +28,31 @@ test('Coach: starkes Modell bei Entscheidungen und Überlastung, sonst Standard'
   assert.equal(entscheidend('Ich habe Sorgen wegen Geld'), true);
   assert.equal(entscheidend('Schorgen'), false);
 });
+
+test('Coach-Aktionen 0.29: Merkzettel, Festhalten, Wochenziel, Saisonvorschlag, höchstens drei', async () => {
+  const { aktionPruefen, aktionenPruefen, bestaetigung, SAISON_BEREICHE, MERK_MAX } = await import('../../lib/coach-aktion.ts');
+  const { BEREICHE_S } = await import('../../lib/saison-regeln.ts');
+  assert.deepEqual([...SAISON_BEREICHE], [...BEREICHE_S]);
+  // Merken: Klartext ohne Steuerzeichen, gekürzt, voller Zettel wird abgelehnt
+  assert.deepEqual(aktionPruefen({ art: 'merken', text: '  Wohlfühlsumme\n 20.000 €\u0007 ' }, []), { art: 'merken', text: 'Wohlfühlsumme 20.000 €' });
+  assert.equal(aktionPruefen({ art: 'merken', text: 'x' }, []), null);
+  assert.equal((aktionPruefen({ art: 'merken', text: 'y'.repeat(500) }, []) as { text: string }).text.length, 200);
+  assert.ok('fehler' in (aktionPruefen({ art: 'merken', text: 'noch was' }, [], { merkzettel: MERK_MAX, saisonLaeuft: false }) as object));
+  // Vergessen nur mit einer Nummer, die es gibt
+  assert.deepEqual(aktionPruefen({ art: 'vergessen', nr: 2 }, [], { merkzettel: 3, saisonLaeuft: false }), { art: 'vergessen', nr: 2 });
+  assert.ok('fehler' in (aktionPruefen({ art: 'vergessen', nr: 4 }, [], { merkzettel: 3, saisonLaeuft: false }) as object));
+  assert.ok('fehler' in (aktionPruefen({ art: 'vergessen', nr: '1; drop' }, [], { merkzettel: 3, saisonLaeuft: false }) as object));
+  // Festhalten und Wochenziel
+  assert.deepEqual(aktionPruefen({ art: 'festhalten', text: 'Idee für den Winter' }, []), { art: 'festhalten', text: 'Idee für den Winter' });
+  assert.equal(aktionPruefen({ art: 'wochenziel', text: 12 }, []), null);
+  // Saison: nur bekannte Bereiche, einer pro Bereich, nicht bei laufender Saison
+  assert.deepEqual(aktionPruefen({ art: 'saison_vorschlag', ziele: [{ bereich: 'geld', text: 'Puffer füllen' }, { bereich: 'geld', text: 'doppelt' }, { bereich: 'drop table', text: 'x y z' }] }, []),
+    { art: 'saison_vorschlag', ziele: [{ bereich: 'geld', text: 'Puffer füllen' }] });
+  assert.ok('fehler' in (aktionPruefen({ art: 'saison_vorschlag', ziele: [{ bereich: 'geld', text: 'Puffer füllen' }] }, [], { merkzettel: 0, saisonLaeuft: true }) as object));
+  // Liste: höchstens drei, unbekannte fallen weg, altes Feld "aktion" geht weiter
+  const vier = aktionenPruefen({ aktionen: [{ art: 'merken', text: 'eins' }, { art: 'sql', text: 'x' }, { art: 'merken', text: 'zwei' }, { art: 'merken', text: 'drei' }] }, []);
+  assert.equal(vier.length, 2);
+  assert.ok('fehler' in aktionenPruefen({ aktionen: [{ art: 'merken', text: 'eins' }, { art: 'merken', text: 'zwei' }] }, [], { merkzettel: MERK_MAX - 1, saisonLaeuft: false })[1]);
+  assert.deepEqual(aktionenPruefen({ aktion: { art: 'sparrate', euro: 100 } }, []), [{ art: 'sparrate', cent: 10000 }]);
+  assert.equal(bestaetigung({ art: 'merken', text: 'Wohlfühlsumme 20.000 €' }), '✓ Gemerkt: Wohlfühlsumme 20.000 €');
+});

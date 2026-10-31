@@ -74,6 +74,15 @@ export const MIGRATIONEN: Migration[] = [
       await tx`create index if not exists fokus_user on fokus_bloecke (user_id, start desc)`;
     },
   },
+  {
+    nr: 7, name: 'Merkzettel des Coachs und Expertenmeinung (0.29)',
+    run: async (tx) => {
+      await tx`create table if not exists coach_merken (
+        id bigserial primary key, user_id text not null, text text not null, erstellt timestamptz not null default now())`;
+      await tx`create index if not exists coach_merken_user on coach_merken (user_id, id)`;
+      await tx`alter table coach_chat add column if not exists experte boolean not null default false`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */
