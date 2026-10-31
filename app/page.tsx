@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, isPending, taskTitle, useBreit, useToast, type Item, type Stand } from './ui';
 import { Liste } from './liste';
+import { FrageOffen } from './frage-offen';
 import { RitualKarte } from './rituale';
 import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
 import { KalenderHeute, useKalender } from './kalender';
@@ -174,7 +175,7 @@ export default function Heute() {
     streifen: <Tagesstreifen c={cockpit} jetzt={minuten} />,
     konten: <KontenHeute c={cockpit} />,
     fragebogen: (
-<RitualKarte art={ci.zeige === 'morgen' || ci.zeige === 'abend' ? ci.zeige : null} wochenrunde={!!ci.coach?.wochenstartOffen && !ci.zeige} />
+<><RitualKarte art={ci.zeige === 'morgen' || ci.zeige === 'abend' ? ci.zeige : null} wochenrunde={!!ci.coach?.wochenstartOffen && !ci.zeige} /><FrageOffen /></>
     ),
     festhalten: (
 <><section className="capture compact" aria-label="Festhalten">

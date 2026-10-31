@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { TopBar, api, useToast } from '../ui';
 import { auf, auspacken, ausPassphrase, ausWiederherstellung, einpacken, inhaltsSchluessel, neuesSalz, zu, zufall } from '../ablage-krypto';
 import { ITERATIONEN, LEERLAUF_MIN, PASSPHRASE_MIN, passphraseOk, wiederAusText, wiederText } from '@/lib/ablage-regeln';
-import { PlanAnsicht, type Plan } from './plan';
+import { Offen, PRIVAT, type Eintrag, type Inhalt } from './offen';
 
 /**
  * Ablage (0.30, Peter 31.10.2026): verborgen, Ende-zu-Ende verschlüsselt. Kein Menüpunkt, Zugang über eine Geste.
@@ -12,17 +12,9 @@ import { PlanAnsicht, type Plan } from './plan';
  * sobald die Seite in den Hintergrund geht, zwei Minuten nichts passiert oder Peter „Sperren“ tippt.
  * Keine KI, keine Suche, kein Diktat, keine Rechtschreibprüfung, kein Coach, keine Mitteilungen.
  */
-type Notiz = { art: 'notiz'; titel: string; text: string };
-type Aufgabe = { art: 'aufgabe'; titel: string; erledigt?: boolean; meilenstein?: boolean; datum?: string };
-type PlanBlock = { art: 'plan'; daten: Plan; haken: Record<string, boolean> };
-type Inhalt = Notiz | Aufgabe | PlanBlock;
-type Eintrag = Inhalt & { id: string; geaendert: string };
 type Kopf = { eingerichtet: boolean; offen: boolean; salz?: string; iterationen?: number; pass_block?: string; wieder_block?: string };
 type Phase = 'laedt' | 'riegel' | 'einrichten' | 'wiederZeigen' | 'entsperren' | 'wiederEingeben' | 'neuePass' | 'offen';
 
-// Kein Diktat, keine Vorschläge, keine Rechtschreibprüfung: Diese Dienste schicken Text an Dritte
-const PRIVAT = { autoComplete: 'off', autoCorrect: 'off', spellCheck: false, 'data-1p-ignore': true, 'data-lpignore': 'true' } as const;
-const tagText = (t: string) => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(t + 'T12:00:00Z'));
 
 export default function Ablage() {
   const [phase, setPhase] = useState<Phase>('laedt');
@@ -175,8 +167,8 @@ export default function Ablage() {
       await laden(key);
     } catch (e) { fehlerOderZu(e); }
   }
-  async function loeschen(x: Eintrag) {
-    if (!window.confirm('Diesen Eintrag löschen?')) return;
+  async function loeschen(x: Eintrag, frage = true) {
+    if (frage && !window.confirm('Diesen Eintrag löschen?')) return;
     try { await api(`/api/ablage/eintraege/${x.id}`, { method: 'DELETE' }); if (key) await laden(key); }
     catch (e) { fehlerOderZu(e); }
   }
@@ -284,125 +276,3 @@ async function rohInhalt(wiederRoh: Uint8Array, wiederBlock: string): Promise<Ui
   return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: roh.slice(0, 12) as Uint8Array<ArrayBuffer> }, huelle, roh.slice(12) as Uint8Array<ArrayBuffer>));
 }
 
-function Offen({ eintraege, onSpeichern, onLoeschen, onSperren, onExport, onFehler }: {
-  eintraege: Eintrag[]; onSpeichern: (i: Inhalt, id?: string) => Promise<void>; onLoeschen: (e: Eintrag) => void; onSperren: () => void; onExport: () => void; onFehler: (m: string) => void;
-}) {
-  const [ansicht, setAnsicht] = useState<'plan' | 'notiz' | 'aufgabe'>('plan');
-  const [titel, setTitel] = useState('');
-  const [text, setText] = useState('');
-  const [meilenstein, setMeilenstein] = useState(false);
-  const [tag, setTag] = useState('');
-  const [offen, setOffen] = useState<string | null>(null);
-  const [entwurf, setEntwurf] = useState('');
-  const plan = eintraege.find((e): e is PlanBlock & { id: string; geaendert: string } => e.art === 'plan');
-  const notizen = eintraege.filter((e): e is Notiz & { id: string; geaendert: string } => e.art === 'notiz').sort((a, b) => b.geaendert.localeCompare(a.geaendert));
-  const aufgaben = eintraege.filter((e): e is Aufgabe & { id: string; geaendert: string } => e.art === 'aufgabe')
-    .sort((a, b) => Number(!!a.erledigt) - Number(!!b.erledigt) || (a.datum ?? '9').localeCompare(b.datum ?? '9'));
-
-  async function neu() {
-    if (ansicht === 'notiz' && text.trim()) await onSpeichern({ art: 'notiz', titel: titel.trim().slice(0, 120), text: text.slice(0, 50_000) });
-    else if (ansicht === 'aufgabe' && titel.trim()) await onSpeichern({ art: 'aufgabe', titel: titel.trim().slice(0, 200), erledigt: false, meilenstein, datum: /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : undefined });
-    else return;
-    setTitel(''); setText(''); setMeilenstein(false); setTag('');
-  }
-
-  /** Eine Plan-Datei einlesen. Sie wird im Browser gelesen und verschlüsselt, die Datei selbst geht nirgendwohin. */
-  async function planEinlesen(f: File | undefined) {
-    if (!f) return;
-    if (f.size > 60_000) { onFehler('Die Datei ist zu groß.'); return; }
-    try {
-      const daten = JSON.parse(await f.text());
-      if (!daten || typeof daten !== 'object' || Array.isArray(daten) || typeof daten.titel !== 'string') { onFehler('Das ist keine Plan-Datei.'); return; }
-      await onSpeichern({ art: 'plan', daten, haken: plan?.haken ?? {} }, plan?.id);
-    } catch { onFehler('Die Datei lässt sich nicht lesen.'); }
-  }
-
-  return (
-    <>
-      <div className="tr-leiste">
-        <nav className="plan-um tr-drei" aria-label="Ansicht">
-          {([['plan', 'Plan'], ['notiz', 'Notizen'], ['aufgabe', 'Aufgaben']] as const).map(([k, l]) => <button key={k} type="button" aria-current={ansicht === k ? 'page' : undefined} onClick={() => setAnsicht(k)}>{l}</button>)}
-        </nav>
-        <button type="button" className="chipbtn" onClick={onSperren}>Sperren</button>
-      </div>
-
-      {ansicht === 'plan' ? (
-        plan ? <PlanAnsicht plan={plan.daten} haken={plan.haken} onHaken={(h) => onSpeichern({ ...plan, haken: h }, plan.id)} />
-          : (
-            <section className="gsec" aria-label="Plan einlesen">
-              <div className="group pad tr-form">
-                <p className="tr-satz">Lies deine Plan-Datei ein. Life liest sie hier im Browser und speichert sie nur verschlüsselt. Danach kannst du die Datei auf deinem Gerät löschen.</p>
-                <label className="btn primary wide tr-datei">Plan-Datei wählen<input type="file" accept="application/json,.json" onChange={(e) => planEinlesen(e.target.files?.[0])} /></label>
-              </div>
-            </section>
-          )
-      ) : null}
-
-      {ansicht !== 'plan' ? (
-        <section className="gsec" aria-label={ansicht === 'notiz' ? 'Neue Notiz' : 'Neue Aufgabe'}>
-          <div className="group pad tr-form">
-            {ansicht === 'notiz' ? <>
-              <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Titel (darf leer bleiben)" aria-label="Titel" maxLength={120} {...PRIVAT} />
-              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Gedanke" aria-label="Gedanke" {...PRIVAT} />
-            </> : <>
-              <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Aufgabe oder Meilenstein" aria-label="Aufgabe" maxLength={200} {...PRIVAT} onKeyDown={(e) => { if (e.key === 'Enter') neu(); }} />
-              <div className="tr-reihe">
-                <label className="tr-check"><input type="checkbox" checked={meilenstein} onChange={(e) => setMeilenstein(e.target.checked)} />Meilenstein</label>
-                <input type="date" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Datum" />
-              </div>
-            </>}
-            <button type="button" className="btn primary" onClick={neu} disabled={ansicht === 'notiz' ? !text.trim() : !titel.trim()}>Verschlüsselt speichern</button>
-          </div>
-        </section>
-      ) : null}
-
-      {ansicht === 'notiz' ? (
-        <section className="gsec" aria-label="Notizen">
-          {!notizen.length ? <p className="muted small">Noch keine Notizen.</p> : (
-            <div className="group">
-              {notizen.map((x) => (
-                <div key={x.id} className="tr-notiz">
-                  <button type="button" className="cell tr-notiz-kopf" aria-expanded={offen === x.id} onClick={() => { setOffen(offen === x.id ? null : x.id); setEntwurf(x.text); }}>
-                    <span className="lbl">{x.titel || x.text.slice(0, 60)}<small>{new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(new Date(x.geaendert))}</small></span>
-                  </button>
-                  {offen === x.id ? (
-                    <div className="pad tr-form">
-                      <textarea value={entwurf} onChange={(e) => setEntwurf(e.target.value)} rows={8} aria-label="Notiz bearbeiten" {...PRIVAT} />
-                      <div className="tr-reihe">
-                        <button type="button" className="btn primary" disabled={entwurf === x.text} onClick={() => onSpeichern({ art: 'notiz', titel: x.titel, text: entwurf.slice(0, 50_000) }, x.id)}>Speichern</button>
-                        <button type="button" className="chipbtn" onClick={() => onLoeschen(x)}>Löschen</button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      {ansicht === 'aufgabe' ? (
-        <section className="gsec" aria-label="Aufgaben">
-          {!aufgaben.length ? <p className="muted small">Noch keine Aufgaben.</p> : (
-            <div className="group">
-              {aufgaben.map((x) => (
-                <div key={x.id} className={'cell static tr-aufgabe' + (x.erledigt ? ' erledigt' : '')}>
-                  <input type="checkbox" className="tr-haken" checked={!!x.erledigt} aria-label={`Erledigt: ${x.titel}`} onChange={() => onSpeichern({ art: 'aufgabe', titel: x.titel, meilenstein: x.meilenstein, datum: x.datum, erledigt: !x.erledigt }, x.id)} />
-                  <span className="lbl">{x.titel}{x.meilenstein || x.datum ? <small>{x.meilenstein ? 'Meilenstein' : ''}{x.meilenstein && x.datum ? ' · ' : ''}{x.datum ? tagText(x.datum) : ''}</small> : null}</span>
-                  <button type="button" className="chipbtn" onClick={() => onLoeschen(x)} aria-label={`Löschen: ${x.titel}`}>Löschen</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      <section className="gsec">
-        <div className="group">
-          <button type="button" className="cell tr-zeile" onClick={onExport}><span className="lbl">Verschlüsselt exportieren<small>Datei mit allem, nur mit Passphrase oder Wiederherstellungsschlüssel lesbar</small></span></button>
-        </div>
-      </section>
-      <p className="gnote">Geht die App in den Hintergrund oder passiert {LEERLAUF_MIN} Minuten nichts, ist die Ablage zu. Dann brauchst du wieder Face ID und Passphrase.</p>
-    </>
-  );
-}

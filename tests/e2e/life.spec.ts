@@ -978,33 +978,66 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(schluessel).toMatch(/^([0-9A-HJKMNP-TV-Z]{4}-){12}[0-9A-HJKMNP-TV-Z]{4}$/);
     await page.getByRole('checkbox', { name: 'Ich habe den Schlüssel sicher notiert' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    // Plan-Datei einlesen (erfundener Inhalt), Jahresziel abhaken
+    // Plan-Datei einlesen (erfundener Inhalt): vier Reiter statt einer langen Seite
     const plan = { schema: 'test.plan.v1', titel: 'Erfundener Langfristplan', ziel: 'Erfundenes Ziel', stand: '2026-10', fokus_wahlen: [{ jahr: 2036, alter: 46, art: 'Probe', prioritaet: 'hoch' }],
-      kategorien: [{ nr: 1, name: 'Erfundene Kategorie', typ: 'Gate', ist_2026: 2, ziel_2032: 5, soll_2045: 9 }], jahresziele: [{ jahr: '2027', ziele: [{ text: 'Erfundenes Jahresziel', kategorien: [1] }] }], rote_linien: ['Erfundene rote Linie'] };
+      kategorien: [{ nr: 1, name: 'Erfundene Kategorie', typ: 'Gate', ist_2026: 2, ziel_2032: 5, soll_2045: 9 }], jahresziele: [{ jahr: '2027', ziele: [{ text: 'Erfundenes Jahresziel', kategorien: [1] }] }], rote_linien: ['Erfundene rote Linie'],
+      annahmen: ['Erfundene Annahme'], dividenden_gewohnheiten: [{ ebene: 'Tag', text: 'Erfundene Tagesgewohnheit', rhythmus: 'täglich', kategorien: [1] }],
+      betriebssystem: { prinzipien: ['Erfundenes Prinzip'], rhythmen: [{ ebene: 'Tag', name: 'Erfundener Abendblick', dauer_min: 5, abendfrage: { frage: 'Erfundene Abendfrage?', optionen: ['Ja', 'Nein'] }, zielquote: '4/5' }] } };
     await page.locator('input[type="file"]').setInputFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(plan)) });
-    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan');
-    await expect(page.locator('section[aria-label="Kategorien"] .pl-kat.gate')).toContainText('Erfundene Kategorie');
-    const det = page.locator('section[aria-label="Jahresziele"] details').first();
+    const heuteListe = page.locator('section[aria-label="Heute"]');
+    await expect(heuteListe).toContainText('Erfundene Tagesgewohnheit');
+    await page.getByRole('checkbox', { name: 'Erfundene Tagesgewohnheit' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Erfundene Tagesgewohnheit' })).toBeChecked();
+    await heuteListe.getByLabel('Heute: hinzufügen').fill('Erfundene neue Gewohnheit');
+    await heuteListe.getByRole('button', { name: 'Dazu' }).click();
+    await expect(heuteListe).toContainText('Erfundene neue Gewohnheit');
+    const abend = page.locator('section[aria-label="Abendfrage"]');
+    await expect(abend).toContainText('Erfundene Abendfrage?');
+    await abend.getByRole('radio', { name: 'Ja' }).click();
+    await expect(abend.getByRole('radio', { name: 'Ja' })).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(async () => (await (await page.request.get('/api/ablage/zeichen')).json()).offen).toBe(false);
+    // Weg: Meilenstein anlegen, Jahresziel abhaken
+    await page.getByRole('button', { name: 'Weg' }).click();
+    await page.getByLabel('Neuer Meilenstein').fill('Erfundener Meilenstein');
+    await page.locator('section[aria-label="Meilensteine"]').getByRole('button', { name: 'Dazu' }).click();
+    await expect(page.locator('section[aria-label="Meilensteine"]')).toContainText('Erfundener Meilenstein');
+    const det = page.locator('section[aria-label="Jahresziele"] details', { hasText: '2027' });
     if ((await det.getAttribute('open')) === null) await det.locator('summary').click();
-    await page.getByRole('checkbox', { name: 'Erfundenes Jahresziel' }).check();
-    await expect(page.locator('section[aria-label="Jahresziele"]')).toContainText('1 von 1');
-    await page.getByRole('button', { name: 'Notizen' }).click();
-    await page.getByLabel('Gedanke').fill('Erfundene streng geheime Testnotiz');
+    await page.getByRole('checkbox', { name: 'Erfundenes Jahresziel' }).click();
+    await expect(det).toContainText('1 von 1');
+    // Woche: Wochenaufgabe und Wochenblick
+    await page.getByRole('button', { name: 'Woche', exact: true }).click();
+    await page.getByLabel('Wochenaufgaben: hinzufügen').fill('Erfundene Wochenaufgabe');
+    await page.locator('section[aria-label="Wochenaufgaben"]').getByRole('button', { name: 'Dazu' }).click();
+    await expect(page.locator('section[aria-label="Wochenaufgaben"]')).toContainText('Erfundene Wochenaufgabe');
+    await page.getByRole('radio', { name: 'Gut' }).click();
+    await expect(page.getByRole('radio', { name: 'Gut' })).toHaveAttribute('aria-checked', 'true');
+    // Kompass: Überblick, Gedanke, neue Fassung mit Abgleich
+    await page.getByRole('button', { name: 'Kompass' }).click();
+    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan');
+    await page.locator('details[aria-label="Gedanken"] summary').click();
+    await page.getByLabel('Gedanke', { exact: true }).fill('Erfundene streng geheime Testnotiz');
     await page.getByRole('button', { name: 'Verschlüsselt speichern' }).click();
-    await expect(page.locator('section[aria-label="Notizen"]')).toContainText('Erfundene streng geheime Testnotiz');
+    await expect(page.locator('details[aria-label="Gedanken"]')).toContainText('Erfundene streng geheime Testnotiz');
+    const plan2 = { ...plan, titel: 'Erfundener Langfristplan zwei', dividenden_gewohnheiten: [...plan.dividenden_gewohnheiten, { ebene: 'Woche', text: 'Erfundene zweite Gewohnheit', rhythmus: 'wöchentlich' }] };
+    await page.locator('section[aria-label="Plan pflegen"] input[type="file"]').setInputFiles({ name: 'plan2.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(plan2)) });
+    await expect(page.locator('section[aria-label="Neue Fassung"]')).toContainText('+ Erfundene zweite Gewohnheit');
+    await page.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan zwei');
+    await expect(page.locator('section[aria-label="Plan pflegen"]')).toContainText('Frühere Fassungen · 1');
     // Auf dem Server liegt nur Unlesbares
     const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
     const roh = await sql<{ block: string }[]>`select block from ablage_bloecke where user_id = 'peter'`;
     const kopfRoh = await sql<{ pass_block: string }[]>`select pass_block from ablage where user_id = 'peter'`;
     await sql.end();
-    expect(roh).toHaveLength(2);
+    expect(roh.length).toBeGreaterThanOrEqual(5);
     const alles = roh.map((r) => r.block + Buffer.from(r.block, 'base64').toString('latin1')).join(' ') + kopfRoh[0].pass_block;
-    expect(alles).not.toMatch(/geheim|Langfristplan|Jahresziel|Erfunden|notiz|plan/i);
+    expect(alles).not.toMatch(/geheim|Langfristplan|Jahresziel|Erfunden|Gewohnheit|Meilenstein|notiz|plan|woche/i);
     expect((await page.request.post('/api/ablage/eintraege', { headers: H, data: { block: '<b>klartext</b>' } })).status()).toBe(400);
     // Verschlüsselter Export: Datei ohne Klartext
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Verschlüsselt exportieren/ }).click()]);
     const datei = (await (await import('node:fs/promises')).readFile((await download.path())!)).toString();
-    expect(JSON.parse(datei).bloecke).toHaveLength(2);
+    expect(JSON.parse(datei).bloecke).toHaveLength(roh.length);
     expect(datei).not.toMatch(/geheim|Langfristplan|Erfunden/i);
     // Sperren: ohne Face ID kommt nichts mehr
     await page.getByRole('button', { name: 'Sperren' }).click();
@@ -1024,13 +1057,14 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await neu.getByLabel('Passphrase', { exact: true }).fill('Zweite erfundene Testpassphrase');
     await neu.getByLabel('Passphrase wiederholen').fill('Zweite erfundene Testpassphrase');
     await neu.getByRole('button', { name: 'Passphrase speichern' }).click();
-    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan');
+    await expect(page.locator('section[aria-label="Heute"]')).toContainText('Erfundene Tagesgewohnheit');
     await page.getByRole('button', { name: 'Sperren' }).click();
     await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
     await page.locator('section[aria-label="Entsperren"]').getByLabel('Passphrase').fill('Zweite erfundene Testpassphrase');
     await page.locator('section[aria-label="Entsperren"]').getByRole('button', { name: 'Entsperren' }).click();
-    await page.getByRole('button', { name: 'Notizen' }).click();
-    await expect(page.locator('section[aria-label="Notizen"]')).toContainText('Erfundene streng geheime Testnotiz');
+    await page.getByRole('button', { name: 'Kompass' }).click();
+    await page.locator('details[aria-label="Gedanken"] summary').click();
+    await expect(page.locator('details[aria-label="Gedanken"]')).toContainText('Erfundene streng geheime Testnotiz');
     // Kein Weg nach außen: nicht in der Suche, nicht beim Coach
     expect(((await (await page.request.get('/api/items?q=geheime')).json()) as unknown[]).length).toBe(0);
     const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
