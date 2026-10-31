@@ -64,6 +64,16 @@ export const MIGRATIONEN: Migration[] = [
         montag date not null, bewertung text not null, primary key (hebel_id, montag))`;
     },
   },
+  {
+    nr: 6, name: 'Fokusblöcke mit Musik und Bewertung (0.27)',
+    run: async (tx) => {
+      await tx`create table if not exists fokus_bloecke (
+        id bigserial primary key, user_id text not null, item_id uuid references items(id) on delete set null,
+        titel text not null default '', start timestamptz not null default now(), minuten int not null, pause int not null,
+        musik text not null, test boolean not null default false, ende timestamptz, bewertung text)`;
+      await tx`create index if not exists fokus_user on fokus_bloecke (user_id, start desc)`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */
