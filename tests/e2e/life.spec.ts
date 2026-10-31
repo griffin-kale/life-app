@@ -950,6 +950,94 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect((await page.request.delete('/api/coach/merken?id=abc', { headers: H })).status()).toBe(400);
   });
 
+  await test.step('Ablage: verborgen, Face ID und Passphrase, Ende-zu-Ende verschlüsselt, Wiederherstellung, Export', async () => {
+    expect(await (await page.request.get('/api/ablage')).json()).toEqual({ eingerichtet: false, offen: false });
+    expect((await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
+    expect((await page.request.post('/api/ablage/eintraege', { headers: H, data: { block: 'A'.repeat(40) } })).status()).toBe(403);
+    // Kein Menüpunkt: Leben zeigt keinen Hinweis, der Titel lange gedrückt führt hin
+    await page.goto('/leben');
+    await expect(page.locator('main')).not.toContainText(/Ablage|Tresor/);
+    await page.locator('h1.lb-titel').hover();
+    await page.mouse.down(); await page.waitForTimeout(1100); await page.mouse.up();
+    await page.waitForURL('/ablage');
+    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    const form = page.locator('section[aria-label="Einrichten"]');
+    await form.getByLabel('Passphrase', { exact: true }).fill('zu kurz');
+    await form.getByLabel('Passphrase wiederholen').fill('zu kurz');
+    await form.getByRole('button', { name: 'Einrichten' }).click();
+    await expect(form.getByRole('alert')).toContainText('Mindestens 12 Zeichen');
+    await form.getByLabel('Passphrase', { exact: true }).fill('Erfundene lange Testpassphrase');
+    await form.getByLabel('Passphrase wiederholen').fill('Erfundene lange Testpassphrase');
+    await form.getByRole('button', { name: 'Einrichten' }).click();
+    // Der Wiederherstellungsschlüssel erscheint genau einmal
+    const schluessel = (await page.locator('.tr-schluessel').innerText()).trim();
+    expect(schluessel).toMatch(/^([0-9A-HJKMNP-TV-Z]{4}-){12}[0-9A-HJKMNP-TV-Z]{4}$/);
+    await page.getByRole('checkbox', { name: 'Ich habe den Schlüssel sicher notiert' }).check();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    // Plan-Datei einlesen (erfundener Inhalt), Jahresziel abhaken
+    const plan = { schema: 'test.plan.v1', titel: 'Erfundener Langfristplan', ziel: 'Erfundenes Ziel', stand: '2026-10', fokus_wahlen: [{ jahr: 2036, alter: 46, art: 'Probe', prioritaet: 'hoch' }],
+      kategorien: [{ nr: 1, name: 'Erfundene Kategorie', typ: 'Gate', ist_2026: 2, ziel_2032: 5, soll_2045: 9 }], jahresziele: [{ jahr: '2027', ziele: [{ text: 'Erfundenes Jahresziel', kategorien: [1] }] }], rote_linien: ['Erfundene rote Linie'] };
+    await page.locator('input[type="file"]').setInputFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(plan)) });
+    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan');
+    await expect(page.locator('section[aria-label="Kategorien"] .pl-kat.gate')).toContainText('Erfundene Kategorie');
+    const det = page.locator('section[aria-label="Jahresziele"] details').first();
+    if ((await det.getAttribute('open')) === null) await det.locator('summary').click();
+    await page.getByRole('checkbox', { name: 'Erfundenes Jahresziel' }).check();
+    await expect(page.locator('section[aria-label="Jahresziele"]')).toContainText('1 von 1');
+    await page.getByRole('button', { name: 'Notizen' }).click();
+    await page.getByLabel('Gedanke').fill('Erfundene streng geheime Testnotiz');
+    await page.getByRole('button', { name: 'Verschlüsselt speichern' }).click();
+    await expect(page.locator('section[aria-label="Notizen"]')).toContainText('Erfundene streng geheime Testnotiz');
+    // Auf dem Server liegt nur Unlesbares
+    const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
+    const roh = await sql<{ block: string }[]>`select block from ablage_bloecke where user_id = 'peter'`;
+    const kopfRoh = await sql<{ pass_block: string }[]>`select pass_block from ablage where user_id = 'peter'`;
+    await sql.end();
+    expect(roh).toHaveLength(2);
+    const alles = roh.map((r) => r.block + Buffer.from(r.block, 'base64').toString('latin1')).join(' ') + kopfRoh[0].pass_block;
+    expect(alles).not.toMatch(/geheim|Langfristplan|Jahresziel|Erfunden|notiz|plan/i);
+    expect((await page.request.post('/api/ablage/eintraege', { headers: H, data: { block: '<b>klartext</b>' } })).status()).toBe(400);
+    // Verschlüsselter Export: Datei ohne Klartext
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Verschlüsselt exportieren/ }).click()]);
+    const datei = (await (await import('node:fs/promises')).readFile((await download.path())!)).toString();
+    expect(JSON.parse(datei).bloecke).toHaveLength(2);
+    expect(datei).not.toMatch(/geheim|Langfristplan|Erfunden/i);
+    // Sperren: ohne Face ID kommt nichts mehr
+    await page.getByRole('button', { name: 'Sperren' }).click();
+    await expect(page.getByRole('button', { name: 'Mit Face ID öffnen' })).toBeVisible();
+    expect((await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
+    expect(await (await page.request.get('/api/ablage')).json()).toEqual({ eingerichtet: true, offen: false });
+    // Falsche Passphrase scheitert, Wiederherstellungsschlüssel öffnet und setzt eine neue Passphrase
+    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    const tor = page.locator('section[aria-label="Entsperren"]');
+    await tor.getByLabel('Passphrase').fill('Eine ganz falsche Passphrase');
+    await tor.getByRole('button', { name: 'Entsperren' }).click();
+    await expect(tor.getByRole('alert')).toContainText('stimmt nicht');
+    await tor.getByRole('button', { name: 'Passphrase vergessen?' }).click();
+    await page.getByLabel('Wiederherstellungsschlüssel').fill(schluessel.toLowerCase());
+    await page.getByRole('button', { name: 'Öffnen' }).click();
+    const neu = page.locator('section[aria-label="Neue Passphrase"]');
+    await neu.getByLabel('Passphrase', { exact: true }).fill('Zweite erfundene Testpassphrase');
+    await neu.getByLabel('Passphrase wiederholen').fill('Zweite erfundene Testpassphrase');
+    await neu.getByRole('button', { name: 'Passphrase speichern' }).click();
+    await expect(page.locator('section[aria-label="Überblick"]')).toContainText('Erfundener Langfristplan');
+    await page.getByRole('button', { name: 'Sperren' }).click();
+    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    await page.locator('section[aria-label="Entsperren"]').getByLabel('Passphrase').fill('Zweite erfundene Testpassphrase');
+    await page.locator('section[aria-label="Entsperren"]').getByRole('button', { name: 'Entsperren' }).click();
+    await page.getByRole('button', { name: 'Notizen' }).click();
+    await expect(page.locator('section[aria-label="Notizen"]')).toContainText('Erfundene streng geheime Testnotiz');
+    // Kein Weg nach außen: nicht in der Suche, nicht beim Coach
+    expect(((await (await page.request.get('/api/items?q=geheime')).json()) as unknown[]).length).toBe(0);
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    expect(prompts.join(' ')).not.toMatch(/geheime Testnotiz|Langfristplan/);
+    // Die Seite in den Hintergrund: sofort gesperrt
+    await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await expect(page.getByRole('button', { name: 'Mit Face ID öffnen' })).toBeVisible();
+    await expect(page.locator('main')).not.toContainText('geheime Testnotiz');
+    await page.goto('/');
+  });
+
   await test.step('Deep Work: ein Bildschirm mit Timer, Sache, Termin, Musik, Gedanke parken, Bewertung, Musiktest', async () => {
     // Von der einen Sache in den Modus, ohne Seitenleiste und Leiste
     await page.goto('/');
@@ -1174,6 +1262,10 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
   expect((await (await Z.get('/api/settings')).json()).kontext).toContain('Zweitengpass');
 
   // Die Saison gehört dem eigenen Menschen: die Zweite sieht keine und kann Peters Ziele nicht zählen
+  // Die Ablage eines anderen sieht niemand, ohne eigenen Passkey geht keine auf, und es gibt keinen Hinweis auf fremde
+  expect((await Z.get('/api/ablage/eintraege')).status()).toBe(403);
+  expect((await Z.post('/api/ablage/riegel-optionen', { headers: H })).status()).toBe(409);
+  expect(await (await Z.get('/api/ablage')).json()).toEqual({ eingerichtet: false, offen: false });
   // Merkzettel und Saisonvorschlag des Coachs gehören nur dem eigenen Menschen
   await Z.post('/api/coach/chat', { headers: H, data: { text: 'Meine Wohlfühlsumme sind 5000 Euro' } });
   expect((await (await Z.get('/api/coach/merken')).json()).punkte).toHaveLength(1);

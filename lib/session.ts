@@ -10,6 +10,7 @@ export const sicher = () => (process.env.PUBLIC_ORIGIN ?? '').startsWith('https:
 const name = (n: string) => (sicher() ? `__Host-${n}` : n);
 export const sessionCookie = () => name('life_session');
 export const challengeCookie = () => name('life_challenge');
+export const ablageCookie = () => name('life_ablage');
 
 const SESSION_DAYS = 30;
 
@@ -25,7 +26,7 @@ function geheimnis(): string {
  * v2 seit 0.16: Sitzungen tragen eine Kennung (sid), ältere Sitzungen gelten nicht mehr.
  */
 const schluessel = new Map<string, Promise<Uint8Array>>();
-function key(zweck: 'sitzung' | 'challenge'): Promise<Uint8Array> {
+function key(zweck: 'sitzung' | 'challenge' | 'ablage'): Promise<Uint8Array> {
   const roh = geheimnis();
   const k = `${zweck}|${roh}`;
   if (!schluessel.has(k)) schluessel.set(k, (async () => {
@@ -59,16 +60,29 @@ export async function validSession(token: string | undefined): Promise<boolean> 
 }
 
 /** Challenge für Passkey-Anmeldung, 5 Minuten gültig, signiert im Cookie. */
-export async function signChallenge(challenge: string, purpose: 'register' | 'login' | 'whoop'): Promise<string> {
+export async function signChallenge(challenge: string, purpose: 'register' | 'login' | 'whoop' | 'ablage'): Promise<string> {
   return new SignJWT({ c: challenge, p: purpose, typ: 'challenge' }).setProtectedHeader({ alg: 'HS256' }).setAudience('life:challenge').setExpirationTime('5m').sign(await key('challenge'));
 }
 
-export async function readChallenge(token: string | undefined, purpose: 'register' | 'login' | 'whoop'): Promise<string | null> {
+export async function readChallenge(token: string | undefined, purpose: 'register' | 'login' | 'whoop' | 'ablage'): Promise<string | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, await key('challenge'), { algorithms: ['HS256'], audience: 'life:challenge' });
     return payload.typ === 'challenge' && payload.p === purpose && typeof payload.c === 'string' ? payload.c : null;
   } catch { return null; }
+}
+
+/** Riegel der Ablage (0.30): nach Face ID zehn Minuten gültig, gebunden an Mensch und Sitzung. Eigener Schlüssel. */
+export const ABLAGE_MIN = 10;
+export async function signAblage(userId: string, sid: string): Promise<string> {
+  return new SignJWT({ sub: userId, sid, typ: 'ablage' }).setProtectedHeader({ alg: 'HS256' }).setAudience('life:ablage').setIssuedAt().setExpirationTime(`${ABLAGE_MIN}m`).sign(await key('ablage'));
+}
+export async function readAblage(token: string | undefined, userId: string, sid: string): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, await key('ablage'), { algorithms: ['HS256'], audience: 'life:ablage' });
+    return payload.typ === 'ablage' && payload.sub === userId && payload.sid === sid;
+  } catch { return false; }
 }
 
 export const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: sicher() || process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', maxAge });

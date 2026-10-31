@@ -20,7 +20,9 @@ export function Rueckmeldung({ onToast }: { onToast: (t: string, k?: 'ok' | 'err
   async function senden() {
     setBusy(true);
     try {
-      const seite = document.referrer ? new URL(document.referrer).pathname : '/einstellungen';
+      const roh = document.referrer ? new URL(document.referrer).pathname : '/einstellungen';
+      // Die Ablage taucht nirgends auf, auch nicht in Rückmeldungen
+      const seite = roh.startsWith('/ablage') ? '/leben' : roh;
       const r = await api<{ id: number; github: number | null }>('/api/rueckmeldung', { method: 'POST', body: JSON.stringify({ art, bereich, gewicht, text, seite }) });
       onToast(r.github ? `Danke. Als Aufgabe Nr. ${r.github} im Backlog.` : 'Danke. Die Meldung ist im Backlog.');
       setArt(''); setBereich(''); setGewicht(''); setText(''); laden();

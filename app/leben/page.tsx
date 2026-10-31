@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { Icon, TabBar, TopBar, api } from '../ui';
 import { useCockpit } from '../cockpit';
 import { MiniRinge } from '../ringe';
@@ -16,13 +17,18 @@ const KONTEN: Konto[] = [
 /** Leben (0.28, Peter 31.10.2026): die vier Konten mit je einem Satz für heute und einem direkten Weg, darunter der Stand. Ersetzt „Ich“. */
 export default function Leben() {
   const { c } = useCockpit();
+  const router = useRouter();
+  // Verborgener Zugang zur Ablage (0.30): den Titel lange drücken. Kein Menüpunkt, kein Hinweis.
+  const halten = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const los = () => { halten.current = setTimeout(() => router.push('/ablage'), 900); };
+  const stopp = () => { if (halten.current) clearTimeout(halten.current); halten.current = null; };
   const [ringe, setRinge] = useState<Record<string, number | null> | null>(null);
   useEffect(() => { api<{ jetzt: { ringe: Record<string, number | null> } }>('/api/kompass').then((k) => setRinge(k.jetzt.ringe)).catch(() => {}); }, []);
   const text = (k: Konto['konto']) => c?.konten.find((x) => x.konto === k)?.text ?? '';
   return (
     <main className="wrap">
       <TopBar title="Leben" profil />
-      <header className="head"><span className="eyebrow">Deine vier Konten</span><h1 className="title">Leben<i>.</i></h1></header>
+      <header className="head"><span className="eyebrow">Deine vier Konten</span><h1 className="title lb-titel" onPointerDown={los} onPointerUp={stopp} onPointerLeave={stopp} onPointerCancel={stopp} onContextMenu={(e) => e.preventDefault()}>Leben<i>.</i></h1></header>
       <section className="lb-konten" aria-label="Konten">
         {KONTEN.map((k) => (
           <div key={k.href} className="lb-konto" style={{ '--c': k.farbe } as React.CSSProperties}>

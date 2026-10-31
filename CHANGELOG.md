@@ -2,6 +2,17 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.30.0] – 2026-10-31
+
+Ablage: ein verborgener Bereich, Ende-zu-Ende verschlüsselt (Peter, 31.10.2026).
+
+### Neu
+- **Ablage.** Ohne Menüpunkt, Zugang über eine Geste. Öffnen braucht Face ID (Passkey) und eine eigene Passphrase. Der Browser verschlüsselt alles mit AES-256-GCM, bevor es zum Server geht. Ein zufälliger Inhaltsschlüssel liegt zweimal eingepackt auf dem Server: mit der Passphrase (PBKDF2-SHA-256, 600.000 Wiederholungen) und mit einem Wiederherstellungsschlüssel zum Ausdrucken. Server, Backups, Logs, andere Konten und Claude sehen nur Unlesbares.
+- Sperrt sich nach zwei Minuten ohne Eingabe und sofort, wenn die App in den Hintergrund geht. Der Riegel nach Face ID gilt höchstens zehn Minuten und nur für diese Sitzung.
+- Plan-Datei einlesen (im Browser gelesen, nur verschlüsselt gespeichert), Ansicht mit Überblick, Kategorien, Phasen, abhakbaren Jahreszielen, Gewohnheiten und Rhythmen. Dazu Notizen und Aufgaben mit Meilensteinen.
+- Verschlüsselter Export als Datei, neue Passphrase über den Wiederherstellungsschlüssel.
+- Keine KI, keine Suche, kein Coach, keine Mitteilungen, kein Diktat und keine Rechtschreibprüfung in der Ablage.
+
 ## [0.29.0] – 2026-10-31
 
 Der Coach merkt sich Dinge, und Mac und iPad folgen dem neuen Menü ganz (Peter, 31.10.2026).
