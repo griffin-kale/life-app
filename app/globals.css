@@ -397,6 +397,7 @@ code { font-family: var(--mono); font-size: .8125rem; background: var(--field); 
 .task.leaving { opacity: .35; }
 
 /* Kleine Knöpfe in Zeilen. Sichtbar 32 px, Trefferfläche durch Abstand größer. */
+a.chipbtn { text-decoration: none; }
 .chipbtn { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgb(var(--tint-rgb) / .1); color: var(--ink); font-size: .8125rem; font-weight: 600; letter-spacing: -.005em; cursor: pointer; -webkit-user-select: none; user-select: none; transition: background-color 200ms ease-out, opacity 220ms; }
 .chipbtn::after { content: ''; position: absolute; inset: -6px -2px; }
 .chipbtn svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--muted); }
@@ -768,10 +769,20 @@ body { font-optical-sizing: auto; }
 @media (hover: hover) { .sl-zeile:hover:not([aria-current]) { background: var(--press); } }
 .sl-symbol { width: 24px; height: 24px; flex: 0 0 auto; border-radius: 7px; display: grid; place-items: center; color: #fff; }
 .sl-symbol svg { width: 15px; height: 15px; }
+.sl-ast { display: grid; gap: 1px; }
+.sl-kinder { display: grid; gap: 1px; padding-left: 20px; margin-bottom: 6px; }
+.sl-zeile.klein { min-height: 32px; font-size: .875rem; color: var(--muted); }
+.sl-zeile.klein[aria-current="page"] { color: var(--ink); }
+.sl-zeile.klein .sl-symbol { width: 20px; height: 20px; border-radius: 6px; }
+.sl-zeile.klein .sl-symbol svg { width: 12px; height: 12px; }
+.sl-zeile.offen { font-weight: 600; }
 .werkzeugleiste { position: fixed; z-index: 14; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 32px; align-items: center; gap: 10px; }
-.wz-suche, .wz-fest { display: inline-flex; align-items: center; gap: 8px; height: 36px; border-radius: 11px; font-size: .875rem; text-decoration: none; }
+.wz-suche, .wz-fest, .wz-dw { display: inline-flex; align-items: center; gap: 8px; height: 36px; border-radius: 11px; font-size: .875rem; text-decoration: none; }
 .wz-suche { width: 240px; padding: 0 10px; background: rgb(var(--tint-rgb) / .1); color: var(--faint); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 .wz-fest { padding: 0 12px; border-radius: 99px; background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.wz-dw { padding: 0 12px; border-radius: 99px; background: var(--sand); color: var(--night); font-weight: 600; }
+.wz-dw svg { width: 13px; height: 13px; }
+.wz-dw kbd { margin-left: 4px; }
 .wz-suche svg, .wz-fest svg { width: 16px; height: 16px; flex: 0 0 auto; }
 .werkzeugleiste kbd { margin-left: auto; padding: 1px 5px; border-radius: 5px; font-family: var(--sans); font-size: .6875rem; color: inherit; opacity: .7; box-shadow: inset 0 0 0 1px currentColor; }
 .wz-fest kbd { margin-left: 4px; }
@@ -1448,3 +1459,14 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .sz-dw-text small { font-size: .8125rem; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sz-vier { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .sz-vier .sz { flex-direction: column; justify-content: center; gap: 6px; min-height: 68px; padding: 8px 4px; font-size: .75rem; }
+
+/* Saison neben der Woche (0.29) */
+.sk { margin-bottom: 18px; }
+.sk-kopf { display: flex; align-items: center; justify-content: space-between; color: var(--muted); text-decoration: none; }
+.sk-kopf svg { width: 16px; height: 16px; }
+.sk .sz-wochen { margin: 6px 0 10px; }
+.sk-leer { display: grid; gap: 4px; margin-bottom: 18px; color: var(--ink); text-decoration: none; }
+.sk-leer small { color: var(--muted); }
+.sk .sz-wochen i { background: rgb(var(--ink-rgb) / .14); }
+.sk .sz-wochen i.vorbei { background: rgb(var(--ink-rgb) / .45); }
+.sk .sz-wochen i.jetzt { background: var(--sand); }
