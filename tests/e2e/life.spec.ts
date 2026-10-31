@@ -900,6 +900,56 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     }
   });
 
+  await test.step('Coach: Merkzettel über den Tag hinaus, Festhalten, Wochenziel, Expertenmeinung', async () => {
+    // Was Peter festes sagt, merkt sich der Coach und weiß es beim nächsten Mal (Peter, 31.10.2026: Wohlfühlsumme dreimal gesagt)
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Meine Wohlfühlsumme sind 20000 Euro' } });
+    let verlauf: { text: string; experte?: boolean }[] = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toBe('✓ Gemerkt: Wohlfühlsumme auf dem Konto: 20000 Euro');
+    const punkte = (await (await page.request.get('/api/coach/merken')).json()).punkte;
+    expect(punkte.map((x: { text: string }) => x.text)).toEqual(['Wohlfühlsumme auf dem Konto: 20000 Euro']);
+    // Gespräch von gestern zählt mit: Der Merkzettel steht in jedem Prompt
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Wie hoch ist meine Wohlfühlsumme?' } });
+    verlauf = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toContain('20000 Euro');
+    // Festhalten landet im Logbuch, Wochenziel steht im Cockpit
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Schreib auf: Erfundene Idee vom Coach für den Winter' } });
+    verlauf = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toMatch(/^✓ Im Logbuch festgehalten: Erfundene Idee vom Coach/);
+    await expect.poll(async () => ((await (await page.request.get('/api/items?q=Erfundene%20Idee%20vom%20Coach')).json()) as unknown[]).length).toBe(1);
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Wochenziel: Zwei erfundene Angebote raus' } });
+    expect((await (await page.request.get('/api/heute/cockpit')).json()).woche.wochenziel).toBe('Zwei erfundene Angebote raus');
+    // Mit laufender Saison schlägt der Coach keine neue vor, Life sagt warum
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Schlag mir eine Saison vor' } });
+    verlauf = (await (await page.request.get('/api/coach/chat')).json()).verlauf;
+    expect(verlauf.at(-1)!.text).toBe('Nicht geändert: Die Saison läuft schon. Ziele änderst du unter Plan → Saison.');
+    // Vergessen: der Punkt geht, eine erfundene Aktion bleibt ohne Wirkung
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Vergiss Punkt 1' } });
+    expect((await (await page.request.get('/api/coach/merken')).json()).punkte).toEqual([]);
+    // Expertenmeinung: Knopf im Coach, Opus mit mehr Platz, Antwort ist gekennzeichnet
+    await page.goto('/');
+    await page.locator('.coach-leiste').click();
+    await page.getByRole('dialog', { name: 'Was geht dir durch den Kopf?' }).getByRole('button', { name: 'Gespräch öffnen' }).click();
+    const coach = page.getByRole('dialog', { name: 'Coach' });
+    await coach.getByRole('button', { name: 'Expertenmeinung' }).click();
+    await expect(coach.getByRole('button', { name: 'Expertenmeinung' })).toHaveAttribute('aria-pressed', 'true');
+    await coach.getByLabel('Was geht dir durch den Kopf?').fill('Puffer oder tilgen?');
+    await coach.getByRole('button', { name: 'Senden' }).click();
+    await expect(coach.locator('.chat-zeile.coach.experte')).toContainText('Gründlich abgewogen');
+    await expect(coach.getByRole('button', { name: 'Expertenmeinung' })).toHaveAttribute('aria-pressed', 'false');
+    const modelle: string[] = await (await page.request.get('http://127.0.0.1:4010/modelle')).json();
+    expect(modelle.at(-1)).toBe('claude-opus-5-5');
+    const prompts: string[] = await (await page.request.get('http://127.0.0.1:4010/prompts')).json();
+    expect(prompts.at(-1)).toMatch(/^COACH EXPERTENMEINUNG/);
+    // Merkzettel unter Einstellungen
+    await page.request.post('/api/coach/chat', { headers: H, data: { text: 'Meine Wohlfühlsumme sind 25000 Euro' } });
+    await page.goto('/einstellungen');
+    const mz = page.locator('section[aria-label="Was der Coach sich merkt"]');
+    await expect(mz).toContainText('25000 Euro');
+    await mz.getByRole('button', { name: /^Streichen/ }).click();
+    await expect(mz).toContainText('Noch nichts');
+    expect((await page.request.delete('/api/coach/merken?id=abc', { headers: H })).status()).toBe(400);
+  });
+
   await test.step('Deep Work: ein Bildschirm mit Timer, Sache, Termin, Musik, Gedanke parken, Bewertung, Musiktest', async () => {
     // Von der einen Sache in den Modus, ohne Seitenleiste und Leiste
     await page.goto('/');
@@ -1124,6 +1174,15 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
   expect((await (await Z.get('/api/settings')).json()).kontext).toContain('Zweitengpass');
 
   // Die Saison gehört dem eigenen Menschen: die Zweite sieht keine und kann Peters Ziele nicht zählen
+  // Merkzettel und Saisonvorschlag des Coachs gehören nur dem eigenen Menschen
+  await Z.post('/api/coach/chat', { headers: H, data: { text: 'Meine Wohlfühlsumme sind 5000 Euro' } });
+  expect((await (await Z.get('/api/coach/merken')).json()).punkte).toHaveLength(1);
+  expect((await (await P.get('/api/coach/merken')).json()).punkte.some((x: { text: string }) => x.text.includes('5000'))).toBe(false);
+  const zp = (await (await Z.get('/api/coach/merken')).json()).punkte[0];
+  expect((await P.delete(`/api/coach/merken?id=${zp.id}`, { headers: H })).status()).toBe(404);
+  await Z.post('/api/coach/chat', { headers: H, data: { text: 'Schlag mir eine Saison vor' } });
+  expect((await (await Z.get('/api/saison')).json()).coach).toEqual([{ bereich: 'geschaeft', text: 'Zehn neue Kunden' }, { bereich: 'koerper', text: 'Dreimal Kraft pro Woche' }]);
+  expect((await (await P.get('/api/saison')).json()).coach).toEqual([]);
   const ps = (await (await P.get('/api/saison')).json()).saison;
   expect((await (await Z.get('/api/saison')).json()).saison).toBeNull();
   if (ps) expect((await Z.patch(`/api/saison/ziele/${ps.ziele[0].id}`, { headers: H, data: { delta: 1 } })).status()).toBe(404);

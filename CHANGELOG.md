@@ -2,6 +2,21 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.29.0] – 2026-10-31
+
+Der Coach merkt sich Dinge, und Mac und iPad folgen dem neuen Menü ganz (Peter, 31.10.2026).
+
+### Neu
+- **Merkzettel des Coachs.** Sagst du dem Coach etwas Festes (Wohlfühlsumme, Vorlieben, Entscheidungen), merkt er es sich, und Life zeigt „✓ Gemerkt: …“. Der Merkzettel steht in jeder Antwort des Coachs, morgens wie im Gespräch. Unter Einstellungen siehst du alles und streichst einzelne Punkte, im Gespräch geht „vergiss …“. Höchstens 60 Punkte.
+- **Gespräch der letzten sieben Tage.** Der Coach kennt jetzt, was ihr in der Woche besprochen habt, nicht nur heute.
+- **Expertenmeinung.** Ein Knopf im Coach: Die nächste Antwort kommt von Opus, darf länger sein und wägt ab. Die Antwort trägt das Zeichen „Expertenmeinung“. Die Automatik für wichtige Fragen bleibt.
+- **Der Coach trägt mehr selbst ein**, jede Aktion geprüft und von Life bestätigt: Gedanken ins Logbuch schreiben, das Wochenziel setzen und, wenn keine Saison läuft, Ziele für die nächste Saison vorschlagen. Die Vorschläge stehen vorgewählt im Blatt „Neue Saison“.
+- **Seitenleiste als Baum** auf Mac und iPad: Plan mit Woche und Saison, Leben mit Körper, Ruhe, Geld, Menschen und Stand, dazu Logbuch. Oben steht Deep Work neben Festhalten (Taste F). Ab Mac-Breite zeigt die rechte Spalte der Woche die Saison mit allen Zielen.
+
+### Repariert
+- Sätze wie „Meine Wohlfühlsumme sind …“ landeten als Notiz im Logbuch und erreichten den Coach nie. Jetzt erkennt Life sie als Nachricht an den Coach.
+- Links in Chips („Deep Work“ in der Liste) sind nicht mehr unterstrichen.
+
 ## [0.28.0] – 2026-10-31
 
 Neues Menü nach Häufigkeit (Peter, 31.10.2026, Entwürfe „Life Menüstruktur“, Wahl A „Tun, Planen, Leben“).

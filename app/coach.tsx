@@ -8,7 +8,7 @@ import type { Empfehlung } from '@/lib/tagesregeln';
 
 type CoachText = { text: string; geste?: string; warnungen: string[] } | null;
 type CoachStand = { morgen: CoachText; abend: CoachText; warnungen: string[]; offen?: string[]; empfehlung?: Empfehlung | null; wochenstartOffen?: boolean; standortEtappe?: number | null };
-type Zeile = { rolle: 'ich' | 'coach'; text: string; zeit: string };
+type Zeile = { rolle: 'ich' | 'coach'; text: string; zeit: string; experte?: boolean };
 type Stand = { erledigt: Record<Bogen['art'], boolean>; aufgaben: string[]; who5: number | null };
 
 const stunde = () => parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date()), 10);
@@ -48,11 +48,11 @@ export function useCoachChat() {
   const [verlauf, setVerlauf] = useState<Zeile[]>([]);
   const [denkt, setDenkt] = useState(false);
   useEffect(() => { api<{ verlauf: Zeile[] }>('/api/coach/chat').then((r) => setVerlauf(r.verlauf)).catch(() => {}); }, []);
-  async function fragen(t: string) {
+  async function fragen(t: string, experte = false) {
     const n = t.trim(); if (!n || denkt) return false;
     setDenkt(true);
-    setVerlauf((v) => [...v, { rolle: 'ich', text: n, zeit: '' }]);
-    try { const r = await api<{ verlauf: Zeile[] }>('/api/coach/chat', { method: 'POST', body: JSON.stringify({ text: n }) }); setVerlauf(r.verlauf); }
+    setVerlauf((v) => [...v, { rolle: 'ich', text: n, zeit: '', experte }]);
+    try { const r = await api<{ verlauf: Zeile[] }>('/api/coach/chat', { method: 'POST', body: JSON.stringify({ text: n, experte }) }); setVerlauf(r.verlauf); }
     catch (e) { setVerlauf((v) => [...v, { rolle: 'coach', text: (e as Error).message, zeit: '' }]); }
     finally { setDenkt(false); }
     return true;
@@ -97,9 +97,9 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
         <div className="chat" aria-live="polite">
           {!alles && zahl > sichtbar.length ? <button type="button" className="chat-mehr" onClick={() => setAlles(true)}>Ganzes Gespräch · {zahl - sichtbar.length} ältere</button> : null}
           {sichtbar.map((e, i) => e.art === 'zeile'
-            ? <p key={'z' + i} className={'chat-zeile ' + e.z.rolle}>{e.z.text}</p>
+            ? <p key={'z' + i} className={'chat-zeile ' + e.z.rolle + (e.z.experte ? ' experte' : '')}>{e.z.experte && e.z.rolle === 'coach' ? <small className="chat-experte">Expertenmeinung</small> : null}{e.z.text}</p>
             : <Link key={e.s.id} href={`/eintrag/${e.s.id}`} className="chat-zeile fest">{e.s.text}<small>Festgehalten{e.s.titel ? ` · ${e.s.titel}` : e.s.laeuft ? ' · Claude ordnet ein …' : ''}</small></Link>)}
-          {chat.denkt || wartet ? <p className="chat-zeile coach working">Der Coach denkt …</p> : null}
+          {chat.denkt || wartet ? <p className="chat-zeile coach working">{chat.denkt && chat.verlauf.at(-1)?.experte ? 'Der Coach denkt gründlich nach …' : 'Der Coach denkt …'}</p> : null}
           <div ref={ende} />
         </div>
       ) : null}
@@ -109,23 +109,28 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
           {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenrunde</Link> : null}
           {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={chat.denkt} onClick={() => chat.fragen(v)}>{v}</button>)}
         </div>
-        <Eingabe onSenden={onSenden} fokus={fokus} onFehler={onFehler} />
+        <Eingabe onSenden={onSenden} fokus={fokus} onFehler={onFehler} onExperte={(t) => chat.fragen(t, true)} />
       </div>
     </>
   );
 }
 
 /** Ein Feld für alles (0.22, Peter 26.10.2026): Life hält jeden Text fest, Claude erkennt beim Einordnen, ob er dem Coach gilt. */
-export function Eingabe({ onSenden, fokus, onFehler }: { onSenden: (text: string) => Promise<boolean>; fokus?: boolean; onFehler: (m: string) => void }) {
+export function Eingabe({ onSenden, fokus, onFehler, onExperte }: { onSenden: (text: string) => Promise<boolean>; fokus?: boolean; onFehler: (m: string) => void; onExperte?: (text: string) => Promise<boolean> }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  // Expertenmeinung (Peter, 31.10.2026): gilt für die nächste Nachricht, geht direkt an den Coach und an Opus
+  const [experte, setExperte] = useState(false);
   const feld = useRef<HTMLTextAreaElement>(null);
   const sprache = useSprache(text, setText, onFehler);
   useEffect(() => { if (fokus) feld.current?.focus(); }, [fokus]);
   async function senden() {
     const t = text.trim(); if (!t || busy) return;
     sprache.stop(); setBusy(true);
-    try { if (await onSenden(t)) setText(''); } finally { setBusy(false); }
+    try {
+      if (experte && onExperte) { if (await onExperte(t)) { setText(''); setExperte(false); } }
+      else if (await onSenden(t)) setText('');
+    } finally { setBusy(false); }
   }
   return (
     <div className="eingabe">
@@ -135,7 +140,10 @@ export function Eingabe({ onSenden, fokus, onFehler }: { onSenden: (text: string
         {sprache.geht ? <button type="button" className={'coach-mic' + (sprache.hoert ? ' an' : '')} onClick={sprache.umschalten} aria-pressed={sprache.hoert} aria-label={sprache.hoert ? 'Aufnahme beenden' : 'Sprechen'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{sprache.hoert ? <rect x="7" y="7" width="10" height="10" rx="2" /> : <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></>}</svg>
         </button> : null}
-        <span className="eingabe-hinweis" aria-live="polite">{sprache.hoert ? <><span className="rec" />Ich höre zu</> : busy ? 'Speichert …' : ''}</span>
+        {onExperte ? <button type="button" className={'eingabe-experte' + (experte ? ' an' : '')} aria-pressed={experte} onClick={() => setExperte((x) => !x)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" fill="currentColor" /></svg>Expertenmeinung
+        </button> : null}
+        <span className="eingabe-hinweis" aria-live="polite">{sprache.hoert ? <><span className="rec" />Ich höre zu</> : busy ? 'Speichert …' : experte ? 'Opus antwortet gründlich' : ''}</span>
         <button type="button" className="eingabe-senden" aria-label="Senden" disabled={!text.trim() || busy} onClick={senden}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
         </button>

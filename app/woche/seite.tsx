@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { PlanUmschalter } from '../plan-umschalter';
+import { SaisonKurz } from '../saison-kurz';
 import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useBreit, useToast, type Item, type Stand } from '../ui';
 import { ZeitKaufen } from '../zeit-kaufen';
 import { Rhythmen, WochenKalender, useWoche } from '../woche-kalender';
@@ -145,7 +146,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
         </section>
       ) : null}
 
-      {teil ? liste : <MitInspektor back={{ label: 'Plan', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={w ? <Rhythmen w={w} /> : <div className="empty"><b>Lädt …</b></div>}>{liste}</MitInspektor>}
+      {teil ? liste : <MitInspektor back={{ label: 'Plan', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={w ? <><SaisonKurz /><Rhythmen w={w} /></> : <div className="empty"><b>Lädt …</b></div>}>{liste}</MitInspektor>}
       {teil === 'energie' && st?.kraft && !(st.kraft.gab.length || st.kraft.kostete.length) ? <div className="empty"><b>Noch keine Bilanz.</b></div> : null}
       {teil === 'energie' && st?.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? (
         <section className="gsec" aria-label="Energie-Bilanz">

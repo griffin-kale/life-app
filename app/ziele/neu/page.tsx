@@ -5,7 +5,7 @@ import { TabBar, TopBar, api, useToast } from '../../ui';
 import { Blaetter, type BlaetterSteuerung } from '../../blaetter';
 import { BEREICH_TITEL, BEREICHE_S, HINDERNISSE, ZIEL_IDEEN, plusTage, wennDannSatz, type SBereich, type Vorschlag } from '@/lib/saison-regeln';
 
-type Grundlage = { saison: { id: number } | null; start: string; vorschlaege: Vorschlag[] };
+type Grundlage = { saison: { id: number } | null; start: string; vorschlaege: Vorschlag[]; coach?: { bereich: SBereich; text: string }[] };
 type Wahl = { titel: string; zielwert: string; hebel: string[]; eigeneHebel: string; wenn: string; dann: string };
 type Ideen = Record<string, { hebel: string[]; dann: string }>;
 const LEITSAETZE = ['Erst das Wichtige, dann das Laute.', 'Weniger, aber besser.', 'Um sechs bin ich bei der Familie.'];
@@ -34,6 +34,8 @@ export default function NeueSaison() {
     api<Grundlage>('/api/saison').then((x) => {
       if (x.saison) { router.replace('/ziele'); return; }
       setG(x); setStart(x.start);
+      // Ziele, die der Coach vorgeschlagen hat, sind vorgewählt. Peter tippt an, was nicht passt.
+      if (x.coach?.length) setWahl(Object.fromEntries(x.coach.map((z) => [z.bereich, { ...leer(), titel: z.text }])));
     }).catch((e) => setToast((e as Error).message, 'err'));
   }, [router, setToast]);
 
@@ -108,6 +110,7 @@ export default function NeueSaison() {
     <div key="b" className="ws-seite">
       <h2 className="ws-titel">Ein Ziel pro Bereich</h2>
       <p className="muted small">Wenige Ziele tragen weiter. Lass leer, was in dieser Saison nicht dran ist.</p>
+      {g.coach?.length ? <p className="sz-coach">Der Coach hat {g.coach.length === 1 ? 'ein Ziel' : `${g.coach.length} Ziele`} aus eurem Gespräch vorgewählt. Tipp an, was nicht passt.</p> : null}
       {BEREICHE_S.map((b) => {
         const w = wahl[b]; const ideenB = ideenFuer(b);
         return (

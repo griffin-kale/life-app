@@ -1,5 +1,5 @@
 import { askJson, MODEL } from './claude';
-import { ensureSchema, getSetting, proNutzer, sql } from './db';
+import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import { Hinweis } from './fehler';
 import { standAus } from './standort';
 import { heuteBerlin } from './zeit';
@@ -71,10 +71,20 @@ export async function aktuelleSaison(userId: string): Promise<SaisonStand | null
 }
 
 /** Was das Blatt „Neue Saison“ braucht: Startvorschlag, Vorschläge aus „Dein Stand“ und der alten Liste, Hindernisse. */
-export async function saisonGrundlage(userId: string): Promise<{ start: string; vorschlaege: Vorschlag[]; hindernisse: readonly string[] }> {
-  const [standRoh, alt] = await Promise.all([getSetting(`stand:${userId}`), getSetting(proNutzer('ziele', userId))]);
+export async function saisonGrundlage(userId: string): Promise<{ start: string; vorschlaege: Vorschlag[]; coach: { bereich: SBereich; text: string }[]; hindernisse: readonly string[] }> {
+  const [standRoh, alt, coachRoh] = await Promise.all([getSetting(`stand:${userId}`), getSetting(proNutzer('ziele', userId)), getSetting(proNutzer('saison_coach', userId))]);
   const stand = standAus(standRoh);
-  return { start: naechsterMontag(heuteBerlin()), vorschlaege: vorschlaegeAus(stand.quartal ?? [], liste(alt)), hindernisse: HINDERNISSE };
+  return { start: naechsterMontag(heuteBerlin()), vorschlaege: vorschlaegeAus(stand.quartal ?? [], liste(alt)), coach: coachVorschlag(coachRoh), hindernisse: HINDERNISSE };
+}
+
+/** Ziele, die der Coach im Gespräch vorgeschlagen hat (0.29). Gespeichert ist geprüftes JSON, gelesen wird es noch einmal streng. */
+function coachVorschlag(roh: string | null): { bereich: SBereich; text: string }[] {
+  try {
+    const a = JSON.parse(roh || '[]');
+    if (!Array.isArray(a)) return [];
+    return a.filter((z) => z && (BEREICHE_S as readonly string[]).includes(z.bereich) && typeof z.text === 'string' && z.text.trim())
+      .map((z) => ({ bereich: z.bereich as SBereich, text: String(z.text).slice(0, 80) }));
+  } catch { return []; }
 }
 
 export async function saisonAnlegen(eingabe: SaisonEingabe, userId: string): Promise<number> {
@@ -93,6 +103,10 @@ export async function saisonAnlegen(eingabe: SaisonEingabe, userId: string): Pro
       for (const [pos, h] of z.hebel.entries()) await tx`insert into hebel (ziel_id, user_id, titel, art, pos) values (${zi.id}, ${userId}, ${h.titel}, ${h.art}, ${pos})`;
     }
     return s.id;
+  }).then(async (id) => {
+    // Der Vorschlag des Coachs ist verbraucht
+    await setSetting(proNutzer('saison_coach', userId), '[]').catch(() => {});
+    return id;
   }) as Promise<number>;
 }
 

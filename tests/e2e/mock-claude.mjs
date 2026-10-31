@@ -5,6 +5,7 @@ import http from 'node:http';
 const E = (o) => ({ typ: 'gedanke', kategorie: 'aufgabe', art: 'geld', titel: '', bereinigt: '', schritt: '', begruendung: '', kern: '', frage: '', ziel: '', hebel: 0, aufwand_min: 60, frist: '', wer: 'ich', delegieren_an: '', ...o });
 function einordnen(entry) {
   const t = entry.trim().split('\n\n')[0].trim();
+  if (/^(Meine Wohlfühlsumme|Schreib auf:|Wochenziel:|Vergiss Punkt)/.test(t)) return E({ kategorie: 'notiz', titel: 'An den Coach', bereinigt: t, aufwand_min: 0, anCoach: true });
   if (/was jetzt\?$/i.test(t)) return E({ kategorie: 'notiz', titel: 'Frage an den Coach', bereinigt: t, aufwand_min: 0, anCoach: true });
   if (/youtu/.test(t)) return E({ typ: 'video', kategorie: 'wissen', art: 'mental', titel: 'Fokus und Engpass', bereinigt: t.split('\n')[1] || 'Video', kern: 'Wer den Engpass kennt, spart Kraft.', frage: 'Wo verzettelst du dich diese Woche?', aufwand_min: 0 });
   if (/Seneca/.test(t)) return E({ typ: 'zitat', kategorie: 'wissen', art: 'zeit', titel: 'Seneca über Zeit', bereinigt: 'Nicht wenig Zeit haben wir, sondern viel verschwenden wir.', kern: 'Zeit fehlt selten, Fokus schon.', frage: 'Welche Stunde verschwendest du täglich?', aufwand_min: 0 });
@@ -112,7 +113,7 @@ http.createServer((req, res) => {
     const a = bon ? { laden: 'Testmarkt', summe: 23.45, topf: 'Alltag' }
       : geld ? { topf: /Tanken/.test(text) ? 'Familie' : 'Alltag' }
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
-      : p.startsWith('SAISON HEBEL') ? saisonHebel(p) : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? coachChat(p) || { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+      : p.startsWith('SAISON HEBEL') ? saisonHebel(p) : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH EXPERTENMEINUNG') ? { text: 'Gründlich abgewogen: Zuerst den Puffer, dann tilgen.', aktionen: [] } : p.startsWith('COACH CHAT') ? coachChat(p) || { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       // Modelle mit „ohne-zwang“ im Namen lehnen ein erzwungenes Werkzeug ab wie die neueren Claude-Modelle
       if (/ohne-zwang/.test(body.model || '') && (body.tool_choice?.type === 'tool' || body.tool_choice?.type === 'any')) {
@@ -162,7 +163,17 @@ http.createServer((req, res) => {
 // Will Peter im Gespräch ein Sparziel ändern, schlägt der Coach die Aktion vor. Life führt sie aus und bestätigt selbst.
 function coachChat(p) {
   // Nur die letzte Nachricht im Gespräch zählt. „Peter“ kommt dort als Platzhalter an.
-  const letzte = (p.split('Gespräch von heute:\n')[1] || '').split('\n\n')[0].split('\n').at(-1) || '';
+  const letzte = (p.split(/Gespräch der letzten Tage[^\n]*\n/)[1] || '').split('\n\n')[0].split('\n').at(-1) || '';
   const m = /Sparziel (\S+) auf (\d+)/.exec(letzte);
-  return m ? { text: 'Erledigt, das Ziel ist angepasst.', aktion: { art: 'sparziel_ziel', ziel: m[1], euro: Number(m[2]) } } : null;
+  if (m) return { text: 'Erledigt, das Ziel ist angepasst.', aktion: { art: 'sparziel_ziel', ziel: m[1], euro: Number(m[2]) } };
+  // 0.29: Merkzettel, Festhalten, Wochenziel, Saison
+  const merk = /Meine Wohlfühlsumme sind (\S+ Euro)/.exec(letzte);
+  if (merk) return { text: 'Verstanden, das behalte ich.', aktionen: [{ art: 'merken', text: `Wohlfühlsumme auf dem Konto: ${merk[1]}` }] };
+  if (/Vergiss Punkt (\d+)/.test(letzte)) return { text: 'Gestrichen.', aktionen: [{ art: 'vergessen', nr: Number(/Vergiss Punkt (\d+)/.exec(letzte)[1]) }, { art: 'loeschen_alles' }] };
+  if (/Schreib auf: /.test(letzte)) return { text: 'Steht im Logbuch.', aktionen: [{ art: 'festhalten', text: letzte.split('Schreib auf: ')[1] }] };
+  if (/Wochenziel: /.test(letzte)) return { text: 'Gutes Ziel.', aktionen: [{ art: 'wochenziel', text: letzte.split('Wochenziel: ')[1] }] };
+  if (/Schlag mir eine Saison vor/.test(letzte)) return { text: 'Hier drei Ziele.', aktionen: [{ art: 'saison_vorschlag', ziele: [{ bereich: 'geschaeft', text: 'Zehn neue Kunden' }, { bereich: 'koerper', text: 'Dreimal Kraft pro Woche' }, { bereich: 'erfunden', text: 'gibt es nicht' }] }] };
+  const merkzettel = /Dein Merkzettel[^\n]*\n((?:\d+\. [^\n]*\n?)+)/.exec(p);
+  if (/Wie hoch ist meine Wohlfühlsumme/.test(letzte)) return { text: merkzettel ? `Laut Merkzettel: ${merkzettel[1].split('\n')[0].replace(/^\d+\. /, '')}` : 'Das weiß ich nicht.' };
+  return null;
 }

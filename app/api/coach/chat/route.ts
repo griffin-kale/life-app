@@ -15,5 +15,6 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const text = typeof b.text === 'string' ? b.text.trim() : '';
   if (!text) return NextResponse.json({ error: 'Nachricht fehlt' }, { status: 400 });
-  return NextResponse.json({ verlauf: await coachChat(text, uid) });
+  // Expertenmeinung (Peter, 31.10.2026): Opus mit mehr Platz, nur wenn Peter den Knopf drückt
+  return NextResponse.json({ verlauf: await coachChat(text, uid, b.experte === true) });
 }
