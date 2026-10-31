@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, isPending, useBreit, useToast, type Item, type Stand } from './ui';
+import { Liste } from './liste';
 import { Fragebogen } from './fragebogen';
 import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
 import { KalenderHeute, useKalender } from './kalender';
@@ -204,6 +205,7 @@ ci.zeige ? (
       </div>
     ),
     naechste: <Danach items={danach} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
+    liste: <Liste jetzt={jetzt} eins={eins} erledigtHeute={st?.erledigtHeute ?? []} zuletzt={st?.zuletzt ?? []} woche={items.filter((i) => i.stapel === 'woche').length} geparkt={items.filter((i) => i.stapel === 'geparkt').length} leaving={leaving} onToggle={toggle} />,
     erledigt: <Erledigt items={st?.erledigtHeute ?? []} onToggle={toggle} onEnergie={(it, n) => act(() => patch(it.id, { energie: n }))} />,
     schnell: <Schnellzugriff onGedanke={gedanke} />,
     empfohlen: <Empfohlen stand={ci} />,

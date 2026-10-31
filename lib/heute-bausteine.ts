@@ -1,10 +1,10 @@
 /** Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. „Jetzt dran“ und der Fragebogen bleiben immer an.
  *  Der Coach ist seit 0.18 kein Baustein mehr: Er sitzt als Leiste unten und geht als Blatt auf, auf dem Mac steht er rechts. */
-export const BAUSTEINE = ['cockpit', 'streifen', 'konten', 'kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'naechste', 'erledigt'] as const;
+export const BAUSTEINE = ['cockpit', 'streifen', 'konten', 'kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'liste', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. */
-export const STANDARD: Baustein[] = ['cockpit', 'jetzt', 'streifen', 'fragebogen', 'konten', 'naechste', 'erledigt'];
+/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. Seit 0.27 (31.10.2026) die Liste statt „Danach“. */
+export const STANDARD: Baustein[] = ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   cockpit: ['Cockpit', 'Erholung, freie Zeit und Woche auf einen Blick'],
   streifen: ['Als Nächstes', 'Die nächsten drei Blöcke des Tages'],
@@ -19,6 +19,7 @@ export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   geld: ['Geld kurz', 'Wochentöpfe'],
   menschen: ['Menschen', 'Wer gerade dran ist'],
   jetzt: ['Die eine Sache', 'Immer an'],
+  liste: ['Liste', 'Jetzt mit Fortschritt, gerade Festgehaltenes, Fokus starten'],
   naechste: ['Danach', 'Die anderen von heute, zugeklappt'],
   erledigt: ['Heute erledigt', 'Zugeklappt, mit Energie-Bilanz'],
 };
@@ -35,7 +36,7 @@ export function bausteineAus(roh: unknown): Baustein[] {
 
 /** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
 const NEU: [number, Baustein, string][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
-export const STAND = 8;
+export const STAND = 9;
 
 /** Umbau 0.18 (Peter, 26.10.2026): Ringe nach oben, Jetzt dran früh, Kalender, Festhalten-Feld und Tagespunkte runter von Heute. */
 const WEG_5: string[] = ['kalender', 'festhalten', 'woche'];
@@ -71,6 +72,12 @@ export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein
     neu = neu.filter((b) => b !== 'empfohlen');
     if (!neu.includes('streifen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'streifen');
     if (!neu.includes('konten')) { const f = neu.indexOf('fragebogen'); neu.splice(f >= 0 ? f + 1 : neu.indexOf('streifen') + 1, 0, 'konten'); }
+  }
+  // 0.27 (Peter, 31.10.2026): die Liste ersetzt „Danach“ und steht unter dem Tagesstreifen
+  if (stand < 9 && !neu.includes('liste')) {
+    neu = neu.filter((b) => b !== 'naechste');
+    const s = neu.indexOf('streifen'); const j = neu.indexOf('jetzt');
+    neu.splice(s >= 0 ? s + 1 : j >= 0 ? j + 1 : neu.length, 0, 'liste');
   }
   return { liste: neu, stand: STAND };
 }

@@ -72,6 +72,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
   const neu = items.filter((i) => !i.stapel);
 
   const liste = (<>
+      {!teil ? <span id="liste" className="anker" aria-hidden="true" /> : null}
       {st === null ? <div className="loading">Lädt …</div> : null}
       {!teil && st && !items.length ? <div className="empty"><b>Alles erledigt.</b></div> : null}
 
