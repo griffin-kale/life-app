@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, isPending, useBreit, useToast, type Item, type Stand } from './ui';
 import { Liste } from './liste';
-import { Fragebogen } from './fragebogen';
+import { RitualKarte } from './rituale';
 import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
 import { KalenderHeute, useKalender } from './kalender';
 import { MiniRinge } from './ringe';
@@ -149,6 +149,13 @@ export default function Heute() {
     return () => clearTimeout(t);
   }, [gedanke]);
   useEffect(() => { window.addEventListener('life-festhalten', gedanke); return () => window.removeEventListener('life-festhalten', gedanke); }, [gedanke]);
+  // Zurück aus Morgen oder Abschluss: kurz bestätigen, der Coach schreibt im Hintergrund
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get('ritual');
+    if (r !== 'morgen' && r !== 'abschluss') return;
+    window.history.replaceState(null, '', '/');
+    setToast(r === 'morgen' ? 'Der Tag steht. Der Coach meldet sich gleich.' : 'Der Tag ist zu. Gute Nacht.');
+  }, [setToast]);
   // „Coach“ im Schnellmenü der Mitte öffnet das Gespräch ohne Tastatur
   useEffect(() => { const f = () => setCoachModus('blatt'); window.addEventListener('life-coach', f); return () => window.removeEventListener('life-coach', f); }, []);
   const spuren: Spur[] = [...(st?.zuletzt ?? [])].reverse()
@@ -167,11 +174,7 @@ export default function Heute() {
     streifen: <Tagesstreifen c={cockpit} jetzt={minuten} />,
     konten: <KontenHeute c={cockpit} />,
     fragebogen: (
-ci.zeige ? (
-        <section className="gsec" aria-label="Fragebogen">
-          <Fragebogen key={ci.zeige} art={ci.zeige} aufgaben={ci.aufgaben} onFertig={() => { ci.fertig(); setToast('Danke. Der Coach meldet sich gleich.'); }} onFehler={(m) => setToast(m, 'err')} />
-        </section>
-      ) : null
+<RitualKarte art={ci.zeige === 'morgen' || ci.zeige === 'abend' ? ci.zeige : null} wochenrunde={!!ci.coach?.wochenstartOffen && !ci.zeige} />
     ),
     festhalten: (
 <><section className="capture compact" aria-label="Festhalten">
@@ -205,7 +208,7 @@ ci.zeige ? (
       </div>
     ),
     naechste: <Danach items={danach} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
-    liste: <Liste jetzt={jetzt} eins={eins} erledigtHeute={st?.erledigtHeute ?? []} zuletzt={st?.zuletzt ?? []} woche={items.filter((i) => i.stapel === 'woche').length} geparkt={items.filter((i) => i.stapel === 'geparkt').length} leaving={leaving} onToggle={toggle} />,
+    liste: <Liste jetzt={jetzt} eins={eins} erledigtHeute={st?.erledigtHeute ?? []} zuletzt={st?.zuletzt ?? []} woche={items.filter((i) => i.stapel === 'woche').length} geparkt={items.filter((i) => i.stapel === 'geparkt').length} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
     erledigt: <Erledigt items={st?.erledigtHeute ?? []} onToggle={toggle} onEnergie={(it, n) => act(() => patch(it.id, { energie: n }))} />,
     schnell: <Schnellzugriff onGedanke={gedanke} />,
     empfohlen: <Empfohlen stand={ci} />,

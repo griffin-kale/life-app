@@ -6,15 +6,15 @@ import { Icon, TaskRow, isPending, taskTitle, type Item } from './ui';
  * Die Liste auf Heute (0.27, Peter 31.10.2026): Jetzt mit sichtbarem Fortschritt, was gerade festgehalten wurde,
  * und aus jeder Aufgabe ein Fokusblock. Kein Punktestand: der Balken füllt sich, mehr nicht.
  */
-export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, leaving, onToggle }: {
+export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, leaving, onToggle, onVor }: {
   jetzt: Item[]; eins: Item | null; erledigtHeute: Item[]; zuletzt: Item[]; woche: number; geparkt: number;
-  leaving: string | null; onToggle: (it: Item) => void;
+  leaving: string | null; onToggle: (it: Item) => void; onVor: (it: Item) => void;
 }) {
   const offen = jetzt.filter((i) => i.status !== 'erledigt' && i.id !== eins?.id);
   const geschafft = erledigtHeute.filter((i) => i.stapel === 'jetzt').length;
   const gesamt = geschafft + jetzt.filter((i) => i.status !== 'erledigt').length;
-  // Neu heute und noch ohne Stapel: Claude ordnet ein oder hat es gerade getan
-  const neu = zuletzt.filter((i) => i.status !== 'erledigt' && i.status !== 'archiv' && (!i.stapel || isPending(i))).slice(0, 5);
+  // Gerade festgehalten und noch nicht eingeordnet. Ideen, Zitate und Wissen landen bewusst in keinem Stapel und bleiben weg.
+  const neu = zuletzt.filter((i) => i.status !== 'erledigt' && i.status !== 'archiv' && isPending(i)).slice(0, 5);
   return (
     <section className="gsec liste" aria-label="Liste">
       <div className="li-kopf">
@@ -26,18 +26,19 @@ export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, lea
           {Array.from({ length: Math.min(gesamt, 6) }, (_, i) => <i key={i} className={i < Math.round((geschafft / gesamt) * Math.min(gesamt, 6)) ? 'an' : ''} />)}
         </div>
       ) : null}
-      {offen.length || eins ? (
+      {offen.length ? (
         <ul className="tasks group">
-          {[...(eins && eins.status !== 'erledigt' ? [eins] : []), ...offen].map((it) => (
+          {offen.map((it) => (
             <TaskRow key={it.id} it={it} onToggle={() => onToggle(it)} leaving={leaving === it.id}>
               <Link href={`/fokus?item=${it.id}`} className="chipbtn" aria-label={`Fokus starten: ${taskTitle(it)}`}>{Icon.play}Fokus</Link>
+              <button type="button" className="chipbtn" onClick={() => onVor(it)}>{Icon.up}Zur einen Sache</button>
             </TaskRow>
           ))}
         </ul>
       ) : null}
       {neu.length ? (
         <>
-          <div className="li-kopf klein"><span>Gerade festgehalten</span>{neu.some(isPending) ? <span className="li-stand">Claude ordnet ein …</span> : null}</div>
+          <div className="li-kopf klein"><span>Gerade festgehalten</span><span className="li-stand">Claude ordnet ein …</span></div>
           <ul className="tasks group">{neu.map((it) => <TaskRow key={it.id} it={it} onToggle={() => onToggle(it)} leaving={leaving === it.id} />)}</ul>
         </>
       ) : null}

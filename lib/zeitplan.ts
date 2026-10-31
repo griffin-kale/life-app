@@ -6,7 +6,6 @@ import { senden } from './push';
 import { warnsignale } from './coach-regeln';
 import { abgleichen, verbunden, whoopBereit } from './whoop';
 import { geldStand } from './geld';
-import { kompassStand } from './kompass';
 import { tageslage } from './tag';
 import { jetztBerlin as zeitBerlin } from './zeit';
 import { vielleichtAbgleichen } from './kalender';
@@ -91,11 +90,11 @@ export async function tick(userId: string) {
       const c = await coachErstellen('morgen', userId).catch(() => null);
       return (await senden({ title: 'Life', body: c?.text || 'Dein Tag steht.', url: '/', tag: 'morgen' }, userId)) > 0;
     }
-    return (await senden({ title: 'Guten Morgen', body: 'Wie erholt fühlst du dich? Eine Frage, zehn Sekunden.', url: '/', tag: 'morgen' }, userId)) > 0;
+    return (await senden({ title: 'Guten Morgen', body: 'Zwei Minuten für den Tag: wie erholt du bist und die eine Sache.', url: '/morgen', tag: 'morgen' }, userId)) > 0;
   });
   schritt = 'abend';
   if (p.abend && faellig(uhr, p.abendZeit) && !ci?.abend) await einmal('abend', tag, async () =>
-    (await senden({ title: 'Der Tag', body: 'Drei Fragen, eine Minute. Dann ist der Plan für morgen fertig.', url: '/', tag: 'abend' }, userId)) > 0);
+    (await senden({ title: 'Abschluss', body: 'Zwei Minuten: abhaken, Offenes verteilen, dann ist der Tag zu.', url: '/abschluss', tag: 'abend' }, userId)) > 0);
   schritt = 'warnung';
   if (p.warnung && minuten(uhr) >= minuten(p.morgenZeit) + 5 && minuten(uhr) <= 21 * 60) await einmal('warnung', tag, async () => {
     const k = await koerperStand(userId);
@@ -104,14 +103,6 @@ export async function tick(userId: string) {
     if (!w.length) return false;
     return (await senden({ title: 'Achtung', body: w[0], url: '/', tag: 'warnung' }, userId)) > 0;
   });
-  schritt = 'kompass';
-  // Meilensteine stündlich prüfen. Neu freigeschaltete kommen als Mitteilung.
-  const stunde = uhr.slice(0, 2);
-  if ((await getSetting(proNutzer('kompass_stunde', userId))) !== `${tag} ${stunde}`) {
-    await setSetting(proNutzer('kompass_stunde', userId), `${tag} ${stunde}`);
-    const k = await kompassStand(userId).catch(() => null);
-    if (k?.neu.length && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) await senden({ title: 'Meilenstein', body: `${k.neu.join(', ')}. Im Kompass steht, was als Nächstes kommt.`, url: '/kompass', tag: 'meilenstein' }, userId);
-  }
   schritt = 'coach';
   // Coach von selbst: verpasste Uhrzeit, Nachmittags-Check, Wochenstart am Montag
   if ((p.verpasst || p.nachmittag || p.wochenstart) && minuten(uhr) >= 7 * 60 && minuten(uhr) <= 21 * 60) {
@@ -127,7 +118,7 @@ export async function tick(userId: string) {
       if (p.nachmittag && faellig(uhr, '15:00') && offen.length && offen.length === lage.jetzt.length) await einmal('nachmittag', tag, async () =>
         (await senden({ title: 'Nachmittag', body: `Von „Jetzt dran“ ist noch nichts erledigt. Fang mit „${offen[0].titel}“ an, dreißig Minuten reichen.`, url: '/', tag: 'nachmittag' }, userId)) > 0);
       if (p.wochenstart && lage.wochenstartOffen && zeitBerlin().wochentag === 'Mon' && faellig(uhr, '08:30')) await einmal('wochenstart', tag, async () =>
-        (await senden({ title: 'Wochenstart', body: 'Zehn Minuten für die Woche: Rückblick, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
+        (await senden({ title: 'Wochenrunde', body: 'Zehn Minuten für die Woche: Rückblick, Hebel, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
     }
   }
   schritt = 'training';
