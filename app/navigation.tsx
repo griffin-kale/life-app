@@ -51,7 +51,8 @@ export function Navigation() {
   const pfad = usePathname();
   const router = useRouter();
   const [offen, setOffen] = useState(false);
-  const aus = pfad.startsWith('/login') || pfad.startsWith('/setup');
+  // Deep Work zeigt nur sich selbst, ohne Seitenleiste und Werkzeuge
+  const aus = pfad.startsWith('/login') || pfad.startsWith('/setup') || pfad.startsWith('/fokus');
   const an = aktiverBereich(pfad);
 
   // Auf Heute öffnet Festhalten den Coach direkt, von anderen Seiten geht es dorthin
@@ -65,6 +66,7 @@ export function Navigation() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); router.push('/archiv?suche=1'); return; }
       if (tippt || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); festhalten(); }
+      else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); router.push('/fokus'); }
       else if (e.key === '/') { e.preventDefault(); router.push('/archiv?suche=1'); }
       else if (e.key === 'Escape') setOffen(false);
     };
