@@ -2,6 +2,11 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.30.1] – 2026-10-31
+
+### Geändert
+- **Schmale Seitenleiste auf Mac und iPad** (Peter, 31.10.2026: „ich mag das Menü aufm Desktop nicht“). Vier Bereiche untereinander, Unterpunkte erscheinen nur beim Bereich, in dem du gerade bist. Die Leiste ist 40 px schmaler, der Inhalt bekommt den Platz.
+
 ## [0.30.0] – 2026-10-31
 
 Ablage: ein verborgener Bereich, Ende-zu-Ende verschlüsselt (Peter, 31.10.2026).

@@ -602,6 +602,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.keyboard.press('n');
     await expect(panel.getByLabel('Was geht dir durch den Kopf?')).toBeFocused();
     await page.locator('h1').click();
+    // Schmale Seitenleiste: Unterpunkte nur beim aktiven Bereich
+    await expect(page.locator('.seitenleiste').getByRole('link', { name: 'Körper' })).toHaveCount(0);
+    await page.locator('.seitenleiste').getByRole('link', { name: 'Leben', exact: true }).click();
+    await page.waitForURL('/leben');
     await page.locator('.seitenleiste').getByRole('link', { name: 'Körper' }).click();
     await page.waitForURL('/koerper');
     await expect(page.locator('.seitenleiste a[aria-current="page"]')).toHaveText('Körper');
