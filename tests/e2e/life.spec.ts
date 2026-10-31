@@ -964,7 +964,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.locator('h1.lb-titel').hover();
     await page.mouse.down(); await page.waitForTimeout(1100); await page.mouse.up();
     await page.waitForURL('/ablage');
-    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    await page.getByRole('button', { name: 'Mit Passkey' }).click();
     const form = page.locator('section[aria-label="Einrichten"]');
     await form.getByLabel('Passphrase', { exact: true }).fill('zu kurz');
     await form.getByLabel('Passphrase wiederholen').fill('zu kurz');
@@ -1041,12 +1041,12 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(datei).not.toMatch(/geheim|Langfristplan|Erfunden/i);
     // Sperren: ohne Face ID kommt nichts mehr
     await page.getByRole('button', { name: 'Sperren' }).click();
-    await expect(page.getByRole('button', { name: 'Mit Face ID öffnen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mit Passkey' })).toBeVisible();
     // Das Schließen des Riegels läuft im Hintergrund, deshalb kurz warten
     await expect.poll(async () => (await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
     expect(await (await page.request.get('/api/ablage')).json()).toEqual({ eingerichtet: true, offen: false });
     // Falsche Passphrase scheitert, Wiederherstellungsschlüssel öffnet und setzt eine neue Passphrase
-    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    await page.getByRole('button', { name: 'Mit Passkey' }).click();
     const tor = page.locator('section[aria-label="Entsperren"]');
     await tor.getByLabel('Passphrase').fill('Eine ganz falsche Passphrase');
     await tor.getByRole('button', { name: 'Entsperren' }).click();
@@ -1060,7 +1060,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await neu.getByRole('button', { name: 'Passphrase speichern' }).click();
     await expect(page.locator('section[aria-label="Heute"]')).toContainText('Erfundene Tagesgewohnheit');
     await page.getByRole('button', { name: 'Sperren' }).click();
-    await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();
+    await page.getByRole('button', { name: 'Mit Passkey' }).click();
     await page.locator('section[aria-label="Entsperren"]').getByLabel('Passphrase').fill('Zweite erfundene Testpassphrase');
     await page.locator('section[aria-label="Entsperren"]').getByRole('button', { name: 'Entsperren' }).click();
     await page.getByRole('button', { name: 'Kompass' }).click();
@@ -1072,7 +1072,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(prompts.join(' ')).not.toMatch(/geheime Testnotiz|Langfristplan/);
     // Die Seite in den Hintergrund: sofort gesperrt
     await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
-    await expect(page.getByRole('button', { name: 'Mit Face ID öffnen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mit Passkey' })).toBeVisible();
     await expect(page.locator('main')).not.toContainText('geheime Testnotiz');
     await page.goto('/');
   });
@@ -1224,6 +1224,69 @@ test('Passwort und Code: einrichten ohne QR, anmelden, Code gilt nur einmal', as
     expect((await request.get('/api/auth/code')).status()).toBe(401);
     expect((await request.delete('/api/auth/code', { headers: H })).status()).toBe(401);
     expect((await request.post('/api/auth/code/start', { headers: H, data: { token: 'falsch', password: 'x'.repeat(20) } })).status()).toBe(403);
+  });
+
+  await test.step('iPhone ohne Passkey: Ablage mit Passwort und Code, dann PIN, Sperre nach 5, zu nach Seitenwechsel', async () => {
+    // Dieses Gerät hat keinen Passkey (kein virtueller Authentifikator), wie Peters iPhone
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sql = postgres(TEST_ENV.DATABASE_URL, { max: 1, onnotice: () => {} });
+    const frischerCode = async () => { await sql`update settings set value = '0' where key = 'totp_last'`; return totp(secret); };
+    await page.goto('/ablage');
+    const tor = page.locator('section[aria-label="Öffnen"]');
+    // Erster Weg ist kein Passkey (kein QR-Code): ohne PIN zuerst Passwort und Code
+    await expect(tor.getByRole('button').first()).toHaveText('Mit Passwort und Code öffnen');
+    await tor.getByLabel('Passwort').fill(PW);
+    await tor.getByLabel('Code').fill(await frischerCode());
+    await tor.getByRole('button', { name: 'Mit Passwort und Code öffnen' }).click();
+    // Frisch bestätigt: PIN festlegen
+    const pinForm = page.locator('section[aria-label="PIN festlegen"]');
+    await pinForm.getByLabel('Neue PIN').fill('482915');
+    await pinForm.getByLabel('PIN wiederholen').fill('482915');
+    await pinForm.getByRole('button', { name: 'PIN speichern' }).click();
+    await expect(page.locator('section[aria-label="Entsperren"]')).toBeVisible();
+    const pinRoh = await sql<{ hash: string }[]>`select hash from ablage_pin where user_id = 'peter'`;
+    expect(pinRoh[0].hash).toMatch(/^scrypt\$/);
+    expect(pinRoh[0].hash).not.toContain('482915');
+    // Seitenwechsel schließt den Riegel auf dem Server
+    await page.goto('/');
+    await expect.poll(async () => (await (await page.request.get('/api/ablage')).json()).offen).toBe(false);
+    // Jetzt steht die PIN vorn, „Mit Passkey“ darunter
+    await page.goto('/ablage');
+    const pinTor = page.locator('section[aria-label="Öffnen"]');
+    await expect(pinTor.getByLabel('PIN')).toBeVisible();
+    await expect(pinTor.getByRole('button', { name: 'Mit Passkey' })).toBeVisible();
+    for (let i = 0; i < 4; i++) {
+      await pinTor.getByLabel('PIN').fill('000000');
+      await pinTor.getByRole('button', { name: 'Öffnen', exact: true }).click();
+      await expect(pinTor.getByRole('alert')).toHaveText('Die PIN stimmt nicht.');
+    }
+    await pinTor.getByLabel('PIN').fill('482915');
+    await pinTor.getByRole('button', { name: 'Öffnen', exact: true }).click();
+    await expect(page.locator('section[aria-label="Entsperren"]')).toBeVisible();
+    // Richtige PIN setzt den Zähler zurück; nach 5 Fehlversuchen ist sie gesperrt, auch die richtige zählt nicht mehr
+    await page.goto('/'); await page.goto('/ablage');
+    for (let i = 0; i < 5; i++) {
+      await pinTor.getByLabel('PIN').fill('111111');
+      await pinTor.getByRole('button', { name: 'Öffnen', exact: true }).click();
+      await expect(pinTor.getByRole('alert')).toBeVisible();
+    }
+    await expect(pinTor.getByRole('alert')).toContainText('gesperrt');
+    expect((await page.request.post('/api/ablage/riegel', { headers: H, data: { pin: '482915' } })).status()).toBe(423);
+    // Passwort und Code öffnen und heben die Sperre auf
+    await page.reload();
+    await tor.getByLabel('Passwort').fill(PW);
+    await tor.getByLabel('Code').fill(await frischerCode());
+    await tor.getByRole('button', { name: 'Mit Passwort und Code öffnen' }).click();
+    await expect(page.locator('section[aria-label="Entsperren"]')).toBeVisible();
+    expect(await (await page.request.get('/api/ablage/pin')).json()).toMatchObject({ gesetzt: true, gesperrt: false });
+    // PIN ändern ohne frische Bestätigung geht nicht
+    await sql`update sitzungen set bestaetigt = now() - interval '10 minutes'`;
+    expect((await page.request.put('/api/ablage/pin', { headers: H, data: { pin: '123123' } })).status()).toBe(403);
+    expect((await page.request.put('/api/ablage/pin', { headers: H, data: { pin: '12' } })).status()).toBe(400);
+    // Ohne Nutzung zu nach 5 Minuten
+    await sql`update sitzungen set ecke_bis = now() - interval '1 second'`;
+    expect((await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
+    await sql.end();
   });
 
   await test.step('Auf allen Geräten abmelden beendet auch die Sitzung auf dem anderen Gerät', async () => {

@@ -10,9 +10,8 @@ export const sicher = () => (process.env.PUBLIC_ORIGIN ?? '').startsWith('https:
 const name = (n: string) => (sicher() ? `__Host-${n}` : n);
 export const sessionCookie = () => name('life_session');
 export const challengeCookie = () => name('life_challenge');
-export const ablageCookie = () => name('life_ablage');
 
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 30; // gleich SITZUNG_TAGE in lib/ablage-pin.ts
 
 function geheimnis(): string {
   const s = process.env.SESSION_SECRET;
@@ -26,7 +25,7 @@ function geheimnis(): string {
  * v2 seit 0.16: Sitzungen tragen eine Kennung (sid), ältere Sitzungen gelten nicht mehr.
  */
 const schluessel = new Map<string, Promise<Uint8Array>>();
-function key(zweck: 'sitzung' | 'challenge' | 'ablage'): Promise<Uint8Array> {
+function key(zweck: 'sitzung' | 'challenge'): Promise<Uint8Array> {
   const roh = geheimnis();
   const k = `${zweck}|${roh}`;
   if (!schluessel.has(k)) schluessel.set(k, (async () => {
@@ -36,7 +35,8 @@ function key(zweck: 'sitzung' | 'challenge' | 'ablage'): Promise<Uint8Array> {
   return schluessel.get(k)!;
 }
 
-export type Sitzung = { sid: string; userId: string };
+/** iat: wann das Cookie ausgestellt wurde (Sekunden), damit es sich bei Nutzung verlängern kann. */
+export type Sitzung = { sid: string; userId: string; iat?: number };
 
 /** Signiert eine Sitzung. Anlegen in der Datenbank übernimmt `neueSitzung` in lib/sitzung.ts. */
 export async function signSession(s: Sitzung): Promise<{ value: string; maxAge: number }> {
@@ -51,7 +51,7 @@ export async function readSession(token: string | undefined): Promise<Sitzung | 
   try {
     const { payload } = await jwtVerify(token, await key('sitzung'), { algorithms: ['HS256'], audience: 'life:sitzung' });
     if (payload.typ !== 'sitzung' || typeof payload.sub !== 'string' || typeof payload.sid !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.sid)) return null;
-    return { sid: payload.sid, userId: payload.sub };
+    return { sid: payload.sid, userId: payload.sub, iat: typeof payload.iat === 'number' ? payload.iat : undefined };
   } catch { return null; }
 }
 
@@ -70,19 +70,6 @@ export async function readChallenge(token: string | undefined, purpose: 'registe
     const { payload } = await jwtVerify(token, await key('challenge'), { algorithms: ['HS256'], audience: 'life:challenge' });
     return payload.typ === 'challenge' && payload.p === purpose && typeof payload.c === 'string' ? payload.c : null;
   } catch { return null; }
-}
-
-/** Riegel der Ablage (0.30): nach Face ID zehn Minuten gültig, gebunden an Mensch und Sitzung. Eigener Schlüssel. */
-export const ABLAGE_MIN = 10;
-export async function signAblage(userId: string, sid: string): Promise<string> {
-  return new SignJWT({ sub: userId, sid, typ: 'ablage' }).setProtectedHeader({ alg: 'HS256' }).setAudience('life:ablage').setIssuedAt().setExpirationTime(`${ABLAGE_MIN}m`).sign(await key('ablage'));
-}
-export async function readAblage(token: string | undefined, userId: string, sid: string): Promise<boolean> {
-  if (!token) return false;
-  try {
-    const { payload } = await jwtVerify(token, await key('ablage'), { algorithms: ['HS256'], audience: 'life:ablage' });
-    return payload.typ === 'ablage' && payload.sub === userId && payload.sid === sid;
-  } catch { return false; }
 }
 
 export const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: sicher() || process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', maxAge });

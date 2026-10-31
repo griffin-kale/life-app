@@ -47,7 +47,6 @@ export default function Leben() {
             <span className="lbl">Stand<small>Wochenringe, Engpass, Richtung</small></span>
             <span className="val">{ringe ? <MiniRinge ringe={ringe} anzeige /> : null}{Icon.chevronRight}</span>
           </Link>
-          <Link className="cell" href="/fokus"><span className="lbl">Deep Work und Musiktest</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/einstellungen"><span className="lbl">Einstellungen</span>{Icon.chevronRight}</Link>
         </div>
       </section>

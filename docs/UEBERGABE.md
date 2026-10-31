@@ -2,7 +2,7 @@
 
 Diese Datei hält fest, was gebaut ist, warum es so gebaut ist und was als Nächstes kommt. Sie ergänzt `CLAUDE.md` (feste Regeln) und `CHANGELOG.md` (jede Version im Detail). Wer an Life weiterarbeitet, liest zuerst `CLAUDE.md`, dann diese Datei.
 
-Stand: 31. Oktober 2026, Version 0.31.1.
+Stand: 31. Oktober 2026, Version 0.31.2.
 
 **Life 2.0 (ab 27.10.2026):** Konzept-Doc „Life 2.0 – Analyse und Konzept“ und klickbarer Prototyp „Life 2.0 Prototyp“ (Artefakte, Kurzfassung im Projekt unter `claude/LIFE-2-KONZEPT.md`). Peters Wahl: Heute als Cockpit (Richtung B) mit Tagesstreifen, vier Tabs mit Festhalten in der Mitte (seit 0.28 Heute · Plan · Leben · Logbuch, vorher Heute · Woche · Ziele · Ich), Ernährung mit Protein zuerst und Gewichtstrend, Reihenfolge Fundament → Heute und Woche → Ziele und Rituale → Körper → Ruhe und Geist → Geld und Menschen → Familie. Phase 0 Fundament ist mit 0.24.0 gebaut, Phase 1 Heute und Woche mit 0.25.0, live seit 28.10.2026 (0.25.1). Phase 2 (Saison, Ziele, Wochenrunde, Morgen, Abschluss, Kompass ohne Punkte) mit 0.26 und 0.27, dazu Liste und Fokus mit Musik. Als Nächstes Phase 3 Körper.
 
@@ -110,6 +110,8 @@ Live unter `https://life.gneuss.xyz`. Server: Hetzner CPX02 in Nürnberg (1 vCPU
 | 25.10. | Imperial Blue `#001D51`, Dark Mode, Instrument Serif | Peters persönliche Farbe, bewusst getrennt vom EHRENBEHÖRDE-Royalblau. |
 | 25.10. | SSH und GitHub nur über 1Password mit Touch ID, kein ControlPersist | „Lieber einmal mehr sicher.“ |
 | 25.10. | Passwort plus Einmal-Code als zweiter Weg | Passkeys gehen auf Peters iPhone wegen einer Firmen-Einstellung (AutoFill) nicht. Fliegt raus, sobald Passkeys gehen. |
+| 31.10. | PIN als Weg in die Ablage fürs iPhone | Passkeys gehen dort nicht, der QR-Code für den Mac hilft am iPhone nicht. 6 Ziffern, Hash, gilt nur mit Anmeldung, Sperre nach 5 Fehlversuchen, Aufheben mit Passwort plus Code. Fliegt raus oder wird optional, sobald Passkeys auf dem iPhone gehen. |
+| 31.10. | Anmeldung 30 Tage ab letzter Nutzung, höchstens 90 Tage | Peter musste sich zu oft neu anmelden. Obergrenze, damit ein vergessenes Gerät nicht ewig angemeldet bleibt. Cookie bleibt SameSite=Lax, weil Strict Links von außen (Mail, Kurzbefehl) zur Anmeldung schickt; Fremdseiten blockt die Herkunftsprüfung. |
 | 25.10. | Claude über die Anthropic-API statt Bedrock | Peter will kein AWS. Ausgleich: Pseudonymisierung vor jedem Aufruf, Körperwerte nur zusammengefasst und ohne Datum. Anthropic verarbeitet in den USA und löscht API-Daten nach 30 Tagen. |
 | 25.10. | Namen raus, Gesundheit nur zusammengefasst | Claude soll nie erfahren, um wen es geht. Neue Namen sieht Claude einmal und meldet sie zurück. |
 | 25.10. | WHOOP direkt, Apple Health später | WHOOP liefert Erholung, HRV, Schlafphasen automatisch. Schritte gibt die WHOOP-Schnittstelle nicht her. |

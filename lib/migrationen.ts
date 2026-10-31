@@ -102,6 +102,16 @@ export const MIGRATIONEN: Migration[] = [
       await tx`alter table ablage add column if not exists zuletzt date`;
     },
   },
+  {
+    nr: 10, name: 'Riegel der Ablage an der Sitzung, PIN fürs iPhone (0.31.2)',
+    run: async (tx) => {
+      // Offen-Zustand und frische Bestätigung liegen an genau einer Sitzung. Abmelden auf allen Geräten schließt damit überall.
+      await tx`alter table sitzungen add column if not exists ecke_bis timestamptz`;
+      await tx`alter table sitzungen add column if not exists bestaetigt timestamptz`;
+      await tx`create table if not exists ablage_pin (
+        user_id text primary key, hash text not null, fehl int not null default 0, geaendert timestamptz not null default now())`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */

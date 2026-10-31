@@ -2,6 +2,18 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.31.2] – 2026-10-31
+
+Die Ablage geht auf dem iPhone auf, und die Anmeldung hält länger (Peter, 31.10.2026).
+
+### Neu
+- **PIN für die Ablage.** Auf Peters iPhone gehen keine Passkeys (Firmen-Einstellung), Safari zeigte deshalb nur einen QR-Code für den Mac. Jetzt steht eine 6-stellige PIN vorn, „Mit Passkey“ darunter, Passwort plus Code als dritter Weg. Die PIN liegt nur als scrypt-Hash auf dem Server, gilt nur mit gültiger Anmeldung und wird in konstanter Zeit geprüft. Nach 5 Fehlversuchen ist sie gesperrt, dann öffnet nur Passwort plus Code, danach zählt sie wieder von null. Anlegen und Ändern nur mit frischer Bestätigung (Passkey oder Passwort plus Code, höchstens 5 Minuten alt).
+
+### Geändert
+- **Die Ablage schließt auf dem Server.** Ob sie offen ist, steht an genau dieser Sitzung (`sitzungen.ecke_bis`), nicht mehr in einem Cookie. Sie geht zu nach 5 Minuten ohne Nutzung, beim Verlassen der Seite, wenn die App in den Hintergrund geht, und überall bei „Auf allen Geräten abmelden“.
+- **Anmeldung hält länger:** 30 Tage ab der letzten Nutzung statt ab der Anmeldung, höchstens 90 Tage, dann einmal neu anmelden. Das Cookie verlängert sich bei Nutzung einmal am Tag und bleibt HttpOnly, Secure und SameSite=Lax.
+- Der Eintrag „Deep Work und Musiktest“ unter Leben ist weg. Deep Work startest du auf Heute oder oben mit F.
+
 ## [0.31.1] – 2026-10-31
 
 ### Repariert

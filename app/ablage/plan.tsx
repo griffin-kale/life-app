@@ -1,5 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../ui';
+import { PinSetzen, type PinStand } from './pin';
 import { ABSCHNITT, abgleich, istObj, liste, quartal, txt, type Abgleich, type Obj } from '@/lib/ablage-plan';
 import { AbgleichAnsicht, DateiWahl, PRIVAT, type QuartalBlock, type Teil } from './offen';
 
@@ -77,6 +79,7 @@ export function Kompass({ plan, nach, heute, onSpeichern, onLoeschen, onFehler, 
       <Annahmen plan={plan} nach={nach} heute={heute} onSpeichern={onSpeichern} />
       <Jahresbewertung kategorien={kategorien} nach={nach} heute={heute} onSpeichern={onSpeichern} />
       <Gedanken nach={nach} onSpeichern={onSpeichern} onLoeschen={onLoeschen} />
+      <PinBereich onFehler={onFehler} />
 
       {neu ? <AbgleichAnsicht unterschiede={neu.unterschiede} onUebernehmen={uebernehmen} onAbbrechen={() => setNeu(null)} /> : (
         <section className="gsec" aria-label="Plan pflegen">
@@ -203,5 +206,22 @@ function Gedanken({ nach, onSpeichern, onLoeschen }: Pick<Teil, 'nach' | 'onSpei
         </div>
       ) : null}
     </details>
+  );
+}
+
+/** PIN fürs iPhone festlegen oder ändern (0.31.2). Braucht eine frische Bestätigung, die das Formular selbst einholt. */
+function PinBereich({ onFehler }: { onFehler: (m: string) => void }) {
+  const [stand, setStand] = useState<PinStand | null>(null);
+  const [offen, setOffen] = useState(false);
+  const laden = () => api<PinStand>('/api/ablage/pin').then(setStand).catch(() => {});
+  useEffect(() => { laden(); }, []);
+  if (!stand) return null;
+  if (offen) return <PinSetzen stand={stand} onFehler={onFehler} onFertig={() => { setOffen(false); laden(); }} onAbbrechen={() => setOffen(false)} />;
+  return (
+    <div className="group pl-teil">
+      <button type="button" className="cell tr-zeile" onClick={() => setOffen(true)}>
+        <span className="lbl">{stand.gesetzt ? 'PIN ändern' : 'PIN festlegen'}<small>{stand.gesperrt ? 'Gesperrt nach 5 Fehlversuchen' : 'Zum Öffnen auf dem iPhone, solange dort keine Passkeys gehen'}</small></span>
+      </button>
+    </div>
   );
 }
