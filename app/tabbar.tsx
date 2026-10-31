@@ -9,10 +9,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Weg = { name: string; href?: string; ereignis?: string; farbe: string; pfad: string };
 const SCHNELL: Weg[] = [
+  { name: 'Deep Work', href: '/fokus', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l2.5 2.5' },
   { name: 'Gedanke', ereignis: 'life-festhalten', farbe: 'var(--k-zeit)', pfad: 'M12 4a6 6 0 0 0-3.5 10.9V17h7v-2.1A6 6 0 0 0 12 4zM9.5 20h5' },
   { name: 'Ausgabe', href: '/geld?erfassen=1', farbe: 'var(--k-koerper)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
   { name: 'Essen', href: '/koerper/essen', farbe: 'var(--k-geld)', pfad: 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1.5-3 4-3 7h3v11' },
-  { name: 'Training', href: '/koerper/training', farbe: 'var(--k-sozial)', pfad: 'M3 12h4l2.5-6 4 12 2.5-6H21' },
   { name: 'Ruhe', href: '/koerper/ruhe', farbe: 'var(--k-mental)', pfad: 'M12 4a8 8 0 1 0 8 8 6 6 0 0 1-8-8z' },
   { name: 'Coach', ereignis: 'life-coach', farbe: 'var(--sand)', pfad: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z' },
 ];
@@ -59,7 +59,7 @@ export function TabBar() {
   function mitte() {
     if (gehalten.current) { gehalten.current = false; return; }
     if (schnell) { setSchnell(false); return; }
-    waehlen(SCHNELL[0]);
+    waehlen(SCHNELL.find((w) => w.name === 'Gedanke')!);
   }
 
   const tab = ([href, label, icon, auch]: (typeof SEITEN)[number]) => {
