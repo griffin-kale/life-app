@@ -135,7 +135,7 @@ export default function Ziele() {
         <Link href="/wochenstart" className="group pad zl-woche">
           <span className="ck-name">Wochenziel</span>
           <b>{st?.wochenziel || 'Noch kein Wochenziel'}</b>
-          <small>{st?.wochenziel ? 'Aus dem Wochenstart' : 'Im Wochenstart legst du es in zehn Minuten fest'}</small>
+          <small>{st?.wochenziel ? 'Aus der Wochenrunde' : 'In der Wochenrunde legst du es in zehn Minuten fest'}</small>
           {st?.engpass ? <small>Engpass: {st.engpass}</small> : null}
         </Link>
       </section>

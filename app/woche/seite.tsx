@@ -1,8 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useBreit, useToast, type Item, type Stand } from '../ui';
-import { Fragebogen } from '../fragebogen';
-import { useCheckins } from '../coach';
 import { ZeitKaufen } from '../zeit-kaufen';
 import { Rhythmen, WochenKalender, useWoche } from '../woche-kalender';
 import { MitInspektor } from '../inspektor';
@@ -26,7 +24,6 @@ export function WocheSeite({ teil }: { teil?: string }) {
   const [st, setSt] = useState<Stand | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
   const [toast, setToast] = useToast();
-  const ci = useCheckins(true);
   const w = useWoche();
   const breit = useBreit(900);
   const mac = useBreit(1100);
@@ -62,7 +59,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
   useEffect(() => {
     if (teil) return;
     api<Ws>('/api/wochenstart').then(setWs).catch(() => {});
-    if (new URLSearchParams(location.search).get('wochenstart') === 'fertig') { setToast('Wochenstart abgeschlossen'); history.replaceState(null, '', '/woche'); }
+    if (new URLSearchParams(location.search).get('wochenrunde') === 'fertig') { setToast('Wochenrunde abgeschlossen'); history.replaceState(null, '', '/woche'); }
   }, [teil, setToast]);
   const fokus = ws ? ws.fokus.map((id) => ws.kandidaten.find((k) => k.id === id)).filter((k): k is { id: string; titel: string } => !!k) : [];
   const [zk, setZk] = useState<number | null>(null);
@@ -117,7 +114,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
 
       {!teil && ws?.offen ? (
         <Link href="/wochenstart" className="ws-banner">
-          <span><b>Wochenstart</b><small>Zehn Minuten</small></span>
+          <span><b>Wochenrunde</b><small>Zehn Minuten</small></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
         </Link>
       ) : null}
@@ -128,17 +125,12 @@ export function WocheSeite({ teil }: { teil?: string }) {
           <div className="group fokus-liste">
             {fokus.map((k, i) => <div key={k.id} className="cell static"><span className="fokus-nr">{i + 1}</span><span className="lbl" style={{ flex: 1 }}>{k.titel}</span></div>)}
           </div>
-          <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p>
+          <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrunde öffnen</Link></p>
         </section>
-      ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenstart öffnen</Link></p> : null}
+      ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrunde öffnen</Link></p> : null}
 
       {!teil && w ? <WochenKalender w={w} breit={breit} /> : null}
       {!teil && w && !mac ? <Rhythmen w={w} /> : null}
-      {!teil && ci.zeige === 'woche' ? (
-        <section className="gsec" aria-label="Wochenbogen">
-          <Fragebogen art="woche" onFertig={() => { ci.fertig(); setToast('Wochenbogen gespeichert'); }} onFehler={(m) => setToast(m, 'err')} />
-        </section>
-      ) : null}
 
       {teil === 'ziele' && st?.ziele.length ? (
         <section className="gsec">

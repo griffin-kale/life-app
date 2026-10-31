@@ -12,10 +12,9 @@ type Zeile = { rolle: 'ich' | 'coach'; text: string; zeit: string };
 type Stand = { erledigt: Record<Bogen['art'], boolean>; aufgaben: string[]; who5: number | null };
 
 const stunde = () => parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date()), 10);
-const wochentag = () => new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', weekday: 'short' }).format(new Date());
 
-/** Welcher Bogen gerade dran ist: morgens bis 14 Uhr der Morgen, ab 17 Uhr der Abend, Freitag bis Montag die Woche. */
-export function useCheckins(mitWoche = false) {
+/** Welches Ritual gerade dran ist: morgens bis 14 Uhr der Morgen, ab 17 Uhr der Abschluss. Die Woche läuft seit 0.27 in der Wochenrunde. */
+export function useCheckins() {
   const [st, setSt] = useState<Stand | null>(null);
   const [coach, setCoach] = useState<CoachStand | null>(null);
   const [warten, setWarten] = useState(0);
@@ -31,15 +30,11 @@ export function useCheckins(mitWoche = false) {
     return () => clearTimeout(t);
   }, [warten, laden]);
   const h = stunde();
-  const wt = wochentag();
   let zeige: Bogen['art'] | null = null;
   if (st) {
     if (!st.erledigt.morgen && h < 14) zeige = 'morgen';
     else if (!st.erledigt.abend && h >= 17) zeige = 'abend';
-    else if (!st.erledigt.woche && (mitWoche || ['Fri', 'Sat', 'Sun', 'Mon'].includes(wt))) zeige = 'woche';
   }
-  // Auf „Woche“ zählt nur der Wochenbogen
-  if (mitWoche && zeige !== 'woche') zeige = st && !st.erledigt.woche ? 'woche' : null;
   return {
     zeige, aufgaben: st?.aufgaben ?? [], coach, warten: warten > 0, who5: st?.who5 ?? null,
     fertig: () => { setSt((s) => s && zeige ? { ...s, erledigt: { ...s.erledigt, [zeige]: true } } : s); setWarten(10); },
@@ -89,7 +84,7 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
 
   const abends = stunde() >= 17 && !!c?.abend;
   // Wochenstart und Standortbestimmung stehen schon als Knopf da, nicht noch einmal als Punkt
-  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Der Wochenstart')) && !(c?.standortEtappe && o.startsWith('Die Standortbestimmung')));
+  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Die Wochenrunde')) && !(c?.standortEtappe && o.startsWith('Die Standortbestimmung')));
   const k = c ? (abends ? c.abend : c.morgen) : null;
   return (
     <>
@@ -111,7 +106,7 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
       <div className="coach-eingabe">
         <div className="chat-vorschlaege">
           {c?.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standortbestimmung</Link> : null}
-          {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenstart</Link> : null}
+          {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenrunde</Link> : null}
           {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={chat.denkt} onClick={() => chat.fragen(v)}>{v}</button>)}
         </div>
         <Eingabe onSenden={onSenden} fokus={fokus} onFehler={onFehler} />

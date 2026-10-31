@@ -200,7 +200,7 @@ test('Tagesregeln: Empfehlung, offene Punkte, Engpass, Montag', async () => {
   assert.equal(empfehlung({ ...basis, ruheHeuteMin: 10, kontakt: 'Jonas' }).titel, 'Jonas melden');
   assert.equal(empfehlung({ ...basis }).id, 'stille');
   const o = { stunde: 15, minute: 10, wochentag: 2, jetzt: [{ titel: 'Angebot', zeit: '10:00', erledigt: false }, { titel: 'Anruf', zeit: null, erledigt: false }], morgen: true, abend: false, trainingstag: false, kraftHeute: false, trainingUhrzeit: '18:00', wochenstartOffen: true };
-  assert.deepEqual(offenePunkte(o), ['„Angebot“ stand für 10:00 an.', 'Der Wochenstart fehlt noch.', 'Von „Jetzt dran“ ist noch nichts erledigt (2 offen).']);
+  assert.deepEqual(offenePunkte(o), ['„Angebot“ stand für 10:00 an.', 'Die Wochenrunde fehlt noch.', 'Von „Jetzt dran“ ist noch nichts erledigt (2 offen).']);
   assert.deepEqual(offenePunkte({ ...o, stunde: 10, minute: 20, wochenstartOffen: false }), []);
   assert.equal(engpassSetzen('Engpass: alt\nLeitsatz: x', 'neu'), 'Engpass: neu\nLeitsatz: x');
   assert.equal(engpassSetzen('Leitsatz: x', ' neu  da '), 'Engpass: neu da\nLeitsatz: x');

@@ -7,6 +7,8 @@ import { aufgabe } from '@/lib/tag';
 import { engpassSetzen, montagVon } from '@/lib/tagesregeln';
 import { wochenziel, wochenzielSetzen } from '@/lib/stand';
 import { mitNutzer } from '@/lib/sitzung';
+import { geldKurz, geldStand } from '@/lib/geld';
+import { who5 } from '@/lib/fragen';
 
 /** Wochenstart: Rückblick, Engpass prüfen, drei Dinge der Woche, Parkplatz sichten. */
 const kurz = (i: Item) => ({ id: i.id, titel: aufgabe(i), stapel: i.stapel });
@@ -32,6 +34,16 @@ export async function GET() {
     sql<Item[]>`select * from items where user_id = ${uid} and status = 'neu' and merged_into is null and coalesce(kategorie, '') not in ('wissen', 'notiz') order by created_at desc limit 10`,
   ]);
   const letzte = kompass?.verlauf.find((v) => v.woche === vor) ?? null;
+  // Wochenrunde (0.27): Fokus der letzten Woche, Geld in einem Satz, WHO-5 alle zwei Wochen
+  const [[fokusWoche], geld, geldW, [who]] = await Promise.all([
+    sql<{ bloecke: number; minuten: number }[]>`
+      select count(*)::int as bloecke, coalesce(sum(least(minuten, extract(epoch from (coalesce(ende, start + make_interval(mins => minuten)) - start)) / 60)), 0)::int as minuten
+      from fokus_bloecke where user_id = ${uid} and (start at time zone 'Europe/Berlin')::date >= ${vor}::date and (start at time zone 'Europe/Berlin')::date < ${montag}::date`,
+    geldKurz(uid).catch(() => ''),
+    geldStand(uid).then((g) => g.warnungen.slice(0, 2)).catch(() => [] as string[]),
+    sql<{ tag: string; antworten: Record<string, unknown> }[]>`select tag::text as tag, antworten from checkins where user_id = ${uid} and art = 'woche' order by tag desc limit 1`,
+  ]);
+  const who5Tage = who && who5(who.antworten) !== null ? Math.round((Date.parse(montag + 'T12:00:00Z') - Date.parse(who.tag + 'T12:00:00Z')) / 864e5) : null;
   const aktiv = items.filter((i) => ['jetzt', 'woche', 'delegieren'].includes(i.stapel ?? ''));
   return NextResponse.json({
     montag, offen: fertig !== montag,
@@ -41,6 +53,8 @@ export async function GET() {
     wochenziel: wz,
     geparkt: items.filter((i) => i.stapel === 'geparkt').slice(0, 15).map(kurz),
     fokus,
+    fokusWoche, geld, geldWarnungen: geldW,
+    who5Faellig: who5Tage === null || who5Tage >= 13, who5Erledigt: who?.tag === montag,
   });
 }
 
