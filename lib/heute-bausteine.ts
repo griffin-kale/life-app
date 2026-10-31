@@ -3,14 +3,15 @@
 export const BAUSTEINE = ['cockpit', 'streifen', 'konten', 'kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'liste', 'naechste', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. Seit 0.27 (31.10.2026) die Liste statt „Danach“. */
-export const STANDARD: Baustein[] = ['cockpit', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt'];
+/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. Seit 0.27 (31.10.2026) die Liste statt „Danach“,
+ *  seit 0.28 Deep Work und die vier schnellen Wege direkt unter dem Cockpit. */
+export const STANDARD: Baustein[] = ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
   cockpit: ['Cockpit', 'Erholung, freie Zeit und Woche auf einen Blick'],
   streifen: ['Als Nächstes', 'Die nächsten drei Blöcke des Tages'],
   konten: ['Konten heute', 'Je Konto eine Zeile, was heute zählt'],
   kompass: ['Wochenringe', 'Klein neben dem Titel'],
-  schnell: ['Schnellzugriffe', 'Zusätzlich zum Plus in der Mitte der Leiste'],
+  schnell: ['Deep Work und Schnellzugriffe', 'Deep Work starten, Gedanke, Ausgabe, Essen, Ruhe'],
   empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
   kalender: ['Kalender', 'Der ganze Tag mit Terminen und freier Zeit'],
   fragebogen: ['Fragebogen', 'Erscheint, wenn er dran ist'],
@@ -36,7 +37,7 @@ export function bausteineAus(roh: unknown): Baustein[] {
 
 /** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
 const NEU: [number, Baustein, string][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
-export const STAND = 9;
+export const STAND = 10;
 
 /** Umbau 0.18 (Peter, 26.10.2026): Ringe nach oben, Jetzt dran früh, Kalender, Festhalten-Feld und Tagespunkte runter von Heute. */
 const WEG_5: string[] = ['kalender', 'festhalten', 'woche'];
@@ -78,6 +79,11 @@ export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein
     neu = neu.filter((b) => b !== 'naechste');
     const s = neu.indexOf('streifen'); const j = neu.indexOf('jetzt');
     neu.splice(s >= 0 ? s + 1 : j >= 0 ? j + 1 : neu.length, 0, 'liste');
+  }
+  // 0.28 Menü (Peter, 31.10.2026): Deep Work und die vier schnellen Wege stehen sichtbar unter dem Cockpit
+  if (stand < 10 && !neu.includes('schnell')) {
+    const c = neu.indexOf('cockpit');
+    neu.splice(c >= 0 ? c + 1 : 0, 0, 'schnell');
   }
   return { liste: neu, stand: STAND };
 }

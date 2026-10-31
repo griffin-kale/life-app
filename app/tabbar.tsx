@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-/** Untere Leiste als schwebende Pille (Life 2.0, Peter 27.10.2026): Heute · Woche · Festhalten · Ziele · Ich.
+/** Untere Leiste als schwebende Pille (Life 2.0, Peter 27.10.2026; Menü 0.28): Heute · Plan · Festhalten · Leben · Logbuch.
  *  Die Mitte hält immer fest, weil das die häufigste Handlung ist. Gedrückt halten öffnet die sechs schnellen Wege.
  *  Jeder Weg im Haltemenü steht auch sichtbar auf seiner Seite. */
 
@@ -16,11 +16,12 @@ const SCHNELL: Weg[] = [
   { name: 'Ruhe', href: '/koerper/ruhe', farbe: 'var(--k-mental)', pfad: 'M12 4a8 8 0 1 0 8 8 6 6 0 0 1-8-8z' },
   { name: 'Coach', ereignis: 'life-coach', farbe: 'var(--sand)', pfad: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z' },
 ];
-const SEITEN: [string, string, ReactNode, string[]][] = [
-  ['/', 'Heute', <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" /></>, []],
-  ['/woche', 'Woche', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>, ['/wochenstart']],
-  ['/ziele', 'Ziele', <><circle cx="12" cy="12" r="8.5" /><path d="M15.4 8.6l-2 4.8-4.8 2 2-4.8z" fill="currentColor" strokeLinejoin="round" /></>, ['/kompass', '/stand']],
-  ['/ich', 'Ich', <><circle cx="12" cy="8.5" r="3.6" /><path d="M4.8 20c.9-3.6 3.8-5.6 7.2-5.6s6.3 2 7.2 5.6" /></>, ['/koerper', '/geld', '/menschen', '/archiv', '/einstellungen', '/eintrag', '/mehr']],
+/** Menü 0.28 (Peter, 31.10.2026): Tun, Planen, Leben. Plan fasst Woche und Saison zusammen, Leben die vier Konten und den Stand. */
+export const SEITEN: [string, string, ReactNode, string[]][] = [
+  ['/', 'Heute', <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" /></>, ['/morgen', '/abschluss']],
+  ['/woche', 'Plan', <><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>, ['/wochenstart', '/ziele']],
+  ['/leben', 'Leben', <><path d="M12 20.5v-8.5" /><path d="M12 12c0-4.2 3-7.5 7.5-7.5 0 4.2-3 7.5-7.5 7.5zM12 14.5c0-3.3-2.6-6-6.5-6 0 3.3 2.6 6 6.5 6z" /></>, ['/koerper', '/geld', '/menschen', '/stand', '/kompass', '/ich', '/mehr', '/einstellungen']],
+  ['/archiv', 'Logbuch', <><path d="M6.5 3.5h8l3 3v14h-11z" /><path d="M9 10.5h6M9 14.5h6" /></>, ['/eintrag']],
 ];
 
 const Symbol = ({ w }: { w: Weg }) => (

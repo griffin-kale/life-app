@@ -37,7 +37,7 @@ export default function Einstellungen() {
   }
   return (
     <main className="wrap">
-      <TopBar title="Einstellungen" />
+      <TopBar title="Einstellungen" back={{ label: 'Zurück', href: '/' }} />
       <header className="head"><span className="eyebrow">Wie Life für dich arbeitet</span><h1 className="title">Einstellungen</h1></header>
 
       <Darstellung />

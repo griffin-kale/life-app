@@ -35,7 +35,7 @@ export default function Menschen() {
 
   return (
     <main className="wrap">
-      <TopBar title="Menschen" back={{ label: 'Ich', href: '/ich' }} />
+      <TopBar title="Menschen" back={{ label: 'Leben', href: '/leben' }} />
       <header className="head"><span className="eyebrow">Diese Woche {m ? `${STD(m.wocheMin)} mit Menschen, davon Familie ${STD(m.familieMin)}` : '…'}</span><h1 className="title">Menschen<i>.</i></h1></header>
 
       {m?.geburtstage.length ? (

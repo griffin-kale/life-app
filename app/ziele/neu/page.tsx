@@ -176,7 +176,7 @@ export default function NeueSaison() {
 
   return (
     <main className="wrap">
-      <TopBar title="Neue Saison" back={{ label: 'Ziele', href: '/ziele' }} />
+      <TopBar title="Neue Saison" back={{ label: 'Plan', href: '/ziele' }} />
       <header className="head"><span className="eyebrow">Zwölf Wochen, wenige Ziele</span><h1 className="title">Neue Saison<i>.</i></h1></header>
       {g ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Neue Saison" onSeite={seite} /></div> : <p className="loading">Lädt …</p>}
       {toast}

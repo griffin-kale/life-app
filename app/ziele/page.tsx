@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { PlanUmschalter } from '../plan-umschalter';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { MiniRinge } from '../ringe';
@@ -45,8 +46,9 @@ export default function Ziele() {
   const eyebrow = !s ? '…' : !sa ? 'Bin ich auf Kurs?' : sa.woche < 1 ? `Saison ${sa.name} · beginnt am ${datum(sa.start)}` : `Saison ${sa.name} · Woche ${sa.woche} von 12`;
   return (
     <main className="wrap">
-      <TopBar title="Ziele" />
-      <header className="head"><span className="eyebrow">{eyebrow}</span><h1 className="title">Ziele<i>.</i></h1></header>
+      <TopBar title="Plan" profil />
+      <header className="head"><span className="eyebrow">{eyebrow}</span><h1 className="title">Plan<i>.</i></h1></header>
+      <PlanUmschalter an="saison" />
 
       {!s ? <p className="loading">Lädt …</p> : sa ? (
         <>
@@ -142,11 +144,10 @@ export default function Ziele() {
 
       <section className="gsec">
         <div className="group">
-          <Link className="cell" href="/kompass">
-            <span className="lbl">Kompass</span>
-            <span className="val">{k ? <MiniRinge ringe={k.jetzt.ringe} level={k.gesamt.level} /> : null}{Icon.chevronRight}</span>
+          <Link className="cell" href="/stand">
+            <span className="lbl">Stand</span>
+            <span className="val">{k ? <MiniRinge ringe={k.jetzt.ringe} anzeige /> : <span>Ringe, Engpass, Richtung</span>}{Icon.chevronRight}</span>
           </Link>
-          <Link className="cell" href="/stand"><span className="lbl">Dein Stand</span><span className="val"><span>Richtung, Engpass</span>{Icon.chevronRight}</span></Link>
         </div>
       </section>
       {toast}

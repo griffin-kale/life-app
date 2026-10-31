@@ -210,7 +210,7 @@ export default function Wochenstart() {
 
   return (
     <main className="wrap">
-      <TopBar title="Wochenrunde" back={{ label: 'Woche', href: '/woche' }} />
+      <TopBar title="Wochenrunde" back={{ label: 'Plan', href: '/woche' }} />
       <header className="head"><span className="eyebrow">{w ? `Woche ab ${new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' }).format(new Date(w.montag + 'T12:00:00Z'))}` : '…'}</span><h1 className="title">Wochenrunde<i>.</i></h1></header>
       {w ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Wochenrunde" /></div> : <p className="loading">Lädt …</p>}
       {toast}
