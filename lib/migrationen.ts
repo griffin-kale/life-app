@@ -96,6 +96,12 @@ export const MIGRATIONEN: Migration[] = [
       await tx`create index if not exists ablage_bloecke_user on ablage_bloecke (user_id, geaendert desc)`;
     },
   },
+  {
+    nr: 9, name: 'Ablage: Datum der letzten Abendfrage für den neutralen Hinweis (0.31)',
+    run: async (tx) => {
+      await tx`alter table ablage add column if not exists zuletzt date`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */

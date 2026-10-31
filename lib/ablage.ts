@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { ensureSchema, sql } from './db';
 import { readAblage, ablageCookie } from './session';
 import { aktuelleSitzung } from './sitzung';
+import { heuteBerlin, jetztBerlin } from './zeit';
 import { EINTRAEGE_MAX } from './ablage-regeln';
 
 /** Antworten aus der Ablage landen in keinem Zwischenspeicher. */
@@ -60,3 +61,13 @@ export async function blockWeg(id: string, userId: string): Promise<boolean> {
   return r.count > 0;
 }
 export const uuidOk = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s);
+
+/** Neutraler Hinweis auf Heute (Peter, 31.10.2026): ab 18 Uhr, wenn heute noch keine Abendfrage beantwortet ist. Kein Inhalt, nur ein Datum. */
+export async function frageOffen(userId: string): Promise<boolean> {
+  await ensureSchema();
+  const [t] = await sql<{ zuletzt: string | null }[]>`select zuletzt::text as zuletzt from ablage where user_id = ${userId}`;
+  return !!t && t.zuletzt !== heuteBerlin() && jetztBerlin().stunde >= 18;
+}
+export async function frageBeantwortet(userId: string): Promise<void> {
+  await sql`update ablage set zuletzt = ${heuteBerlin()} where user_id = ${userId}`;
+}

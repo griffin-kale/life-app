@@ -108,7 +108,8 @@ export function Navigation() {
             return (
               <div key={z.href} className="sl-ast">
                 <Zeile z={z} an={an === z.href && !kindAn} offen={kindAn} onWahl={() => setOffen(false)} />
-                {kinder.length ? <div className="sl-kinder">{kinder.map((k) => <Zeile key={k.href} z={k} an={an === k.href} klein onWahl={() => setOffen(false)} />)}</div> : null}
+                {/* Schmal (Peter, 31.10.2026): Unterpunkte nur beim Bereich, in dem du gerade bist */}
+                {kinder.length && (kindAn || an === z.href) ? <div className="sl-kinder">{kinder.map((k) => <Zeile key={k.href} z={k} an={an === k.href} klein onWahl={() => setOffen(false)} />)}</div> : null}
               </div>
             );
           })}
