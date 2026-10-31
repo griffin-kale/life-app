@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api } from '../ui';
 import { FARBE, Ring } from '../ringe';
+import { KompassTeil } from '../kompass-teil';
 import { BEREICH_NAME, KONTEN, type Stand } from '@/lib/standort';
 
 type R = { stand: Stand; wochenziel: string; engpass: string; heute: string; naechste: number | null; etappen: { nr: number; titel: string; kurz: string; dauer: string; erledigt: string | null }[] };
 const datum = (t: string) => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' }).format(new Date(t + 'T12:00:00Z'));
 
-/** Dein Stand: was die Standortbestimmung ergeben hat. Der Coach kennt diese Seite bei jedem Satz. */
+/** Stand (seit 0.28 mit den Wochenringen des Kompass): was die Standortbestimmung ergeben hat. Der Coach kennt diese Seite bei jedem Satz. */
 export default function StandSeite() {
   const [r, setR] = useState<R | null>(null);
   useEffect(() => { api<R>('/api/stand').then(setR).catch(() => {}); }, []);
@@ -17,8 +18,8 @@ export default function StandSeite() {
   const leer = (t: string) => <span className="st-leer">{t}</span>;
   return (
     <main className="wrap">
-      <TopBar title="Dein Stand" back={{ label: 'Ziele', href: '/ziele' }} />
-      <header className="head"><span className="eyebrow">{b ? `Baseline vom ${datum(b.tag)}` : 'Standortbestimmung'}</span><h1 className="title">Dein Stand<i>.</i></h1></header>
+      <TopBar title="Stand" back={{ label: 'Leben', href: '/leben' }} />
+      <header className="head"><span className="eyebrow">{b ? `Baseline vom ${datum(b.tag)}` : 'Standortbestimmung'}</span><h1 className="title">Stand<i>.</i></h1></header>
       {!r ? <p className="loading">Lädt …</p> : <>
         {r.naechste ? (
           <Link href={`/stand/${r.naechste}`} className="ws-banner st-start">
@@ -26,6 +27,8 @@ export default function StandSeite() {
             {Icon.chevronRight}
           </Link>
         ) : null}
+
+        <KompassTeil />
 
         <section className="gsec" aria-label="Baseline">
           <h2 className="glabel">Wo du stehst</h2>

@@ -39,6 +39,7 @@ export function useFokusMusik() {
   const [art, setArt] = useState<Musik>('stille');
   const [spielt, setSpielt] = useState(false);
   const [stueck, setStueck] = useState(0);
+  const stueckRef = useRef(0);
   const [lautstaerke, setLautstaerke] = useState(0.6);
 
   // Muss aus einem Tippen heraus laufen, sonst lässt Safari keinen Ton zu
@@ -54,21 +55,21 @@ export function useFokusMusik() {
     lfo.connect(lfoTiefe).connect(am.gain); lfo.start();
     const laut = ctx.createGain(); laut.gain.value = lautstaerke;
     quelle.connect(am).connect(laut).connect(ctx.destination);
+    // Am Ende eines Stücks geht es von selbst weiter (Peter, 31.10.2026). Der Lauscher hängt einmal am Element,
+    // damit er auch dann greift, wenn das erste Stück zufällig dasselbe ist wie der Startwert.
+    audio.addEventListener('ended', () => {
+      const i = (stueckRef.current + 1) % STUECKE.length;
+      audio.src = `/musik/${STUECKE[i].datei}.m4a`; stueckRef.current = i; setStueck(i);
+      audio.play().then(() => setSpielt(true)).catch(() => setSpielt(false));
+    });
     kette.current = { ctx, audio, am, lfoTiefe, laut, rauschen: null };
     return kette.current;
   }, [lautstaerke]);
 
   const stueckLaden = useCallback((k: Kette, i: number) => {
     const s = STUECKE[((i % STUECKE.length) + STUECKE.length) % STUECKE.length];
-    k.audio.src = `/musik/${s.datei}.m4a`; setStueck(STUECKE.indexOf(s));
+    k.audio.src = `/musik/${s.datei}.m4a`; stueckRef.current = STUECKE.indexOf(s); setStueck(stueckRef.current);
   }, []);
-
-  useEffect(() => {
-    const k = kette.current; if (!k) return;
-    const weiter = () => { stueckLaden(k, stueck + 1); k.audio.play().catch(() => setSpielt(false)); };
-    k.audio.addEventListener('ended', weiter);
-    return () => k.audio.removeEventListener('ended', weiter);
-  }, [stueck, stueckLaden]);
 
   const stop = useCallback(() => {
     const k = kette.current; if (!k) return;
@@ -96,8 +97,8 @@ export function useFokusMusik() {
 
   const naechstes = useCallback(() => {
     const k = kette.current; if (!k || (art !== 'klassik' && art !== 'welle')) return;
-    stueckLaden(k, stueck + 1); k.audio.play().then(() => setSpielt(true)).catch(() => setSpielt(false));
-  }, [art, stueck, stueckLaden]);
+    stueckLaden(k, stueckRef.current + 1); k.audio.play().then(() => setSpielt(true)).catch(() => setSpielt(false));
+  }, [art, stueckLaden]);
 
   useEffect(() => { if (kette.current) kette.current.laut.gain.value = lautstaerke; }, [lautstaerke]);
   useEffect(() => () => { stop(); kette.current?.ctx.close().catch(() => {}); kette.current = null; }, [stop]);

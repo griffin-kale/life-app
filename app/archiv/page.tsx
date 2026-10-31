@@ -35,7 +35,7 @@ export default function Archiv() {
 
   return (
     <main className="wrap breit">
-      <TopBar title="Logbuch" />
+      <TopBar title="Logbuch" profil />
       <header className="head"><span className="eyebrow">Alles, was du festgehalten hast</span><h1 className="title">Logbuch</h1></header>
       <MitInspektor back={{ label: 'Logbuch', href: '/archiv' }} onGeaendert={() => setRunde((x) => x + 1)} leer={<div className="empty"><b>Wähl links einen Eintrag.</b>Hier stehen dann Kernidee, Schritt, Einordnung und Priorität.</div>}>
       <div className="tools-col">

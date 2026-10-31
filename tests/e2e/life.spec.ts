@@ -200,11 +200,14 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.ttitle', { hasText: 'KGSt' })).toHaveCount(1);
     await page.goto('/woche/ziele');
     await expect(page.locator('main')).toContainText('Plattform');
-    // Ziele als eigener Tab: ohne Saison die bisherigen Ziele mit Fortschritt, Kompass und Dein Stand
-    await page.locator('.tabbar').getByRole('link', { name: 'Ziele' }).click();
+    // Plan (0.28): Woche und Saison sind zwei Ansichten. Ohne Saison stehen die bisherigen Ziele mit Fortschritt da, dazu der Stand
+    await page.locator('.tabbar').getByRole('link', { name: 'Plan' }).click();
+    await page.waitForURL('/woche');
+    await page.getByRole('navigation', { name: 'Zeitraum' }).getByRole('link', { name: 'Saison' }).click();
     await page.waitForURL('/ziele');
+    await expect(page.getByRole('navigation', { name: 'Zeitraum' }).getByRole('link', { name: 'Saison' })).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('section[aria-label="Neue Saison"]')).toContainText('Plattform');
-    await expect(page.locator('main')).toContainText('Dein Stand');
+    await expect(page.locator('main').getByRole('link', { name: /^Stand/ })).toHaveAttribute('href', '/stand');
     expect((await page.request.get('/woche/gibtsnicht')).status()).toBe(404);
   });
 
@@ -229,7 +232,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/ich', '/ziele', '/ziele/neu', '/fokus', '/morgen', '/abschluss', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/menschen', '/leben', '/ziele', '/ziele/neu', '/fokus', '/morgen', '/abschluss', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
@@ -284,7 +287,9 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Als Nächstes"]')).toBeVisible();
     await expect(page.locator('section[aria-label="Konten heute"] .ck-konto')).toHaveCount(5);
     await expect(page.locator('section[aria-label="Empfohlen für dich"]')).toHaveCount(0);
-    await expect(page.locator('section[aria-label="Schnellzugriffe"]')).toHaveCount(0);
+    // 0.28: Deep Work und vier schnelle Wege stehen sichtbar unter dem Cockpit, Deep Work startet mit der einen Sache
+    await expect(page.locator('section[aria-label="Schnellzugriffe"] .sz')).toHaveCount(4);
+    await expect(page.getByRole('link', { name: /^Deep Work starten/ })).toHaveAttribute('href', /^\/fokus/);
     const ck = await (await page.request.get('/api/heute/cockpit')).json();
     expect(ck.konten.map((k: { konto: string }) => k.konto)).toEqual(['zeit', 'koerper', 'mental', 'sozial', 'geld']);
     // Ein normaler Gedanke im kurzen Feld: festgehalten, das Feld geht zu
@@ -478,9 +483,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(issues[0].labels).toContain('bug');
   });
 
-  await test.step('Kompass: fünf Ringe aus echten Daten, ohne Punkte, Level und Meilensteine', async () => {
-    await page.goto('/kompass');
-    await expect(page.locator('.ringreihe .ringzelle')).toHaveCount(5);
+  await test.step('Stand mit Kompass: fünf Ringe aus echten Daten, ohne Punkte, Level und Meilensteine', async () => {
+    // Der Kompass hat seit 0.28 keine eigene Seite mehr, alte Wege landen auf Stand
+    expect(new URL((await page.goto('/kompass'))!.url()).pathname).toBe('/stand');
+    await expect(page.locator('section[aria-label="Diese Woche"] .ringzelle')).toHaveCount(5);
     // Konten zugeklappt: Ring und Prozent. Details eine Ebene tiefer
     await expect(page.locator('details[aria-label="Körper"] .konto-mehr')).toBeHidden();
     await page.locator('details[aria-label="Körper"] summary').click();
@@ -488,10 +494,11 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('details[aria-label="Körper"]')).toContainText('1 / 3');
     // Ringe bleiben, Punkte gehen (Peter, 29.10.2026)
     await expect(page.locator('details[aria-label="Meilensteine"]')).toHaveCount(0);
-    await expect(page.locator('main')).not.toContainText('Level');
-    await expect(page.locator('main')).not.toContainText('Punkte');
-    await page.goto('/ziele');
-    await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
+    await expect(page.locator('section[aria-label="Konten"]')).not.toContainText('Level');
+    await expect(page.locator('section[aria-label="Konten"]')).not.toContainText('Punkte');
+    await expect(page.locator('main')).toContainText('Was dich bremst');
+    await page.goto('/leben');
+    await expect(page.getByRole('link', { name: /^Stand/ })).toBeVisible();
   });
 
   await test.step('Darstellung: Hell wählen, bleibt nach dem Neuladen, Dunkel zurück', async () => {
@@ -506,7 +513,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.getByRole('region', { name: 'Cockpit' })).toBeVisible();
     if (process.env.SCREENSHOTS) for (const t of ['light', 'dark']) {
       await page.evaluate((x) => { document.documentElement.dataset.theme = x; }, t);
-      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/kompass', 'kompass'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/ich', 'ich'], ['/ziele', 'ziele'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart'], ['/stand', 'stand'], ['/stand/1', 'stand-etappe']]) {
+      for (const [p, n] of [['/', 'heute'], ['/koerper', 'koerper'], ['/koerper/ruhe', 'ruhe'], ['/einstellungen', 'einstellungen'], ['/geld', 'geld'], ['/leben', 'leben'], ['/ziele', 'ziele'], ['/menschen', 'menschen'], ['/woche', 'woche'], ['/einstellungen/heute', 'anpassen'], ['/geld/monatlich', 'geld-monatlich'], ['/wochenstart', 'wochenstart'], ['/stand', 'stand'], ['/stand/1', 'stand-etappe']]) {
         await page.context().addCookies([{ name: 'life-thema', value: t, url: new URL('/', page.url()).toString() }]);
         await page.goto(p); await page.waitForTimeout(500);
         await page.screenshot({ path: `test-results/design/${n}-${t}.png`, fullPage: true });
@@ -542,12 +549,22 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   await test.step('Leiste: vier Tabs, Festhalten in der Mitte, Halten öffnet sechs Wege', async () => {
     await page.goto('/woche');
     const leiste = page.locator('.tabbar');
-    for (const n of ['Heute', 'Woche', 'Ziele', 'Ich']) await expect(leiste.getByRole('link', { name: n })).toBeVisible();
-    // Ich ersetzt Mehr, Körper und Geld liegen als Konten darunter
-    await leiste.getByRole('link', { name: 'Ich' }).click();
-    await page.waitForURL('/ich');
-    await expect(page.locator('section[aria-label="Konten"] .ich-konto')).toHaveCount(5);
-    expect(new URL((await page.goto('/mehr'))!.url()).pathname).toBe('/ich');
+    // Menü 0.28 (Peter, 31.10.2026): Heute · Plan · + · Leben · Logbuch
+    for (const n of ['Heute', 'Plan', 'Leben', 'Logbuch']) await expect(leiste.getByRole('link', { name: n })).toBeVisible();
+    await expect(leiste.getByRole('link', { name: 'Plan' })).toHaveAttribute('aria-current', 'page');
+    // Leben ersetzt Ich und Mehr: vier Konten, jedes mit einem direkten Weg
+    await leiste.getByRole('link', { name: 'Leben' }).click();
+    await page.waitForURL('/leben');
+    await expect(page.locator('section[aria-label="Konten"] .lb-konto')).toHaveCount(4);
+    await expect(page.getByRole('link', { name: 'Ausgabe festhalten' })).toHaveAttribute('href', '/geld?erfassen=1');
+    expect(new URL((await page.goto('/mehr'))!.url()).pathname).toBe('/leben');
+    expect(new URL((await page.goto('/ich'))!.url()).pathname).toBe('/leben');
+    // Einstellungen über den Kreis oben rechts, Logbuch als eigener Tab
+    await page.getByRole('link', { name: 'Einstellungen' }).first().click();
+    await page.waitForURL('/einstellungen');
+    await page.goto('/leben');
+    await page.locator('.tabbar').getByRole('link', { name: 'Logbuch' }).click();
+    await page.waitForURL('/archiv');
     // Ein Tipp auf die Mitte hält einen Gedanken fest, auch von einer anderen Seite aus
     const plus = leiste.getByRole('button', { name: 'Gedanke festhalten' });
     await plus.click();
@@ -895,6 +912,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await dw.getByRole('radiogroup', { name: 'Musik' }).getByRole('radio', { name: 'Stille' }).click();
     await dw.getByRole('button', { name: 'Starten' }).click();
     await expect(dw.getByRole('timer')).toContainText(/2[45]:\d\d/);
+    // Der Timer zeigt 25:00 schon vor dem Start, deshalb auf den gespeicherten Block warten (in CI war das ein Wettlauf)
+    await expect.poll(async () => (await (await page.request.get('/api/fokus')).json()).block !== null, { timeout: 10000 }).toBe(true);
     const lauf = (await (await page.request.get('/api/fokus')).json()).block;
     expect(lauf).toMatchObject({ minuten: 25, pause: 5, musik: 'stille', test: false });
     // Ein zweiter Block gleichzeitig geht nicht

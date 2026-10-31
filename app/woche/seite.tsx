@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { PlanUmschalter } from '../plan-umschalter';
 import { Icon, STAPEL, TabBar, TaskRow, TopBar, api, fTime, useBreit, useToast, type Item, type Stand } from '../ui';
 import { ZeitKaufen } from '../zeit-kaufen';
 import { Rhythmen, WochenKalender, useWoche } from '../woche-kalender';
@@ -19,7 +20,7 @@ function kw(d = new Date()) {
 export const TEILE: Record<string, string> = { ziele: 'Ziele', energie: 'Energie-Bilanz', 'zeit-kaufen': 'Zeit kaufen', parkplatz: 'Parkplatz' };
 
 /** Woche (Life 2.0): Wofür ist diese Woche da? Drei Dinge der Woche, sieben Tage mit Terminen, Rhythmen, darunter die Stapel.
- *  Energie, Zeit kaufen und Parkplatz haben eigene Seiten, Ziele stehen unter dem Tab Ziele. */
+ *  Energie, Zeit kaufen und Parkplatz haben eigene Seiten. Seit 0.28 heißt die Seite „Plan“ und schaltet auf die Saison um. */
 export function WocheSeite({ teil }: { teil?: string }) {
   const [st, setSt] = useState<Stand | null>(null);
   const [leaving, setLeaving] = useState<string | null>(null);
@@ -106,11 +107,12 @@ export function WocheSeite({ teil }: { teil?: string }) {
 
   return (
     <main className={'wrap' + (teil ? '' : ' breit')}>
-      <TopBar title={teil ? TEILE[teil] : 'Woche'} back={teil ? { label: 'Woche', href: '/woche' } : undefined} />
+      <TopBar title={teil ? TEILE[teil] : 'Plan'} back={teil ? { label: 'Plan', href: '/woche' } : undefined} profil={!teil} />
       <header className="head">
         <span className="eyebrow">KW {kw()}{st && !teil ? ` · ${st.erledigtWoche} erledigt` : ''}</span>
-        <h1 className="title">{teil ? TEILE[teil] : 'Woche'}<i>.</i></h1>
+        <h1 className="title">{teil ? TEILE[teil] : 'Plan'}<i>.</i></h1>
       </header>
+      {!teil ? <PlanUmschalter an="woche" /> : null}
 
       {!teil && ws?.offen ? (
         <Link href="/wochenstart" className="ws-banner">
@@ -143,7 +145,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
         </section>
       ) : null}
 
-      {teil ? liste : <MitInspektor back={{ label: 'Woche', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={w ? <Rhythmen w={w} /> : <div className="empty"><b>Lädt …</b></div>}>{liste}</MitInspektor>}
+      {teil ? liste : <MitInspektor back={{ label: 'Plan', href: '/woche' }} onGeaendert={() => load().catch(() => {})} leer={w ? <Rhythmen w={w} /> : <div className="empty"><b>Lädt …</b></div>}>{liste}</MitInspektor>}
       {teil === 'energie' && st?.kraft && !(st.kraft.gab.length || st.kraft.kostete.length) ? <div className="empty"><b>Noch keine Bilanz.</b></div> : null}
       {teil === 'energie' && st?.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? (
         <section className="gsec" aria-label="Energie-Bilanz">

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import { Icon, TabBar, TopBar, api, isPending, useBreit, useToast, type Item, type Stand } from './ui';
+import { Icon, TabBar, TopBar, api, isPending, taskTitle, useBreit, useToast, type Item, type Stand } from './ui';
 import { Liste } from './liste';
 import { RitualKarte } from './rituale';
 import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
@@ -210,7 +210,7 @@ export default function Heute() {
     naechste: <Danach items={danach} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
     liste: <Liste jetzt={jetzt} eins={eins} erledigtHeute={st?.erledigtHeute ?? []} zuletzt={st?.zuletzt ?? []} woche={items.filter((i) => i.stapel === 'woche').length} geparkt={items.filter((i) => i.stapel === 'geparkt').length} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
     erledigt: <Erledigt items={st?.erledigtHeute ?? []} onToggle={toggle} onEnergie={(it, n) => act(() => patch(it.id, { energie: n }))} />,
-    schnell: <Schnellzugriff onGedanke={gedanke} />,
+    schnell: <Schnellzugriff onGedanke={gedanke} sache={eins ? { id: eins.id, titel: taskTitle(eins) } : null} />,
     empfohlen: <Empfohlen stand={ci} />,
     kalender: <KalenderHeute />,
     koerper: kurz.koerper ? <KoerperKurz k={kurz.koerper} /> : null,
@@ -221,7 +221,7 @@ export default function Heute() {
 
   return (
     <main className="wrap breit">
-      <TopBar title="Heute" />
+      <TopBar title="Heute" profil />
       <header className="head">
         <span className="eyebrow">{today}</span>
         <div className="titel-zeile"><h1 className="title">Heute<i>.</i></h1>{bausteine.includes('kompass') && ringe && kompass ? <MiniRinge ringe={ringe} level={kompass.gesamt.level} /> : null}</div>

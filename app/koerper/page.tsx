@@ -23,7 +23,7 @@ export default function Koerper() {
   ] : [];
   return (
     <main className="wrap breit">
-      <TopBar title="Körper" />
+      <TopBar title="Körper" back={{ label: 'Leben', href: '/leben' }} />
       <header className="head"><span className="eyebrow">{datum}</span><h1 className="title">Körper<i>.</i></h1></header>
 
       <section className="gsec" aria-label="Letzte Nacht">

@@ -52,13 +52,13 @@ export function Tagespunkte({ tage, heute }: { tage: { tag: string; wert: number
   );
 }
 
-/** Die Woche als fünf kleine Ringe ineinander neben dem Titel. Tippen öffnet den Kompass mit allen Zahlen. */
-export function MiniRinge({ ringe }: { ringe: Record<string, number | null>; level?: number }) {
+/** Die Woche als fünf kleine Ringe ineinander neben dem Titel. Tippen öffnet den Stand mit allen Zahlen.
+ *  `anzeige`: nur das Bild, wenn die Ringe schon in einem Link stehen (Zelle auf Leben und Plan). */
+export function MiniRinge({ ringe, anzeige }: { ringe: Record<string, number | null>; level?: number; anzeige?: boolean }) {
   const werte = KONTEN.map((x) => ringe[x]).filter((v): v is number => v !== null);
   const schnitt = werte.length ? Math.round((werte.reduce((a, b) => a + Math.min(1, b), 0) / werte.length) * 100) : 0;
   const g = 48; const dicke = 4; const abstand = 4.6; const aussen = g / 2 - dicke / 2 - 1;
-  return (
-    <Link href="/kompass" className="mini-ringe" aria-label={`Kompass: diese Woche ${schnitt} Prozent`}>
+  const bild = (
       <svg width={g} height={g} viewBox={`0 0 ${g} ${g}`} aria-hidden="true">
         {KONTEN.map((x, i) => {
           const r = aussen - i * abstand; const u = 2 * Math.PI * r; const v = ringe[x] === null ? 0 : Math.min(1, ringe[x]!);
@@ -70,6 +70,7 @@ export function MiniRinge({ ringe }: { ringe: Record<string, number | null>; lev
           );
         })}
       </svg>
-    </Link>
   );
+  if (anzeige) return <span className="mini-ringe" role="img" aria-label={`Diese Woche ${schnitt} Prozent`}>{bild}</span>;
+  return <Link href="/stand" className="mini-ringe" aria-label={`Stand: diese Woche ${schnitt} Prozent`}>{bild}</Link>;
 }

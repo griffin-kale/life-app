@@ -111,7 +111,7 @@ export function GeldSeite({ teil }: { teil?: string }) {
   ) : null;
   return (
     <main className={'wrap' + (teil ? '' : ' breit')}>
-      <TopBar title={teil ? TEILE[teil] : 'Geld'} back={teil ? { label: 'Geld', href: '/geld' } : undefined} />
+      <TopBar title={teil ? TEILE[teil] : 'Geld'} back={teil ? { label: 'Geld', href: '/geld' } : { label: 'Leben', href: '/leben' }} />
       <header className="head"><span className="eyebrow">{teil ? 'Geld' : kw}</span><h1 className="title">{teil ? TEILE[teil] : 'Geld'}<i>.</i></h1></header>
 
       {!teil ? g?.warnungen.map((w) => <p key={w} className="coach-warn">{w}</p>) : null}

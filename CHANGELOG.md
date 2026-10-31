@@ -2,6 +2,20 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.28.0] – 2026-10-31
+
+Neues Menü nach Häufigkeit (Peter, 31.10.2026, Entwürfe „Life Menüstruktur“, Wahl A „Tun, Planen, Leben“).
+
+### Geändert
+- **Leiste: Heute · Plan · + · Leben · Logbuch.** Woche und Ziele sind jetzt „Plan“ mit dem Umschalter Woche | Saison. „Ich“ heißt „Leben“ und zeigt die vier Konten Körper, Ruhe, Geld und Menschen, jedes mit einem direkten Weg (Essen festhalten, Ruhe starten, Ausgabe festhalten, Wer ist dran?). Das Logbuch hat einen eigenen Tab. Einstellungen öffnet der Kreis oben rechts auf den vier Hauptseiten. `/ich` und `/mehr` führen zu Leben.
+- **Deep Work und schnelle Wege sichtbar auf Heute.** Unter dem Cockpit stehen „Deep Work starten“ (mit der einen Sache) und die vier Wege Gedanke, Ausgabe, Essen und Ruhe. Das Haltemenü auf dem Plus bleibt als Abkürzung. Gespeicherte Heute-Listen bekommen den Baustein einmal unter das Cockpit, wer ihn ausschaltet, behält das.
+- **Stand fasst Kompass und Standortbestimmung zusammen.** Oben die Wochenringe mit den Konten zum Aufklappen und dem Wohlbefinden, darunter Baseline, Engpass, Richtung und Etappen. `/kompass` führt zu Stand.
+- **Mac und iPad** zeigen dieselben vier Bereiche, darunter Konten und Stand.
+
+### Repariert
+- **Musik spielt von selbst weiter.** Am Ende eines Stücks startet das nächste, auch wenn das erste Stück zufällig das erste der Liste war (Peter, 31.10.2026: „muss ich grade noch manuell drücken“).
+- Die kleinen Ringe stehen in Zellen nicht mehr als Link im Link.
+
 ## [0.27.0] – 2026-10-31
 
 Liste, Fokus und Rituale in einem Update (Peter, 31.10.2026: „Alles zusammen“). Phase 2 von Life 2.0 ist damit fertig.

@@ -139,7 +139,8 @@ export function Log({ items, from, freshId }: { items: Item[]; from?: string; fr
 }
 
 /** Obere Leiste: unsichtbar, solange der große Titel zu sehen ist; danach Material mit kleinem Titel (Scroll-Edge statt harter Linie). */
-export function TopBar({ title, back }: { title: string; back?: { label: string; href: string } }) {
+/** Obere Leiste. Auf den vier Hauptseiten führt der Kreis rechts zu den Einstellungen (0.28, Peter 31.10.2026). */
+export function TopBar({ title, back, profil }: { title: string; back?: { label: string; href: string }; profil?: boolean }) {
   const router = useRouter();
   const [edge, setEdge] = useState(false);
   const [titled, setTitled] = useState(false);
@@ -153,7 +154,11 @@ export function TopBar({ title, back }: { title: string; back?: { label: string;
     <div className={'topbar' + (edge ? ' edge' : '') + (titled ? ' titled' : '')}>
       {back ? <button type="button" className="back" onClick={goBack}>{Icon.chevronLeft}<span>{back.label}</span></button> : <span />}
       <span className="toptitle" aria-hidden="true">{title}</span>
-      <span />
+      {profil ? (
+        <Link href="/einstellungen" className="tb-profil" aria-label="Einstellungen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="9" r="3.4" /><path d="M5.6 19.2c1-3 3.4-4.6 6.4-4.6s5.4 1.6 6.4 4.6" /></svg>
+        </Link>
+      ) : <span />}
     </div>
   );
 }
