@@ -11,7 +11,7 @@ export async function GET() {
   const { aus, uid } = await mitNutzer(); if (aus) return aus;
   try {
     const [block, heute, test, naechste] = await Promise.all([laufend(uid), fokusHeute(uid), testStand(uid), testNaechste(uid)]);
-    return NextResponse.json({ block, heute, test, naechste });
+    return NextResponse.json({ block, heute, test, naechste, jetzt: Date.now() });
   } catch (e) {
     return NextResponse.json({ error: oeffentlich(e, 'Der Fokus lässt sich gerade nicht laden.', 'fokus') }, { status: 500 });
   }
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       const itemId = typeof b.itemId === 'string' && UUID.test(b.itemId) ? b.itemId : null;
       const musik = b.musik === 'test' ? 'test' : MUSIK.includes(b.musik) ? (b.musik as Musik) : null;
       if (!musik || !Number.isInteger(b.minuten) || !Number.isInteger(b.pause)) return NextResponse.json({ error: 'Ungültige Angaben.' }, { status: 400 });
-      return NextResponse.json({ block: await starten(uid, { itemId, minuten: b.minuten, pause: b.pause, musik }) });
+      return NextResponse.json({ block: await starten(uid, { itemId, minuten: b.minuten, pause: b.pause, musik }), jetzt: Date.now() });
     }
     if (b.aktion === 'ende') {
       const id = Number(b.id);

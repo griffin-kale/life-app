@@ -1346,3 +1346,18 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .fk-spur-h i { display: block; height: 100%; border-radius: 5px; background: var(--k-mental); }
 @media (prefers-reduced-motion: reduce) { .fk-wert { transition: none; } }
 .fk-titel { font-size: clamp(1.6rem, 7vw, 2.2rem); line-height: 1.08; text-wrap: balance; }
+
+/* Wochenrunde (0.27): Hebel bewerten, Ziel ergänzen */
+.wr-hebel { display: grid; gap: 6px; padding: 8px 0; }
+.wr-hebel + .wr-hebel { border-top: 1px solid var(--line); }
+.wr-hkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .9375rem; }
+.wr-hkopf span { min-width: 0; overflow-wrap: anywhere; }
+.wr-hkopf .chipbtn { min-height: 28px; padding: 0 8px; }
+.wr-leer { padding-top: 10px; border-top: 1px solid var(--line); }
+.wr-leer summary { cursor: pointer; font-weight: 600; color: var(--sky); padding: 6px 0; }
+.wr-leer[open] { display: grid; gap: 10px; }
+
+/* Rituale auf Heute (0.27) */
+.rt-karte { align-items: center; }
+.rt-knopf { flex: 0 0 auto; font-style: normal; font-size: .8125rem; font-weight: 600; padding: 7px 12px; border-radius: 999px; background: var(--hero-ink); color: #001D51; }
+@media (max-width: 380px) { .rt-knopf { display: none; } }

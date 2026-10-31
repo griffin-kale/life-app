@@ -8,7 +8,7 @@ import {
 } from '@/lib/fokus-regeln';
 import type { Block } from '@/lib/fokus';
 
-type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null };
+type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null; jetzt: number };
 type ItemKurz = { id: string; titel: string | null; schritt: string | null; text: string; status: string };
 
 /**
@@ -21,6 +21,8 @@ export default function Fokus() {
   const [laenge, setLaenge] = useState(0);
   const [musik, setMusik] = useState<Musik>('klassik');
   const [jetzt, setJetzt] = useState(() => Date.now());
+  // Abstand zur Uhr des Servers: die Startzeit kommt von dort, die Uhr im Gerät kann falsch gehen
+  const [versatz, setVersatz] = useState(0);
   const [bewerten, setBewerten] = useState(false);
   const [bewertung, setBewertung] = useState<Bewertung | null>(null);
   const [erledigt, setErledigt] = useState(false);
@@ -28,7 +30,7 @@ export default function Fokus() {
   const [toast, setToast] = useToast();
   const m = useFokusMusik();
 
-  const laden = useCallback(() => api<Antwort>('/api/fokus').then((x) => { setD(x); return x; }), []);
+  const laden = useCallback(() => api<Antwort>('/api/fokus').then((x) => { setD(x); setVersatz(x.jetzt - Date.now()); return x; }), []);
   useEffect(() => {
     laden().catch((e) => setToast((e as Error).message, 'err'));
     const id = new URLSearchParams(window.location.search).get('item');
@@ -37,7 +39,7 @@ export default function Fokus() {
   useEffect(() => { const t = setInterval(() => setJetzt(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   const b = d?.block ?? null;
-  const ph = b ? phase(Date.parse(b.start), b.minuten, b.pause, jetzt) : null;
+  const ph = b ? phase(Date.parse(b.start), b.minuten, b.pause, jetzt + versatz) : null;
   // In der Pause schweigt die Musik, am Ende fragt Life, wie es lief
   useEffect(() => { if (ph?.phase === 'pause' && m.spielt) m.stop(); }, [ph?.phase, m]);
   useEffect(() => { if (b && ph?.phase === 'fertig' && !bewerten) { m.stop(); setBewerten(true); } }, [b, ph?.phase, bewerten, m]);
@@ -50,8 +52,9 @@ export default function Fokus() {
     m.spielen(gewaehlt); // noch im Tippen, sonst blockt das iPhone den Ton
     setBusy(true);
     try {
-      const r = await api<{ block: Block }>('/api/fokus', { method: 'POST', body: JSON.stringify({ aktion: 'start', itemId: item?.id ?? null, minuten, pause, musik: imTest ? 'test' : musik }) });
+      const r = await api<{ block: Block; jetzt: number }>('/api/fokus', { method: 'POST', body: JSON.stringify({ aktion: 'start', itemId: item?.id ?? null, minuten, pause, musik: imTest ? 'test' : musik }) });
       if (r.block.musik !== gewaehlt) m.spielen(r.block.musik);
+      setVersatz(r.jetzt - Date.now());
       setD({ ...d, block: r.block }); setBewerten(false); setBewertung(null); setErledigt(false);
       laden().catch(() => {});
     } catch (e) { m.stop(); setToast((e as Error).message, 'err'); }
