@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from './ui';
 
 type E = { morgen: boolean; abend: boolean; warnung: boolean; training: boolean; verpasst: boolean; nachmittag: boolean; wochenstart: boolean; morgenZeit: string; abendZeit: string };
-const ARTEN: [keyof E, string][] = [['morgen', 'Morgen-Check-in und Coach'], ['abend', 'Abendfragen'], ['warnung', 'Warnsignale, höchstens eins am Tag'], ['training', 'Training an Trainingstagen'], ['verpasst', 'Aufgabe mit Uhrzeit verpasst'], ['nachmittag', 'Nachmittags-Check um 15 Uhr'], ['wochenstart', 'Wochenstart am Montag um 8:30']];
+const ARTEN: [keyof E, string][] = [['morgen', 'Morgen und Coach'], ['abend', 'Abschluss am Abend'], ['warnung', 'Warnsignale, höchstens eins am Tag'], ['training', 'Training an Trainingstagen'], ['verpasst', 'Aufgabe mit Uhrzeit verpasst'], ['nachmittag', 'Nachmittags-Check um 15 Uhr'], ['wochenstart', 'Wochenrunde am Montag um 8:30']];
 
 const bytes = (b64: string) => { const p = '='.repeat((4 - (b64.length % 4)) % 4); const r = atob((b64 + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
 

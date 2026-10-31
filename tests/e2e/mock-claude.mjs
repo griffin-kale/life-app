@@ -30,6 +30,11 @@ function standort(p) {
     { art: 'engpass', text: 'Zu wenige Erstgespräche', herleitung: 'Ideen und Angebote gibt es genug, es fehlen Gespräche.' },
     { art: 'wochenziel', text: 'Drei Erstgespräche vereinbart' }, { art: 'hack', text: 'darf nicht durch' }] };
 }
+/** Drei feste Hebel und ein Dann-Satz pro angefragtem Ziel. Namen kommen nur als Platzhalter an. */
+function saisonHebel(p) {
+  const ziele = p.split('Ziele:\n')[1].split('\nAntworte')[0].split('\n').map((l) => l.match(/^- (\w+): /)?.[1]).filter(Boolean);
+  return { ziele: ziele.map((b) => ({ bereich: b, hebel: [`Montags ${b}-Block`, `Mittwochs ${b}-Block`, `Freitags ${b}-Rückblick`], dann: 'Mache ich zehn Minuten direkt nach dem Mittag' })) };
+}
 function sortieren(p) {
   const kor = (p.split('So hat Peter zuletzt korrigiert')[1] || '').split('\n\nOffene')[0];
   if (kor) console.log('KORREKTUREN:' + kor.replace(/\n/g, ' | ').slice(0, 400));
@@ -107,7 +112,7 @@ http.createServer((req, res) => {
     const a = bon ? { laden: 'Testmarkt', summe: 23.45, topf: 'Alltag' }
       : geld ? { topf: /Tanken/.test(text) ? 'Familie' : 'Alltag' }
       : essen ? { name: Array.isArray(p) ? 'Nudeln mit Gemüse' : 'Bowl mit Hähnchen', protein_von: 40, protein_bis: 55, kcal_von: 650, kcal_bis: 850, gemuese: true }
-      : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? coachChat(p) || { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
+      : p.startsWith('SAISON HEBEL') ? saisonHebel(p) : p.startsWith('STANDORT') ? standort(p) : p.startsWith('SORTIERLAUF') ? sortieren(p) : p.startsWith('COACH CHAT') ? coachChat(p) || { text: /müde/.test(p) ? 'Dann zuerst zwanzig Minuten NSDR, danach das Angebot.' : 'Fang mit dem Angebot an, dreißig Minuten, Handy weg.' } : p.startsWith('COACH') ? coach(p) : einordnen(p.split('Eintrag (oft diktiert, kann Füllwörter und Fehler enthalten):\n')[1] || '');
     setTimeout(() => {
       // Modelle mit „ohne-zwang“ im Namen lehnen ein erzwungenes Werkzeug ab wie die neueren Claude-Modelle
       if (/ohne-zwang/.test(body.model || '') && (body.tool_choice?.type === 'tool' || body.tool_choice?.type === 'any')) {

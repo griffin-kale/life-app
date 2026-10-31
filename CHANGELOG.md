@@ -2,6 +2,46 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.27.0] – 2026-10-31
+
+Liste, Fokus und Rituale in einem Update (Peter, 31.10.2026: „Alles zusammen“). Phase 2 von Life 2.0 ist damit fertig.
+
+### Neu
+- **Liste auf Heute.** Ersetzt „Danach“: Jetzt mit Balken („2 von 3 geschafft“), gerade Festgehaltenes, solange Claude einordnet, und aus jeder Aufgabe ein Fokusblock. Die ganze Liste mit allen Stapeln steht unter Woche. Kein Punktestand.
+- **Fokus mit Timer.** 25 + 5, 50 + 10 oder 90 + 20 Minuten mit fester Pause. Der Timer rechnet mit der Startzeit und der Uhr des Servers, er stimmt also auch nach dem Schließen der App. Nach jedem Block ein Tipp: zäh, okay oder im Fluss, auf Wunsch „Aufgabe ist erledigt“.
+- **Musik zum Fokus.** Zehn freie Aufnahmen von Musopen (CC0, Bach, Chopin, Albinoni, Beethoven, Brahms, zusammen 54 Minuten), dazu eine Fokus-Welle (dieselbe Musik mit einer schnellen, leisen Lautstärke-Welle wie bei Brain.fm), braunes Rauschen und Stille. Alles kommt vom eigenen Server oder entsteht im Browser.
+- **Musiktest über 14 Tage.** Life wechselt fair zwischen Klassik, Fokus-Welle und Stille und zeigt, mit welcher Musik du am häufigsten im Fluss warst. Ab drei Blöcken pro Art und mit klarem Abstand nennt Life eine Gewinnerin, sonst sagt es ehrlich: kein klarer Unterschied.
+- **Morgen und Abschluss als Blatt.** Morgens: wie erholt du bist, was von gestern übrig ist, die eine Sache. Abends: abhaken, Offenes verteilen, wie der Tag war. Auf Heute steht dafür eine Karte, die Mitteilungen öffnen das Blatt direkt.
+- **Wochenrunde.** Ersetzt Wochenstart und Wochenbogen: Rückblick mit Fokusminuten, Hebel der Saison bewerten (auf Kurs, anpassen, daneben), Hebel dazunehmen oder entfernen, ein Ziel in einem freien Bereich ergänzen, Engpass, drei Dinge, Geld-Check, alle zwei Wochen „Wie geht es dir?“ mit WHO-5, Parkplatz.
+
+### Geändert
+- **Kompass ohne Punkte.** Die fünf Ringe bleiben, Level, Punkte und Meilensteine samt Mitteilungen fallen weg. Die Daten bleiben gespeichert.
+- Der Wochenbogen steht nicht mehr auf Woche, die Fragebögen nicht mehr auf Heute.
+
+### Technik
+- Datenbank-Schritt 6: Tabelle `fokus_bloecke` mit `user_id`.
+- `lib/fokus-regeln.ts`, `lib/fokus.ts`, `GET`/`POST /api/fokus`, `PATCH`/`DELETE /api/saison/hebel/[id]`, `POST /api/saison/ziele`, `POST /api/saison/ziele/[id]`. Musik unter `public/musik` mit Quellen in `public/musik/QUELLEN.md`.
+
+### Tests
+- Unit-Tests für Timer, Musiktest-Wechsel und Auswertung, Liste statt Danach. Ende-zu-Ende: Liste, Morgen, Abschluss, Wochenrunde mit WHO-5, Hebel bewerten und ändern, Fokus mit Bewertung und Musiktest, Kompass ohne Punkte, Musik nur mit Anmeldung, die Zweite sieht Peters Fokus nicht.
+
+## [0.26.0] – 2026-10-29
+
+Phase 2 von Life 2.0, erster Teil: Saison und Ziele (Peter, 29.10.2026: „A Zielkarten“, „Eins pro Bereich“, „Blatt in drei Schritten“, „Ringe bleiben, Punkte gehen“).
+
+### Neu
+- **Saison mit zwölf Wochen.** Unter Ziele legst du eine Saison an: Start an einem Montag, ein Leitsatz, höchstens ein Ziel pro Bereich (Geschäft, Zeit, Körper, Ruhe und Geist, Menschen, Geld), je bis zu drei Hebel und ein Wenn-dann-Plan.
+- **Blatt „Neue Saison“ zum Antippen.** Vorschläge kommen aus „Dein Stand“, aus deiner bisherigen Zielliste und aus festen Ideen pro Bereich. Claude schlägt pro Ziel drei Hebel und einen Dann-Satz vor und sieht dabei nur Platzhalter. Eigene Worte gehen überall.
+- **Zielkarten.** Jede Karte zeigt Bereich, Ziel, Stand mit Zählern (+1, −1) und ob du im Plan bist, die Hebel mit ihrer letzten Bewertung und den Wenn-dann-Satz. Karten ohne Handlungsbedarf klappen zu.
+- **Die Saison gilt überall.** Einordnen, Sortieren, Coach und die Ziel-Auswahl im Eintrag nehmen die Saisonziele. Benennst du ein Ziel um, ziehen die Einträge mit. Die Einstellungen zeigen die Saisonziele statt des Textfelds.
+
+### Technik
+- Datenbank-Schritt 5: Tabellen `saisons`, `saison_ziele`, `hebel`, `hebel_wochen`, alle mit `user_id`.
+- `lib/saison-regeln.ts` (reine Regeln), `lib/saison.ts`, `GET`/`POST /api/saison`, `POST /api/saison/hebel`, `PATCH /api/saison/ziele/[id]`.
+
+### Tests
+- Unit-Tests für Zeitraum, Prüfung des Blatts, Wenn-dann-Satz, Vorschläge und Claudes Hebel. Ende-zu-Ende: Blatt durchklicken, Zielkarten, Zähler, Umbenennen, zweite Saison abgelehnt, die Zweite sieht Peters Saison nicht.
+
 ## [0.25.2] – 2026-10-28
 
 ### Behoben

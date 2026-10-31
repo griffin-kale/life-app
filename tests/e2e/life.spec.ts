@@ -49,7 +49,9 @@ test('Schutz: ohne Anmeldung keine Daten, falscher Schlüssel kein Erfassen, Sic
   expect((await request.get('/api/items')).status()).toBe(401);
   expect((await request.get('/api/checkin')).status()).toBe(401);
   expect((await request.get('/api/coach')).status()).toBe(401);
-  for (const u of ['/api/stand', '/api/stand/1', '/api/kalender']) expect((await request.get(u)).status(), u).toBe(401);
+  for (const u of ['/api/stand', '/api/stand/1', '/api/kalender', '/api/saison', '/api/fokus']) expect((await request.get(u)).status(), u).toBe(401);
+  // Die Musik liegt hinter der Anmeldung, wie alles andere
+  expect((await request.get('/musik/m01.m4a', { maxRedirects: 0 })).status()).not.toBe(200);
   expect((await request.post('/api/kalender', { headers: H })).status()).toBe(401);
   // Ein Challenge-Cookie aus der offenen Anmeldung darf nie als Sitzung gelten
   const opt = await request.post('/api/auth/login-options', { headers: H });
@@ -147,10 +149,13 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await warteBisRuhig(page);
     await page.reload();
     await warteBisRuhig(page);
-    // The ONE Thing: eine Sache groß, die anderen zwei zugeklappt unter „Danach“
+    // The ONE Thing: eine Sache groß, die anderen zwei in der Liste mit Fortschritt und Fokus (0.27)
     await expect(page.locator('section[aria-label="Die eine Sache"] .es-titel')).toContainText(/Newsletter|Behörden-Geschichten/);
-    await expect(page.locator('section[aria-label="Danach"] .ak-zeile')).toContainText('2');
-    await expect(page.locator('section[aria-label="Danach"] .task')).toHaveCount(0);
+    const liste = page.locator('section[aria-label="Liste"]');
+    await expect(liste.locator('.li-stand').first()).toHaveText('0 von 3 geschafft');
+    await expect(liste.locator('.task')).toHaveCount(2);
+    await expect(liste.getByRole('link', { name: /^Fokus starten/ })).toHaveCount(2);
+    await expect(page.locator('section[aria-label="Danach"]')).toHaveCount(0);
     await expect(page.locator('.tgrund')).toHaveCount(0);
     // Der Engpass steht als eine Zeile über der einen Sache, ohne Erklärung
     await expect(page.locator('.engpass-zeile')).not.toContainText('Zahlt ein');
@@ -166,11 +171,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.locator('.toast button').click();
     await expect(sache.locator('.es-titel')).toHaveText(erste);
     // Eine andere Sache nach vorn holen und wieder zurück
-    await page.locator('section[aria-label="Danach"] .ak-zeile').click();
-    const zweite = (await page.locator('section[aria-label="Danach"] .ttitle').first().innerText()).trim();
-    await page.locator('section[aria-label="Danach"] .task').first().getByRole('button', { name: 'Zur einen Sache' }).click();
+    const zweite = (await page.locator('section[aria-label="Liste"] .ttitle').first().innerText()).trim();
+    await page.locator('section[aria-label="Liste"] .task').first().getByRole('button', { name: 'Zur einen Sache' }).click();
     await expect(sache.locator('.es-titel')).toHaveText(zweite);
-    await page.locator('section[aria-label="Danach"] .task', { hasText: erste }).getByRole('button', { name: 'Zur einen Sache' }).click();
+    await page.locator('section[aria-label="Liste"] .task', { hasText: erste }).getByRole('button', { name: 'Zur einen Sache' }).click();
     await expect(sache.locator('.es-titel')).toHaveText(erste);
   });
 
@@ -195,10 +199,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('.ttitle', { hasText: 'KGSt' })).toHaveCount(1);
     await page.goto('/woche/ziele');
     await expect(page.locator('main')).toContainText('Plattform');
-    // Ziele als eigener Tab: Ziele mit Fortschritt, Kompass und Dein Stand
+    // Ziele als eigener Tab: ohne Saison die bisherigen Ziele mit Fortschritt, Kompass und Dein Stand
     await page.locator('.tabbar').getByRole('link', { name: 'Ziele' }).click();
     await page.waitForURL('/ziele');
-    await expect(page.locator('section[aria-label="Deine Ziele"]')).toContainText('Plattform');
+    await expect(page.locator('section[aria-label="Neue Saison"]')).toContainText('Plattform');
     await expect(page.locator('main')).toContainText('Dein Stand');
     expect((await page.request.get('/woche/gibtsnicht')).status()).toBe(404);
   });
@@ -224,25 +228,40 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
   });
 
   await test.step('Keine Seite scrollt seitlich auf 390 px', async () => {
-    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/ich', '/ziele', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
+    for (const p of ['/', '/woche', '/koerper', '/koerper/training', '/koerper/ruhe', '/koerper/nacht', '/koerper/bewegung', '/koerper/essen', '/einstellungen/heute', '/geld', '/geld/monatlich', '/geld/sparen', '/kompass', '/menschen', '/ich', '/ziele', '/ziele/neu', '/fokus', '/morgen', '/abschluss', '/archiv', '/einstellungen', '/wochenstart', '/stand', '/stand/1']) {
       await page.goto(p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }
   });
 
-  await test.step('Wochenbogen auf „Woche“: nur klickbar, Pflichtfragen zuerst', async () => {
+  await test.step('Morgen und Abschluss als Blatt: zum Antippen, speichern als Check-in', async () => {
+    // Der Wochenbogen steht nicht mehr auf „Woche“, er läuft alle zwei Wochen in der Wochenrunde
     await page.goto('/woche');
-    const bogen = page.locator('section[aria-label="Wochenbogen"]');
-    await expect(bogen).toContainText('WHO-5');
-    await expect(bogen.getByRole('button', { name: 'Fertig' })).toBeDisabled();
-    for (const g of await bogen.getByRole('radiogroup').all()) await g.getByRole('radio').nth(3).click();
-    await bogen.getByRole('button', { name: 'kleiner geworden' }).click();
-    await bogen.getByRole('button', { name: 'Etwas dazu sagen' }).first().click();
-    await bogen.locator('textarea').first().fill('Erfundene Testnotiz');
-    await bogen.getByRole('button', { name: 'Fertig' }).click();
-    // Wohlbefinden steht nur da, wenn es niedrig ist (60 ist es nicht)
-    await expect(bogen).toHaveCount(0);
-    await expect(page.locator('main')).not.toContainText('60 von 100');
+    await expect(page.locator('section[aria-label="Wochenbogen"]')).toHaveCount(0);
+    await page.goto('/morgen');
+    const m = page.getByRole('group', { name: 'Morgen' });
+    await m.getByRole('radiogroup', { name: 'Wie erholt fühlst du dich?' }).getByRole('radio', { name: 'gut' }).click();
+    await expect(m.getByRole('heading', { name: 'Was von gestern übrig ist' })).toBeInViewport();
+    await m.getByRole('button', { name: 'Weiter' }).click();
+    await expect(m.getByRole('radiogroup', { name: 'Die eine Sache' }).getByRole('radio').first()).toHaveAttribute('aria-checked', 'true');
+    await m.getByRole('button', { name: 'Tag starten' }).click();
+    await page.waitForURL('/');
+    await expect(page.locator('.toast')).toContainText('Der Tag steht');
+    expect((await (await page.request.get('/api/checkin')).json()).erledigt.morgen).toBe(true);
+    await page.goto('/abschluss');
+    const a = page.getByRole('group', { name: 'Abschluss' });
+    await expect(a.locator('.task').first()).toBeVisible();
+    await a.getByRole('button', { name: 'Weiter' }).click();
+    await a.getByRole('button', { name: 'Weiter' }).click();
+    await a.getByRole('button', { name: 'Tag abschließen' }).click();
+    await expect(page.locator('.toast')).toContainText('Tipp an, wie der Tag war');
+    await a.getByRole('radiogroup', { name: 'Wie war der Tag?' }).getByRole('radio', { name: 'gut' }).click();
+    await a.getByRole('group', { name: 'Was hat Kraft gekostet?' }).getByRole('button', { name: 'Termine' }).click();
+    await a.getByLabel('Drei gute Dinge von heute').fill('Erfundener guter Moment');
+    await a.getByRole('button', { name: 'Tag abschließen' }).click();
+    await page.waitForURL('/');
+    await expect(page.locator('.toast')).toContainText('Der Tag ist zu');
+    expect((await (await page.request.get('/api/checkin')).json()).erledigt.abend).toBe(true);
   });
 
   await test.step('Morgen und Abend per Schnittstelle, Coach antwortet mit echten Namen', async () => {
@@ -458,16 +477,18 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     expect(issues[0].labels).toContain('bug');
   });
 
-  await test.step('Kompass: fünf Ringe, Level, Meilensteine aus echten Daten', async () => {
+  await test.step('Kompass: fünf Ringe aus echten Daten, ohne Punkte, Level und Meilensteine', async () => {
     await page.goto('/kompass');
     await expect(page.locator('.ringreihe .ringzelle')).toHaveCount(5);
-    // Konten zugeklappt: Ring, Prozent, Level. Details eine Ebene tiefer
+    // Konten zugeklappt: Ring und Prozent. Details eine Ebene tiefer
     await expect(page.locator('details[aria-label="Körper"] .konto-mehr')).toBeHidden();
     await page.locator('details[aria-label="Körper"] summary').click();
     await expect(page.locator('details[aria-label="Körper"]')).toContainText('Kraft');
     await expect(page.locator('details[aria-label="Körper"]')).toContainText('1 / 3');
-    await expect(page.locator('details[aria-label="Meilensteine"] .meilenstein.an')).toContainText(['Erste Krafteinheit']);
-    await expect(page.locator('main')).toContainText('Punkte bis Level');
+    // Ringe bleiben, Punkte gehen (Peter, 29.10.2026)
+    await expect(page.locator('details[aria-label="Meilensteine"]')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText('Level');
+    await expect(page.locator('main')).not.toContainText('Punkte');
     await page.goto('/ziele');
     await expect(page.getByRole('link', { name: /Kompass/ })).toBeVisible();
   });
@@ -747,7 +768,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     }
   });
 
-  await test.step('Wochenstart: Rückblick, Engpass, drei Dinge, Parkplatz, seitenweise', async () => {
+  await test.step('Wochenrunde: Rückblick, Engpass, drei Dinge, Geld, WHO-5 alle zwei Wochen, Parkplatz', async () => {
     expect((await (await page.request.get('/api/coach')).json()).wochenstartOffen).toBe(true);
     await page.goto('/woche');
     await page.locator('.ws-banner').click();
@@ -762,17 +783,136 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await drei.nth(1).click();
     await expect(page.locator('main')).toContainText('2 von 3 gewählt');
     await page.getByRole('button', { name: 'Weiter' }).click();
+    await expect(page.locator('main')).toContainText('Töpfen im Rahmen');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    // Noch nie ausgefüllt, also fällig: WHO-5 und die fünf Konten, nur zum Antippen
+    const wie = page.locator('.ws-seite', { has: page.getByRole('heading', { name: 'Wie geht es dir?' }) });
+    await expect(wie).toContainText('WHO-5');
+    for (const g of await wie.getByRole('radiogroup').all()) await g.getByRole('radio').nth(3).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.locator('main')).toContainText('Erfundener Engpass der Testwoche');
-    await page.getByRole('button', { name: 'Wochenstart abschließen' }).click();
+    await expect(page.locator('main')).toContainText('Wie geht es dir: beantwortet');
+    await page.getByRole('button', { name: 'Wochenrunde abschließen' }).click();
     await page.waitForURL(/\/woche/);
-    await expect(page.locator('.toast')).toContainText('Wochenstart abgeschlossen');
+    await expect(page.locator('.toast')).toContainText('Wochenrunde abgeschlossen');
+    expect((await (await page.request.get('/api/checkin')).json()).who5).toBe(60);
+    expect((await (await page.request.get('/api/wochenstart')).json()).who5Faellig).toBe(false);
     await expect(page.locator('section[aria-label="Drei Dinge der Woche"] .cell')).toHaveCount(2);
     await expect(page.locator('.ws-banner')).toHaveCount(0);
     await page.goto('/');
     await expect(page.locator('.engpass-zeile')).toContainText('Erfundener Engpass');
     expect((await (await page.request.get('/api/coach')).json()).wochenstartOffen).toBe(false);
     expect(await (await page.request.post('/api/wochenstart', { headers: H, data: { aktion: 'fokus', ids: ['x; drop table'] } })).json()).toMatchObject({ ids: [] });
+  });
+
+  await test.step('Saison: Blatt mit Zeitraum, Zielen, Hebeln von Claude und Wenn-dann, danach Zielkarten', async () => {
+    await page.goto('/ziele');
+    // Ohne Saison: Einstieg ins Blatt, die bisherige Liste steht darunter
+    await expect(page.locator('main')).toContainText('Bisherige Ziele');
+    await page.getByRole('link', { name: /Neue Saison anlegen/ }).click();
+    await expect(page).toHaveURL(/\/ziele\/neu$/);
+    const blatt = page.getByRole('group', { name: 'Neue Saison' });
+    const weiter = () => blatt.getByRole('button', { name: 'Weiter' }).click();
+    // 1 Zeitraum und Leitsatz: der nächste Montag ist vorgewählt
+    await expect(blatt.getByRole('radiogroup', { name: 'Start' }).getByRole('radio').first()).toHaveAttribute('aria-checked', 'true');
+    await blatt.getByRole('radio', { name: 'Weniger, aber besser.' }).click();
+    await weiter();
+    // 2 Ziele: Vorschläge aus der alten Liste, feste Ideen, eigene Worte
+    await blatt.getByRole('radiogroup', { name: 'Geschäft' }).getByRole('radio', { name: 'Plattform' }).click();
+    await blatt.getByLabel('Zielzahl Geschäft').fill('8');
+    await blatt.getByRole('radiogroup', { name: 'Körper' }).getByRole('radio', { name: 'Dreimal pro Woche Kraft' }).click();
+    await blatt.getByLabel('Eigenes Ziel Menschen').fill('Erfundener Spieleabend im Monat');
+    await blatt.getByLabel('Eigenes Ziel Menschen').press('Enter');
+    await expect(blatt.getByRole('radiogroup', { name: 'Menschen' }).getByRole('radio', { name: 'Erfundener Spieleabend im Monat' })).toHaveAttribute('aria-checked', 'true');
+    await weiter();
+    // 3 Hebel: Claudes Vorschläge sind vorgewählt, höchstens drei, eigener Dann-Satz geht
+    const hebel = blatt.getByRole('group', { name: 'Hebel für Dreimal pro Woche Kraft' });
+    await expect(hebel.getByRole('button', { name: 'Montags koerper-Block' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(hebel.getByRole('button', { name: 'Freitags koerper-Rückblick' })).toHaveAttribute('aria-pressed', 'true');
+    await hebel.getByRole('button', { name: 'Freitags koerper-Rückblick' }).click();
+    await blatt.getByLabel('Eigener Hebel für Dreimal pro Woche Kraft').fill('Sonntags Mobility');
+    await blatt.getByLabel('Eigener Hebel für Dreimal pro Woche Kraft').press('Enter');
+    await expect(blatt.getByLabel('Dann-Plan für Plattform')).toHaveValue('Mache ich zehn Minuten direkt nach dem Mittag');
+    await expect(blatt.locator('.sz-wenn').first()).toContainText('Wenn der Tag zu voll wird, dann mache ich zehn Minuten direkt nach dem Mittag.');
+    await weiter();
+    // 4 Fertig
+    await blatt.getByRole('button', { name: 'Saison anlegen' }).click();
+    await expect(page).toHaveURL(/\/ziele$/);
+    await expect(page.locator('.sz-saison')).toContainText('Weniger, aber besser.');
+    await expect(page.locator('.sz-ziel')).toHaveCount(3);
+    const kraft = page.locator('details[aria-label="Dreimal pro Woche Kraft"]');
+    await expect(kraft.locator('.sz-hebel li')).toHaveText([/Montags koerper-Block/, /Mittwochs koerper-Block/, /Sonntags Mobility/]);
+    await expect(page.locator('.sz-leer')).toContainText('Zeit, Ruhe und Geist, Geld');
+    const platt = page.locator('details[aria-label="Plattform"]');
+    await expect(platt).toContainText('0 von 8');
+    await platt.getByRole('button', { name: 'Plattform: einen mehr' }).click();
+    await expect(platt).toContainText('1 von 8');
+    // Die Saison gilt jetzt für Claude und die Auswahl im Eintrag, die Einstellungen zeigen sie statt des Textfelds
+    expect((await (await page.request.get('/api/settings')).json()).saisonZiele).toEqual(['Plattform', 'Dreimal pro Woche Kraft', 'Erfundener Spieleabend im Monat']);
+    await page.goto('/einstellungen');
+    await expect(page.locator('#ziele')).toHaveCount(0);
+    await expect(page.locator('main')).toContainText('Deine Ziele kommen jetzt aus der Saison');
+    // Umbenennen zieht Einträge mit, eine zweite Saison und kaputte Eingaben lehnt Life ab
+    const sa = (await (await page.request.get('/api/saison')).json()).saison;
+    const pId = sa.ziele.find((z: { titel: string }) => z.titel === 'Plattform').id;
+    expect((await page.request.patch(`/api/saison/ziele/${pId}`, { headers: H, data: { titel: 'Plattform wächst' } })).status()).toBe(200);
+    expect((await page.request.patch('/api/saison/ziele/999999', { headers: H, data: { delta: 1 } })).status()).toBe(404);
+    expect((await page.request.post('/api/saison', { headers: H, data: { start: sa.start, ziele: [{ bereich: 'zeit', titel: 'Zweite Saison' }] } })).status()).toBe(409);
+    expect((await page.request.post('/api/saison', { headers: H, data: { start: '2026-11-03', ziele: [{ bereich: 'zeit', titel: 'Kein Montag' }] } })).status()).toBe(400);
+    // Wochenrunde (0.27): Hebel bewerten, Hebel dazu und weg, Ziel in einem freien Bereich ergänzen
+    const kraftZiel = sa.ziele.find((z: { titel: string }) => z.titel === 'Dreimal pro Woche Kraft');
+    const h0 = kraftZiel.hebel[0].id;
+    expect((await page.request.patch(`/api/saison/hebel/${h0}`, { headers: H, data: { bewertung: 'anpassen' } })).status()).toBe(200);
+    expect((await page.request.patch(`/api/saison/hebel/${h0}`, { headers: H, data: { bewertung: 'quatsch' } })).status()).toBe(400);
+    expect((await page.request.post(`/api/saison/ziele/${kraftZiel.id}`, { headers: H, data: { titel: 'Vierter Hebel' } })).status()).toBe(409);
+    expect((await page.request.delete(`/api/saison/hebel/${kraftZiel.hebel[2].id}`, { headers: H })).status()).toBe(200);
+    expect((await page.request.post(`/api/saison/ziele/${kraftZiel.id}`, { headers: H, data: { titel: 'Freitags Kraft' } })).status()).toBe(200);
+    expect((await page.request.post('/api/saison/ziele', { headers: H, data: { bereich: 'zeit', titel: 'Zwei Fokusblöcke pro Tag' } })).status()).toBe(200);
+    expect((await page.request.post('/api/saison/ziele', { headers: H, data: { bereich: 'zeit', titel: 'Doppelt' } })).status()).toBe(409);
+    await page.goto('/ziele');
+    await expect(page.locator('.sz-ziel')).toHaveCount(4);
+    const kraftKarte = page.locator('details[aria-label="Dreimal pro Woche Kraft"]');
+    await expect(kraftKarte.locator('.sz-hebel li').first()).toContainText('anpassen');
+    await expect(kraftKarte.locator('.sz-hebel li').last()).toContainText('Freitags Kraft');
+    if (process.env.SCREENSHOTS) for (const [p2, n] of [['/ziele', 'ziele-saison']] as const) {
+      await page.goto(p2); await page.waitForTimeout(400);
+      await page.screenshot({ path: `test-results/design/${n}.png`, fullPage: true });
+    }
+  });
+
+  await test.step('Fokus: Block mit Timer und Musik, Bewertung danach, Musiktest wechselt fair', async () => {
+    const h = await (await page.request.get('/api/heute')).json();
+    const aufgabe = h.items.find((i: { stapel: string; status: string }) => i.stapel === 'jetzt' && i.status !== 'erledigt');
+    await page.goto(`/fokus?item=${aufgabe.id}`);
+    await page.getByRole('radiogroup', { name: 'Musik' }).getByRole('radio', { name: 'Stille' }).click();
+    await page.getByRole('button', { name: 'Fokus starten' }).click();
+    await expect(page.getByRole('timer')).toContainText(/2[45]:\d\d/);
+    const lauf = (await (await page.request.get('/api/fokus')).json()).block;
+    expect(lauf).toMatchObject({ minuten: 25, pause: 5, musik: 'stille', itemId: aufgabe.id, test: false });
+    // Ein zweiter Block gleichzeitig und erfundene Längen gehen nicht
+    expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'stille' } })).status()).toBe(409);
+    await page.getByRole('button', { name: 'Block beenden' }).click();
+    await page.getByRole('radiogroup', { name: 'Wie gut ging es' }).getByRole('radio', { name: 'im Fluss' }).click();
+    await page.getByRole('button', { name: 'Fertig' }).click();
+    await expect(page.locator('.toast')).toContainText('Festgehalten: im Fluss');
+    await expect(page.locator('.head .eyebrow')).toContainText('Heute 1 Block');
+    expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 30, pause: 5, musik: 'stille' } })).status()).toBe(409);
+    expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'techno' } })).status()).toBe(400);
+    // Musiktest: Life wählt, erst Klassik, dann Fokus-Welle
+    await page.getByRole('button', { name: 'Musiktest starten' }).click();
+    await expect(page.locator('section[aria-label="Musiktest"]')).toContainText('Tag 1 von 14');
+    await expect(page.locator('section[aria-label="Fokus starten"]')).toContainText('Dein Musiktest wählt: Klassik');
+    const t1 = (await (await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'test' } })).json()).block;
+    expect(t1).toMatchObject({ musik: 'klassik', test: true });
+    expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'ende', id: t1.id, bewertung: 'okay' } })).status()).toBe(200);
+    expect((await (await page.request.get('/api/fokus')).json()).naechste).toBe('welle');
+    expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'ende', id: t1.id, bewertung: 'super' } })).status()).toBe(400);
+    // Die Musik kommt vom eigenen Server, in Stücken abrufbar
+    const m = await page.request.get('/musik/m01.m4a', { headers: { range: 'bytes=0-99' } });
+    expect([200, 206]).toContain(m.status());
+    expect(m.headers()['content-type']).toContain('audio/mp4');
+    if (process.env.SCREENSHOTS) { await page.goto('/fokus'); await page.waitForTimeout(400); await page.screenshot({ path: 'test-results/design/fokus.png', fullPage: true }); }
   });
 
   await test.step('Abmelden sperrt die Daten, auch für ein kopiertes Cookie, Face ID öffnet sie wieder', async () => {
@@ -944,6 +1084,19 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
   expect((await Z.put('/api/settings', { headers: H, data: { kontext: 'Engpass: Zweitengpass ohne Bezug' } })).status()).toBe(200);
   expect((await (await P.get('/api/settings')).json()).kontext).not.toContain('Zweitengpass');
   expect((await (await Z.get('/api/settings')).json()).kontext).toContain('Zweitengpass');
+
+  // Die Saison gehört dem eigenen Menschen: die Zweite sieht keine und kann Peters Ziele nicht zählen
+  const ps = (await (await P.get('/api/saison')).json()).saison;
+  expect((await (await Z.get('/api/saison')).json()).saison).toBeNull();
+  if (ps) expect((await Z.patch(`/api/saison/ziele/${ps.ziele[0].id}`, { headers: H, data: { delta: 1 } })).status()).toBe(404);
+
+  // Fokusblöcke gehören dem eigenen Menschen
+  const pf = await (await P.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'stille' } })).json();
+  if (pf.block) {
+    expect((await Z.post('/api/fokus', { headers: H, data: { aktion: 'ende', id: pf.block.id, bewertung: 'zaeh' } })).status()).toBe(404);
+    expect((await (await Z.get('/api/fokus')).json()).block).toBeNull();
+    await P.post('/api/fokus', { headers: H, data: { aktion: 'ende', id: pf.block.id, bewertung: null } });
+  }
 
   // Geld hängt am eigenen Haushalt
   expect((await (await Z.get('/api/geld')).json()).haushalt).toBe('zweiter');

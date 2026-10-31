@@ -59,7 +59,7 @@ export default function StandSeite() {
         <section className="gsec" aria-label="Woche und Tag">
           <h2 className="glabel">Diese Woche und heute</h2>
           <div className="group">
-            <div className="cell static st-zeile"><em>Woche</em><span>{r.wochenziel || leer('Setzt du in Etappe 3 oder im Wochenstart')}</span></div>
+            <div className="cell static st-zeile"><em>Woche</em><span>{r.wochenziel || leer('Setzt du in Etappe 3 oder in der Wochenrunde')}</span></div>
             <div className="cell static st-zeile"><em>Heute</em><span>{r.heute || leer('Claude setzt morgens „Jetzt dran“')}</span></div>
           </div>
           <p className="gnote">Alle zwölf Wochen fragt der Coach Etappe 1 nochmal ab, dann siehst du hier, was sich bewegt hat.</p>
