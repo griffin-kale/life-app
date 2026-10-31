@@ -1042,7 +1042,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     // Sperren: ohne Face ID kommt nichts mehr
     await page.getByRole('button', { name: 'Sperren' }).click();
     await expect(page.getByRole('button', { name: 'Mit Face ID öffnen' })).toBeVisible();
-    expect((await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
+    // Das Schließen des Riegels läuft im Hintergrund, deshalb kurz warten
+    await expect.poll(async () => (await page.request.get('/api/ablage/eintraege')).status()).toBe(403);
     expect(await (await page.request.get('/api/ablage')).json()).toEqual({ eingerichtet: true, offen: false });
     // Falsche Passphrase scheitert, Wiederherstellungsschlüssel öffnet und setzt eine neue Passphrase
     await page.getByRole('button', { name: 'Mit Face ID öffnen' }).click();

@@ -16,8 +16,8 @@ import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
 import { CockpitKacheln, KontenHeute, Tagesstreifen, useCockpit } from './cockpit';
 
-/** Auf iPad und Mac stehen diese Bausteine rechts unter dem Coach, alles zum Tun links. */
-const RECHTS: Baustein[] = ['streifen', 'konten', 'empfohlen', 'kalender', 'koerper', 'geld', 'menschen'];
+/** Auf iPad und Mac steht rechts unter dem Coach nur, was in den Tag passt. Alles andere links, damit die Seite nicht scrollt (Peter, 31.10.2026). */
+const RECHTS: Baustein[] = ['streifen', 'kalender'];
 const uhrBerlin = (iso: string) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
@@ -221,7 +221,7 @@ export default function Heute() {
   const reihe = bausteine.filter((b) => b !== 'kompass');
 
   return (
-    <main className="wrap breit">
+    <main className={'wrap breit' + (breit ? ' heute-desk' : '')}>
       <TopBar title="Heute" profil />
       <header className="head">
         <span className="eyebrow">{today}</span>
@@ -231,7 +231,7 @@ export default function Heute() {
       {breit ? (
         <div className="heute-spalten">
           <div className="spalte">{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
-          <div className="spalte">
+          <div className="spalte spalte-rechts">
             <aside className="hero coach coach-panel" aria-label="Coach">{coachInhalt}</aside>
             {reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
           </div>
