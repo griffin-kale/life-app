@@ -38,7 +38,7 @@ export default function Ich() {
       </section>
       <section className="gsec">
         <div className="group">
-          <Link className="cell" href="/fokus"><span className="lbl">Fokus und Musiktest</span>{Icon.chevronRight}</Link>
+          <Link className="cell" href="/fokus"><span className="lbl">Deep Work und Musiktest</span>{Icon.chevronRight}</Link>
           <Link className="cell" href="/einstellungen"><span className="lbl">Einstellungen</span>{Icon.chevronRight}</Link>
         </div>
       </section>

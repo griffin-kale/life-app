@@ -30,7 +30,7 @@ export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, lea
         <ul className="tasks group">
           {offen.map((it) => (
             <TaskRow key={it.id} it={it} onToggle={() => onToggle(it)} leaving={leaving === it.id}>
-              <Link href={`/fokus?item=${it.id}`} className="chipbtn" aria-label={`Fokus starten: ${taskTitle(it)}`}>{Icon.play}Fokus</Link>
+              <Link href={`/fokus?item=${it.id}`} className="chipbtn" aria-label={`Deep Work: ${taskTitle(it)}`}>{Icon.play}Deep Work</Link>
               <button type="button" className="chipbtn" onClick={() => onVor(it)}>{Icon.up}Zur einen Sache</button>
             </TaskRow>
           ))}

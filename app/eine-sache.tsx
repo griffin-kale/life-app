@@ -26,6 +26,7 @@ export function EineSache({ it, frei, leaving, onErledigt, onZeit, onSpaeter, on
         : frei ? <button type="button" className="es-frei" aria-label={`Im Kalender frei von ${frei.von} bis ${frei.bis}, als Uhrzeit setzen`} onClick={() => onZeit(frei.von)}>{frei.von}–{frei.bis} frei</button> : null}
       {it.wenn ? <p className="es-wenn">{it.wenn}</p> : null}
       <div className="es-knoepfe">
+        <Link href={`/fokus?item=${it.id}`} className="es-dw" aria-label={`Deep Work: ${titel}`}>{Icon.play}Deep Work</Link>
         <button type="button" className="es-ok" onClick={onErledigt}>{Icon.check}Erledigt</button>
         <button type="button" className="es-mehr" aria-label="Mehr zu dieser Sache" aria-haspopup="dialog" onClick={() => setMenue(true)}>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="18.5" cy="12" r="1.8" /></svg>

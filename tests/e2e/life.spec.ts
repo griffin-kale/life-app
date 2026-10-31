@@ -154,7 +154,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const liste = page.locator('section[aria-label="Liste"]');
     await expect(liste.locator('.li-stand').first()).toHaveText('0 von 3 geschafft');
     await expect(liste.locator('.task')).toHaveCount(2);
-    await expect(liste.getByRole('link', { name: /^Fokus starten/ })).toHaveCount(2);
+    await expect(liste.getByRole('link', { name: /^Deep Work/ })).toHaveCount(2);
+    await expect(page.locator('section[aria-label="Die eine Sache"]').getByRole('link', { name: /^Deep Work/ })).toBeVisible();
     await expect(page.locator('section[aria-label="Danach"]')).toHaveCount(0);
     await expect(page.locator('.tgrund')).toHaveCount(0);
     // Der Engpass steht als eine Zeile über der einen Sache, ohne Erklärung
@@ -558,6 +559,7 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up();
     const schnell = page.getByRole('dialog', { name: 'Schnell festhalten' });
     await expect(schnell.getByRole('button')).toHaveCount(6);
+    await expect(schnell.getByRole('button').first()).toHaveText('Deep Work');
     if (process.env.SCREENSHOTS) await page.screenshot({ path: 'test-results/design/leiste-plus.png' });
     await page.keyboard.press('Escape');
     await expect(schnell).toHaveCount(0);
@@ -881,28 +883,42 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     }
   });
 
-  await test.step('Fokus: Block mit Timer und Musik, Bewertung danach, Musiktest wechselt fair', async () => {
-    const h = await (await page.request.get('/api/heute')).json();
-    const aufgabe = h.items.find((i: { stapel: string; status: string }) => i.stapel === 'jetzt' && i.status !== 'erledigt');
-    await page.goto(`/fokus?item=${aufgabe.id}`);
-    await page.getByRole('radiogroup', { name: 'Musik' }).getByRole('radio', { name: 'Stille' }).click();
-    await page.getByRole('button', { name: 'Fokus starten' }).click();
-    await expect(page.getByRole('timer')).toContainText(/2[45]:\d\d/);
+  await test.step('Deep Work: ein Bildschirm mit Timer, Sache, Termin, Musik, Gedanke parken, Bewertung, Musiktest', async () => {
+    // Von der einen Sache in den Modus, ohne Seitenleiste und Leiste
+    await page.goto('/');
+    const sache = (await page.locator('section[aria-label="Die eine Sache"] .es-titel').innerText()).trim();
+    await page.locator('section[aria-label="Die eine Sache"]').getByRole('link', { name: /^Deep Work/ }).click();
+    await page.waitForURL(/\/fokus\?item=/);
+    const dw = page.getByRole('main', { name: 'Deep Work' });
+    await expect(dw.locator('h1.dw-sache')).toHaveText(sache);
+    await expect(page.locator('.tabbar')).toHaveCount(0);
+    await dw.getByRole('radiogroup', { name: 'Musik' }).getByRole('radio', { name: 'Stille' }).click();
+    await dw.getByRole('button', { name: 'Starten' }).click();
+    await expect(dw.getByRole('timer')).toContainText(/2[45]:\d\d/);
     const lauf = (await (await page.request.get('/api/fokus')).json()).block;
-    expect(lauf).toMatchObject({ minuten: 25, pause: 5, musik: 'stille', itemId: aufgabe.id, test: false });
-    // Ein zweiter Block gleichzeitig und erfundene Längen gehen nicht
+    expect(lauf).toMatchObject({ minuten: 25, pause: 5, musik: 'stille', test: false });
+    // Ein zweiter Block gleichzeitig geht nicht
     expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'stille' } })).status()).toBe(409);
-    await page.getByRole('button', { name: 'Block beenden' }).click();
-    await page.getByRole('radiogroup', { name: 'Wie gut ging es' }).getByRole('radio', { name: 'im Fluss' }).click();
-    await page.getByRole('button', { name: 'Fertig' }).click();
+    // Gedanke parken, ohne den Modus zu verlassen
+    await dw.getByRole('button', { name: 'Gedanke parken' }).click();
+    await page.getByRole('dialog', { name: 'Gedanke parken' }).getByLabel('Gedanke').fill('Erfundener Gedanke aus dem Deep Work');
+    await page.getByRole('dialog', { name: 'Gedanke parken' }).getByRole('button', { name: 'Parken' }).click();
+    await expect(page.locator('.toast')).toContainText('Geparkt');
+    expect(page.url()).toContain('/fokus');
+    // Block beenden ohne Erledigt, dann bewerten
+    await dw.getByRole('button', { name: 'Block beenden, Aufgabe bleibt offen' }).click();
+    await dw.getByRole('radiogroup', { name: 'Wie gut ging es' }).getByRole('radio', { name: 'im Fluss' }).click();
+    await expect(dw.getByRole('button', { name: 'Aufgabe ist erledigt' })).toHaveAttribute('aria-pressed', 'false');
+    await dw.getByRole('button', { name: 'Fertig' }).click();
     await expect(page.locator('.toast')).toContainText('Festgehalten: im Fluss');
-    await expect(page.locator('.head .eyebrow')).toContainText('Heute 1 Block');
+    await expect(dw.locator('.dw-kopf')).toContainText('Heute 1 Block');
     expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 30, pause: 5, musik: 'stille' } })).status()).toBe(409);
     expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'techno' } })).status()).toBe(400);
     // Musiktest: Life wählt, erst Klassik, dann Fokus-Welle
-    await page.getByRole('button', { name: 'Musiktest starten' }).click();
-    await expect(page.locator('section[aria-label="Musiktest"]')).toContainText('Tag 1 von 14');
-    await expect(page.locator('section[aria-label="Fokus starten"]')).toContainText('Dein Musiktest wählt: Klassik');
+    await dw.getByRole('button', { name: 'Musiktest' }).click();
+    await dw.getByRole('button', { name: 'Musiktest starten' }).click();
+    await expect(dw.getByRole('button', { name: /Musiktest · Tag 1 von 14/ })).toBeVisible();
+    await expect(dw).toContainText('Dein Musiktest wählt: Klassik');
     const t1 = (await (await page.request.post('/api/fokus', { headers: H, data: { aktion: 'start', minuten: 25, pause: 5, musik: 'test' } })).json()).block;
     expect(t1).toMatchObject({ musik: 'klassik', test: true });
     expect((await page.request.post('/api/fokus', { headers: H, data: { aktion: 'ende', id: t1.id, bewertung: 'okay' } })).status()).toBe(200);
@@ -912,7 +928,10 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     const m = await page.request.get('/musik/m01.m4a', { headers: { range: 'bytes=0-99' } });
     expect([200, 206]).toContain(m.status());
     expect(m.headers()['content-type']).toContain('audio/mp4');
-    if (process.env.SCREENSHOTS) { await page.goto('/fokus'); await page.waitForTimeout(400); await page.screenshot({ path: 'test-results/design/fokus.png', fullPage: true }); }
+    // Verlassen führt zurück zu Heute
+    await dw.getByRole('button', { name: 'Deep Work verlassen' }).click();
+    await page.waitForURL('/');
+    if (process.env.SCREENSHOTS) { await page.goto('/fokus'); await page.waitForTimeout(400); await page.screenshot({ path: 'test-results/design/deep-work.png', fullPage: true }); }
   });
 
   await test.step('Abmelden sperrt die Daten, auch für ein kopiertes Cookie, Face ID öffnet sie wieder', async () => {
