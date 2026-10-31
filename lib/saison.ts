@@ -155,3 +155,39 @@ export async function hebelVorschlagen(ziele: { bereich: SBereich; titel: string
   const roh = await askJson<unknown>(prompt, MODEL(), 900);
   return pruefeHebelVorschlaege(roh, sauber.map((z) => z.bereich));
 }
+
+/** Wochenrunde: einen Hebel für die laufende Woche bewerten. Ein zweites Mal überschreibt. Nur eigene Hebel. */
+export async function hebelBewerten(hebelId: number, montag: string, bewertung: Bewertung, userId: string): Promise<boolean> {
+  const r = await sql`
+    insert into hebel_wochen (hebel_id, user_id, montag, bewertung)
+    select id, ${userId}, ${montag}, ${bewertung} from hebel where id = ${hebelId} and user_id = ${userId}
+    on conflict (hebel_id, montag) do update set bewertung = excluded.bewertung`;
+  return r.count > 0;
+}
+
+/** Ein Ziel in einem noch freien Bereich der laufenden Saison ergänzen. */
+export async function zielErgaenzen(bereich: SBereich, titel: string, userId: string): Promise<number> {
+  const s = await saisonZeile(userId);
+  if (!s) throw new Hinweis('Es läuft keine Saison.');
+  const [z] = await sql<{ id: number }[]>`
+    insert into saison_ziele (saison_id, user_id, bereich, titel) values (${s.id}, ${userId}, ${bereich}, ${titel})
+    on conflict (saison_id, bereich) do nothing returning id`;
+  if (!z) throw new Hinweis('Dieser Bereich hat schon ein Ziel.');
+  return z.id;
+}
+
+/** Hebel dazu (höchstens drei pro Ziel) oder weg. Nur eigene Ziele und Hebel. */
+export async function hebelDazu(zielId: number, titel: string, userId: string): Promise<boolean> {
+  return sql.begin(async (tx) => {
+    const [z] = await tx<{ n: number }[]>`
+      select (select count(*)::int from hebel h where h.ziel_id = z.id) as n from saison_ziele z where z.id = ${zielId} and z.user_id = ${userId} for update`;
+    if (!z) return false;
+    if (z.n >= 3) throw new Hinweis('Ein Ziel hat höchstens drei Hebel.');
+    await tx`insert into hebel (ziel_id, user_id, titel, pos) values (${zielId}, ${userId}, ${titel}, ${z.n})`;
+    return true;
+  }) as Promise<boolean>;
+}
+export async function hebelWeg(hebelId: number, userId: string): Promise<boolean> {
+  const r = await sql`delete from hebel where id = ${hebelId} and user_id = ${userId}`;
+  return r.count > 0;
+}

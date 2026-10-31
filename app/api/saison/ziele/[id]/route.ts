@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { oeffentlich } from '@/lib/fehler';
-import { zielAendern } from '@/lib/saison';
+import { hebelDazu, zielAendern } from '@/lib/saison';
 import { mitNutzer } from '@/lib/sitzung';
 
 const text = (x: unknown, max: number) => (typeof x === 'string' ? x.replace(/\s+/g, ' ').trim().slice(0, max) : undefined);
@@ -25,4 +25,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch (e) {
     return NextResponse.json({ error: oeffentlich(e, 'Das Ziel ließ sich nicht ändern.', 'saison') }, { status: 500 });
   }
+}
+
+/** Einen Hebel zu einem Saisonziel dazunehmen (höchstens drei). */
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { aus, uid } = await mitNutzer(); if (aus) return aus;
+  const id = Number((await params).id);
+  const b = await req.json().catch(() => ({}));
+  const titel = text(b.titel, 80);
+  if (!Number.isSafeInteger(id) || id < 1 || !titel || titel.length < 3) return NextResponse.json({ error: 'Ungültige Angaben.' }, { status: 400 });
+  try {
+    if (!(await hebelDazu(id, titel, uid))) return NextResponse.json({ error: 'Ziel nicht gefunden.' }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Der Hebel ließ sich nicht speichern.', 'saison') }, { status: 409 }); }
 }
