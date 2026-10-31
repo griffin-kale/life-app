@@ -912,6 +912,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await dw.getByRole('radiogroup', { name: 'Musik' }).getByRole('radio', { name: 'Stille' }).click();
     await dw.getByRole('button', { name: 'Starten' }).click();
     await expect(dw.getByRole('timer')).toContainText(/2[45]:\d\d/);
+    // Der Timer zeigt 25:00 schon vor dem Start, deshalb auf den gespeicherten Block warten (in CI war das ein Wettlauf)
+    await expect.poll(async () => (await (await page.request.get('/api/fokus')).json()).block !== null, { timeout: 10000 }).toBe(true);
     const lauf = (await (await page.request.get('/api/fokus')).json()).block;
     expect(lauf).toMatchObject({ minuten: 25, pause: 5, musik: 'stille', test: false });
     // Ein zweiter Block gleichzeitig geht nicht
