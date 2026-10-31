@@ -1570,3 +1570,17 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .pl-teil[open] > summary::after { transform: rotate(90deg); }
 .tr-dazu-datum { display: grid; grid-template-columns: 1fr auto; }
 .tr-dazu-datum input:not([type='date']) { grid-column: 1 / -1; }
+
+/* Mac und iPad quer ohne Scrollen der Seite (0.31.1, Peter 31.10.2026): Heute passt in das Fenster.
+   Jede Spalte scrollt für sich, der Coach bleibt stehen, sein Feld klebt unten, nichts rutscht mehr darunter. */
+@media (min-width: 1100px) {
+  html:has(main.heute-desk), html:has(main.heute-desk) body { height: 100%; overflow: hidden; }
+  main.heute-desk { height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 16px; }
+  main.heute-desk .head { flex: 0 0 auto; }
+  main.heute-desk .heute-spalten { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  main.heute-desk .spalte { min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; scrollbar-width: thin; padding: 2px 6px 24px 2px; margin: -2px -6px 0 -2px; }
+  main.heute-desk .spalte-rechts { display: flex; flex-direction: column; gap: 14px; overflow: hidden; padding-bottom: 0; }
+  main.heute-desk .coach-panel { position: relative; top: auto; flex: 1 1 auto; min-height: 280px; max-height: none; overflow-y: auto; }
+  main.heute-desk .coach-panel .coach-eingabe { position: sticky; bottom: 0; z-index: 1; background: #04112E; }
+  main.heute-desk .spalte-rechts > :not(.coach-panel) { flex: 0 1 auto; min-height: 0; max-height: 38%; overflow-y: auto; }
+}

@@ -2,6 +2,12 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.31.1] – 2026-10-31
+
+### Repariert
+- **Heute auf Mac und iPad quer passt ins Fenster** (Peter, 31.10.2026: „da scrollt das rechts noch den Coach weg“). Die Seite selbst scrollt nicht mehr, jede Spalte scrollt für sich. Der Coach bleibt stehen, sein Eingabefeld klebt unten, und nichts rutscht mehr darunter durch. Rechts stehen nur noch Coach und „Als Nächstes“, die Konten und alles andere links.
+- Ein Test wartet jetzt, bis die Ablage nach „Sperren“ wirklich zu ist.
+
 ## [0.31.0] – 2026-10-31
 
 Die Ablage wird ein lebendes Dokument (Peter, 31.10.2026: „wie kann ich das nachhalten und weiterentwickeln“).
