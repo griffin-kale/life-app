@@ -1,7 +1,7 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ensureSchema, sql } from './db';
-import { readAblage, ablageCookie } from './session';
+import { hashPasswort, pruefePasswort } from './passwort-core';
+import { PIN_MAX_FEHL, PIN_TEXT, pinVersuch, riegelBis, type PinErgebnis } from './ablage-pin';
 import { aktuelleSitzung } from './sitzung';
 import { heuteBerlin, jetztBerlin } from './zeit';
 import { EINTRAEGE_MAX } from './ablage-regeln';
@@ -9,12 +9,55 @@ import { EINTRAEGE_MAX } from './ablage-regeln';
 /** Antworten aus der Ablage landen in keinem Zwischenspeicher. */
 export const OHNE_CACHE = { 'cache-control': 'no-store, max-age=0', pragma: 'no-cache' };
 
-/** Dritter Riegel: Nach Face ID gilt er zehn Minuten, nur für diesen Menschen und diese Sitzung. */
+/**
+ * Dritter Riegel (seit 0.31.2 auf dem Server): offen liegt an genau dieser Sitzung in `sitzungen.ecke_bis`.
+ * Jede Anfrage prüft und verlängert ihn um 5 Minuten. Ohne Nutzung, beim Verlassen und beim Abmelden ist er zu.
+ */
 export async function ablageRiegel(uid: string): Promise<NextResponse | null> {
   const s = await aktuelleSitzung();
-  const ok = !!s && s.userId === uid && await readAblage((await cookies()).get(ablageCookie())?.value, uid, s.sid);
-  return ok ? null : NextResponse.json({ error: 'Zu. Bitte mit Face ID öffnen.' }, { status: 403, headers: OHNE_CACHE });
+  if (s && s.userId === uid) {
+    const r = await sql`update sitzungen set ecke_bis = ${riegelBis()} where id = ${s.sid} and user_id = ${uid} and widerrufen is null and ecke_bis > now() returning id`;
+    if (r.length) return null;
+  }
+  return NextResponse.json({ error: 'Zu. Bitte neu öffnen.' }, { status: 403, headers: OHNE_CACHE });
 }
+/** Riegel öffnen. bestaetigt: nach Passkey oder Passwort plus Code, nicht nach PIN. */
+export async function riegelAuf(sid: string, uid: string, bestaetigt: boolean): Promise<void> {
+  await sql`update sitzungen set ecke_bis = ${riegelBis()}, bestaetigt = ${bestaetigt ? sql`now()` : sql`bestaetigt`} where id = ${sid} and user_id = ${uid}`;
+}
+export async function riegelZu(sid: string): Promise<void> {
+  await sql`update sitzungen set ecke_bis = null where id = ${sid}`;
+}
+export async function bestaetigtUm(sid: string): Promise<Date | null> {
+  const [r] = await sql<{ bestaetigt: Date | null }[]>`select bestaetigt from sitzungen where id = ${sid}`;
+  return r?.bestaetigt ?? null;
+}
+
+/** PIN-Stand ohne die PIN selbst. */
+export async function pinStand(uid: string): Promise<{ gesetzt: boolean; gesperrt: boolean }> {
+  await ensureSchema();
+  const [r] = await sql<{ fehl: number }[]>`select fehl from ablage_pin where user_id = ${uid}`;
+  return { gesetzt: !!r, gesperrt: !!r && r.fehl >= PIN_MAX_FEHL };
+}
+/** PIN speichern, nur als scrypt-Hash. Der Zähler steht danach auf null. */
+export async function pinSetzen(pin: string, uid: string): Promise<void> {
+  await sql`insert into ablage_pin (user_id, hash, fehl) values (${uid}, ${hashPasswort(pin)}, 0)
+    on conflict (user_id) do update set hash = excluded.hash, fehl = 0, geaendert = now()`;
+}
+export async function pinZaehlerNull(uid: string): Promise<void> {
+  await sql`update ablage_pin set fehl = 0 where user_id = ${uid}`;
+}
+/** Prüft eine PIN in konstanter Zeit (scrypt und timingSafeEqual) und zählt Fehlversuche, gesperrt unter Sperre der Zeile. */
+export async function pinPruefen(pin: string, uid: string): Promise<PinErgebnis | null> {
+  return sql.begin(async (tx) => {
+    const [r] = await tx<{ hash: string; fehl: number }[]>`select hash, fehl from ablage_pin where user_id = ${uid} for update`;
+    if (!r) return null;
+    const e = pinVersuch(r.fehl, pruefePasswort(pin, r.hash));
+    if (e.fehl !== r.fehl) await tx`update ablage_pin set fehl = ${e.fehl} where user_id = ${uid}`;
+    return e;
+  }) as Promise<PinErgebnis | null>;
+}
+export { PIN_TEXT };
 
 export type AblageKopf = { salz: string; iterationen: number; pass_block: string; wieder_block: string };
 

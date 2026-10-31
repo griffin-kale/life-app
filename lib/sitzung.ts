@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ensureSchema, ERSTER_NUTZER, getSetting, sql } from './db';
 import { cookieOptions, readSession, sameSecret, sessionCookie, signSession, type Sitzung } from './session';
+import { OBERGRENZE_TAGE, SITZUNG_TAGE, cookieErneuern } from './ablage-pin';
 
 /**
  * Sitzungen mit Gegenstück in der Datenbank (Tabelle `sitzungen`).
@@ -42,16 +43,26 @@ export async function pruefeSitzung(token: string | undefined): Promise<Sitzung 
   if (!s) return null;
   await ensureSchema();
   const rows = await sql<{ zuletzt: Date }[]>`
-    select zuletzt from sitzungen where id = ${s.sid} and user_id = ${s.userId} and widerrufen is null and erstellt > now() - interval '30 days'`;
+    select zuletzt from sitzungen where id = ${s.sid} and user_id = ${s.userId} and widerrufen is null
+      and zuletzt > now() - make_interval(days => ${SITZUNG_TAGE}) and erstellt > now() - make_interval(days => ${OBERGRENZE_TAGE})`;
   if (!rows.length) return null;
   // Höchstens einmal pro Stunde schreiben
   if (Date.now() - new Date(rows[0].zuletzt).getTime() > 3600_000) await sql`update sitzungen set zuletzt = now() where id = ${s.sid}`;
   return s;
 }
 
-/** Aktuelle Sitzung aus dem Cookie der Anfrage. */
+/**
+ * Aktuelle Sitzung aus dem Cookie der Anfrage. Die Sitzung gilt 30 Tage ab der letzten Nutzung, höchstens 90 Tage
+ * (Peter, 31.10.2026). Ist das Cookie älter als einen Tag, stellt Life es neu aus, damit es sich mitverlängert.
+ */
 export async function aktuelleSitzung(): Promise<Sitzung | null> {
-  return pruefeSitzung((await cookies()).get(sessionCookie())?.value);
+  const jar = await cookies();
+  const s = await pruefeSitzung(jar.get(sessionCookie())?.value);
+  if (s && cookieErneuern(s.iat)) {
+    try { const neu = await signSession({ sid: s.sid, userId: s.userId }); jar.set(sessionCookie(), neu.value, cookieOptions(neu.maxAge)); }
+    catch { /* außerhalb von Routen lässt Next keine Cookies setzen, dann beim nächsten Mal */ }
+  }
+  return s;
 }
 
 /**
@@ -76,7 +87,7 @@ export async function widerrufen(sid: string): Promise<void> {
 
 export async function alleWiderrufen(userId: string): Promise<number> {
   await ensureSchema();
-  const r = await sql`update sitzungen set widerrufen = now() where user_id = ${userId} and widerrufen is null returning id`;
+  const r = await sql`update sitzungen set widerrufen = now(), ecke_bis = null where user_id = ${userId} and widerrufen is null returning id`;
   return r.length;
 }
 

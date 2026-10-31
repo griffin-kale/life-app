@@ -1,10 +1,11 @@
 'use client';
-import { startAuthentication } from '@simplewebauthn/browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TopBar, api, useToast } from '../ui';
 import { auf, auspacken, ausPassphrase, ausWiederherstellung, einpacken, inhaltsSchluessel, neuesSalz, zu, zufall } from '../ablage-krypto';
 import { ITERATIONEN, LEERLAUF_MIN, PASSPHRASE_MIN, passphraseOk, wiederAusText, wiederText } from '@/lib/ablage-regeln';
 import { Offen, PRIVAT, type Eintrag, type Inhalt } from './offen';
+import { PasswortCode, PinSetzen, mitPasskey, type PinStand } from './pin';
+import { PIN_LAENGE } from '@/lib/ablage-pin';
 
 /**
  * Ablage (0.30, Peter 31.10.2026): verborgen, Ende-zu-Ende verschlüsselt. Kein Menüpunkt, Zugang über eine Geste.
@@ -13,7 +14,7 @@ import { Offen, PRIVAT, type Eintrag, type Inhalt } from './offen';
  * Keine KI, keine Suche, kein Diktat, keine Rechtschreibprüfung, kein Coach, keine Mitteilungen.
  */
 type Kopf = { eingerichtet: boolean; offen: boolean; salz?: string; iterationen?: number; pass_block?: string; wieder_block?: string };
-type Phase = 'laedt' | 'riegel' | 'einrichten' | 'wiederZeigen' | 'entsperren' | 'wiederEingeben' | 'neuePass' | 'offen';
+type Phase = 'laedt' | 'riegel' | 'pinSetzen' | 'einrichten' | 'wiederZeigen' | 'entsperren' | 'wiederEingeben' | 'neuePass' | 'offen';
 
 
 export default function Ablage() {
@@ -30,22 +31,27 @@ export default function Ablage() {
   const [toast, setToast] = useToast();
   const leerlauf = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const kopfLaden = useCallback(async () => {
-    const k = await api<Kopf>('/api/ablage');
-    setKopf(k);
-    setPhase(!k.offen ? 'riegel' : k.eingerichtet ? 'entsperren' : 'einrichten');
+  const [pinStand, setPinStand] = useState<PinStand | null>(null);
+  const [pin, setPin] = useState('');
+  const [mitCode, setMitCode] = useState(false);
+  /** Kopf und PIN-Stand laden. nachOeffnen: ohne PIN erst anbieten, eine festzulegen (fürs iPhone). */
+  const kopfLaden = useCallback(async (nachOeffnen = false) => {
+    const [k, p] = await Promise.all([api<Kopf>('/api/ablage'), api<PinStand>('/api/ablage/pin')]);
+    setKopf(k); setPinStand(p);
+    setPhase(!k.offen ? 'riegel' : nachOeffnen && !p.gesetzt && p.frisch ? 'pinSetzen' : k.eingerichtet ? 'entsperren' : 'einrichten');
   }, []);
   useEffect(() => { kopfLaden().catch((e) => setToast((e as Error).message, 'err')); }, [kopfLaden, setToast]);
 
   const sperren = useCallback((grund?: string) => {
     setKey(null); setEintraege([]); setPass1(''); setPass2(''); setWieder(''); setFehler(''); setBestaetigt(false);
-    fetch('/api/ablage/riegel', { method: 'DELETE' }).catch(() => {});
+    fetch('/api/ablage/riegel', { method: 'DELETE', keepalive: true }).catch(() => {});
     setPhase('riegel');
     if (grund) setToast(grund);
   }, [setToast]);
 
   // Hintergrund oder Leerlauf: sofort zu. Gilt auch, während der Wiederherstellungsschlüssel angezeigt wird.
-  const offenOderGeheim = phase === 'offen' || phase === 'wiederZeigen' || phase === 'neuePass';
+  // Seit 0.31.2: sobald der Riegel offen ist, auch vor der Passphrase. Der Server schließt ihn dann sofort.
+  const offenOderGeheim = phase !== 'laedt' && phase !== 'riegel';
   useEffect(() => {
     if (!offenOderGeheim) return;
     const weg = () => { if (document.visibilityState === 'hidden') sperren(); };
@@ -62,23 +68,27 @@ export default function Ablage() {
       if (leerlauf.current) clearTimeout(leerlauf.current);
     };
   }, [offenOderGeheim, sperren]);
-  useEffect(() => () => { fetch('/api/ablage/riegel', { method: 'DELETE' }).catch(() => {}); }, []);
+  useEffect(() => () => { fetch('/api/ablage/riegel', { method: 'DELETE', keepalive: true }).catch(() => {}); }, []);
 
   function fehlerOderZu(e: unknown) {
     const m = (e as Error).message || '';
-    if (/Bitte mit Face ID öffnen/.test(m)) sperren('Zehn Minuten sind um. Bitte neu öffnen.');
+    if (/Bitte neu öffnen/.test(m)) sperren('Fünf Minuten ohne Nutzung. Bitte neu öffnen.');
     else setToast(m, 'err');
   }
 
-  async function faceId() {
+  async function passkey() {
     setBusy(true); setFehler('');
-    try {
-      const opts = await api<Parameters<typeof startAuthentication>[0]['optionsJSON']>('/api/ablage/riegel-optionen', { method: 'POST' });
-      const response = await startAuthentication({ optionsJSON: opts });
-      await api('/api/ablage/riegel', { method: 'POST', body: JSON.stringify({ response }) });
-      await kopfLaden();
-    } catch (e) { setFehler((e as Error).name === 'NotAllowedError' ? 'Face ID abgebrochen.' : (e as Error).message); }
+    try { await mitPasskey(); await kopfLaden(); }
+    catch (e) { setFehler((e as Error).name === 'NotAllowedError' ? 'Passkey abgebrochen.' : (e as Error).message); }
     finally { setBusy(false); }
+  }
+  async function mitPin() {
+    setBusy(true); setFehler('');
+    try { await api('/api/ablage/riegel', { method: 'POST', body: JSON.stringify({ pin }) }); setPin(''); await kopfLaden(); }
+    catch (e) {
+      const m = (e as Error).message; setFehler(m); setPin('');
+      if (/gesperrt/.test(m)) setPinStand((s) => (s ? { ...s, gesperrt: true } : s));
+    } finally { setBusy(false); }
   }
 
   async function laden(k: CryptoKey) {
@@ -193,15 +203,31 @@ export default function Ablage() {
 
       {phase === 'laedt' ? <p className="loading">Lädt …</p> : null}
 
-      {phase === 'riegel' ? (
+      {phase === 'riegel' && pinStand ? (
         <section className="gsec" aria-label="Öffnen">
           <div className="group pad tr-form">
             <p className="tr-satz">Life verschlüsselt alles hier auf deinem Gerät, bevor es zum Server geht. Der Server, Backups, Claude und andere Konten sehen nur Unlesbares.</p>
-            <button type="button" className="btn primary wide" onClick={faceId} disabled={busy}>{busy ? 'Prüft …' : 'Mit Face ID öffnen'}</button>
-            {fehlerZeile}
+            {pinStand.gesetzt && !pinStand.gesperrt && !mitCode ? <>
+              {/* PIN vorn (Peter, 31.10.2026): auf dem iPhone gehen keine Passkeys, ein QR-Code hilft dort nicht */}
+              <label className="field">PIN<input type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_LAENGE))} aria-label="PIN" autoFocus {...PRIVAT}
+                onKeyDown={(e) => { if (e.key === 'Enter' && pin.length === PIN_LAENGE) mitPin(); }} /></label>
+              <button type="button" className="btn primary wide" onClick={mitPin} disabled={busy || pin.length !== PIN_LAENGE}>{busy ? 'Prüft …' : 'Öffnen'}</button>
+              {fehlerZeile}
+              <button type="button" className="btn wide" onClick={passkey} disabled={busy}>Mit Passkey</button>
+              {pinStand.code ? <button type="button" className="linkbtn tr-vergessen" onClick={() => { setFehler(''); setMitCode(true); }}>Mit Passwort und Code</button> : null}
+            </> : <>
+              {pinStand.gesperrt && !fehler ? <p className="tr-warn">Die PIN ist nach 5 Fehlversuchen gesperrt. Öffne mit Passwort und Code, danach gilt sie wieder.</p> : null}
+              {pinStand.code ? <PasswortCode knopf="Mit Passwort und Code öffnen" busy={busy} setBusy={setBusy} onFehler={setFehler} onFertig={() => { setMitCode(false); setFehler(''); kopfLaden(true).catch(() => {}); }} /> : null}
+              {fehlerZeile}
+              <button type="button" className={pinStand.code ? 'btn wide' : 'btn primary wide'} onClick={passkey} disabled={busy}>Mit Passkey</button>
+              {mitCode ? <button type="button" className="linkbtn tr-vergessen" onClick={() => { setFehler(''); setMitCode(false); }}>Zurück zur PIN</button> : null}
+            </>}
           </div>
         </section>
       ) : null}
+
+      {phase === 'pinSetzen' && pinStand ? <PinSetzen stand={pinStand} onFehler={(m) => setToast(m, 'err')}
+        onFertig={() => { setToast('PIN gespeichert'); kopfLaden().catch(() => {}); }} onAbbrechen={() => kopfLaden().catch(() => {})} /> : null}
 
       {phase === 'einrichten' || phase === 'neuePass' ? (
         <section className="gsec" aria-label={phase === 'einrichten' ? 'Einrichten' : 'Neue Passphrase'}>

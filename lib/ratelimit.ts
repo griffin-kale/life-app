@@ -14,6 +14,7 @@ export const LIMITS = {
   einrichten: { max: 10, windowMs: 15 * 60_000 },  // Einrichtungscode raten unmöglich machen
   anmelden: { max: 30, windowMs: 15 * 60_000 },
   code: { max: 10, windowMs: 15 * 60_000 },        // Passwort und Einmal-Code
+  pin: { max: 30, windowMs: 15 * 60_000 },         // PIN der Ablage; die eigentliche Sperre greift nach 5 Fehlversuchen pro Mensch
   erfassen: { max: 60, windowMs: 60_000 },         // Kurzbefehl
   schreiben: { max: 120, windowMs: 60_000 },       // Einträge und Änderungen aus der App
   sortieren: { max: 10, windowMs: 15 * 60_000 },   // Sortierlauf auf Knopfdruck, jeder Lauf kostet Claude-Aufrufe
