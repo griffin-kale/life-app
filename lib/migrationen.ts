@@ -83,6 +83,19 @@ export const MIGRATIONEN: Migration[] = [
       await tx`alter table coach_chat add column if not exists experte boolean not null default false`;
     },
   },
+  {
+    nr: 8, name: 'Ablage mit Ende-zu-Ende-Verschlüsselung (0.30)',
+    run: async (tx) => {
+      // Der Server kennt nur Salz, Wiederholungen und verschlüsselte Blöcke. Art, Titel und Text liegen im Block.
+      await tx`create table if not exists ablage (
+        user_id text primary key, salz text not null, iterationen int not null,
+        pass_block text not null, wieder_block text not null, erstellt timestamptz not null default now())`;
+      await tx`create table if not exists ablage_bloecke (
+        id uuid primary key default gen_random_uuid(), user_id text not null, block text not null,
+        erstellt timestamptz not null default now(), geaendert timestamptz not null default now())`;
+      await tx`create index if not exists ablage_bloecke_user on ablage_bloecke (user_id, geaendert desc)`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */

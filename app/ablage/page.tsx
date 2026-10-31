@@ -1,0 +1,408 @@
+'use client';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { TopBar, api, useToast } from '../ui';
+import { auf, auspacken, ausPassphrase, ausWiederherstellung, einpacken, inhaltsSchluessel, neuesSalz, zu, zufall } from '../ablage-krypto';
+import { ITERATIONEN, LEERLAUF_MIN, PASSPHRASE_MIN, passphraseOk, wiederAusText, wiederText } from '@/lib/ablage-regeln';
+import { PlanAnsicht, type Plan } from './plan';
+
+/**
+ * Ablage (0.30, Peter 31.10.2026): verborgen, Ende-zu-Ende verschlüsselt. Kein Menüpunkt, Zugang über eine Geste.
+ * Öffnen braucht Face ID und die Passphrase. Der Inhaltsschlüssel lebt nur im Speicher dieser Seite und ist weg,
+ * sobald die Seite in den Hintergrund geht, zwei Minuten nichts passiert oder Peter „Sperren“ tippt.
+ * Keine KI, keine Suche, kein Diktat, keine Rechtschreibprüfung, kein Coach, keine Mitteilungen.
+ */
+type Notiz = { art: 'notiz'; titel: string; text: string };
+type Aufgabe = { art: 'aufgabe'; titel: string; erledigt?: boolean; meilenstein?: boolean; datum?: string };
+type PlanBlock = { art: 'plan'; daten: Plan; haken: Record<string, boolean> };
+type Inhalt = Notiz | Aufgabe | PlanBlock;
+type Eintrag = Inhalt & { id: string; geaendert: string };
+type Kopf = { eingerichtet: boolean; offen: boolean; salz?: string; iterationen?: number; pass_block?: string; wieder_block?: string };
+type Phase = 'laedt' | 'riegel' | 'einrichten' | 'wiederZeigen' | 'entsperren' | 'wiederEingeben' | 'neuePass' | 'offen';
+
+// Kein Diktat, keine Vorschläge, keine Rechtschreibprüfung: Diese Dienste schicken Text an Dritte
+const PRIVAT = { autoComplete: 'off', autoCorrect: 'off', spellCheck: false, 'data-1p-ignore': true, 'data-lpignore': 'true' } as const;
+const tagText = (t: string) => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(t + 'T12:00:00Z'));
+
+export default function Ablage() {
+  const [phase, setPhase] = useState<Phase>('laedt');
+  const [kopf, setKopf] = useState<Kopf | null>(null);
+  const [key, setKey] = useState<CryptoKey | null>(null);
+  const [eintraege, setEintraege] = useState<Eintrag[]>([]);
+  const [pass1, setPass1] = useState('');
+  const [pass2, setPass2] = useState('');
+  const [wieder, setWieder] = useState('');
+  const [bestaetigt, setBestaetigt] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [fehler, setFehler] = useState('');
+  const [toast, setToast] = useToast();
+  const leerlauf = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const kopfLaden = useCallback(async () => {
+    const k = await api<Kopf>('/api/ablage');
+    setKopf(k);
+    setPhase(!k.offen ? 'riegel' : k.eingerichtet ? 'entsperren' : 'einrichten');
+  }, []);
+  useEffect(() => { kopfLaden().catch((e) => setToast((e as Error).message, 'err')); }, [kopfLaden, setToast]);
+
+  const sperren = useCallback((grund?: string) => {
+    setKey(null); setEintraege([]); setPass1(''); setPass2(''); setWieder(''); setFehler(''); setBestaetigt(false);
+    fetch('/api/ablage/riegel', { method: 'DELETE' }).catch(() => {});
+    setPhase('riegel');
+    if (grund) setToast(grund);
+  }, [setToast]);
+
+  // Hintergrund oder Leerlauf: sofort zu. Gilt auch, während der Wiederherstellungsschlüssel angezeigt wird.
+  const offenOderGeheim = phase === 'offen' || phase === 'wiederZeigen' || phase === 'neuePass';
+  useEffect(() => {
+    if (!offenOderGeheim) return;
+    const weg = () => { if (document.visibilityState === 'hidden') sperren(); };
+    const ende = () => sperren();
+    const neu = () => { if (leerlauf.current) clearTimeout(leerlauf.current); leerlauf.current = setTimeout(() => sperren(`Nach ${LEERLAUF_MIN} Minuten ohne Eingabe gesperrt`), LEERLAUF_MIN * 60_000); };
+    neu();
+    document.addEventListener('visibilitychange', weg);
+    window.addEventListener('pagehide', ende);
+    for (const e of ['pointerdown', 'keydown'] as const) window.addEventListener(e, neu);
+    return () => {
+      document.removeEventListener('visibilitychange', weg);
+      window.removeEventListener('pagehide', ende);
+      for (const e of ['pointerdown', 'keydown'] as const) window.removeEventListener(e, neu);
+      if (leerlauf.current) clearTimeout(leerlauf.current);
+    };
+  }, [offenOderGeheim, sperren]);
+  useEffect(() => () => { fetch('/api/ablage/riegel', { method: 'DELETE' }).catch(() => {}); }, []);
+
+  function fehlerOderZu(e: unknown) {
+    const m = (e as Error).message || '';
+    if (/Bitte mit Face ID öffnen/.test(m)) sperren('Zehn Minuten sind um. Bitte neu öffnen.');
+    else setToast(m, 'err');
+  }
+
+  async function faceId() {
+    setBusy(true); setFehler('');
+    try {
+      const opts = await api<Parameters<typeof startAuthentication>[0]['optionsJSON']>('/api/ablage/riegel-optionen', { method: 'POST' });
+      const response = await startAuthentication({ optionsJSON: opts });
+      await api('/api/ablage/riegel', { method: 'POST', body: JSON.stringify({ response }) });
+      await kopfLaden();
+    } catch (e) { setFehler((e as Error).name === 'NotAllowedError' ? 'Face ID abgebrochen.' : (e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  async function laden(k: CryptoKey) {
+    const r = await api<{ bloecke: { id: string; block: string; geaendert: string }[] }>('/api/ablage/eintraege');
+    const liste: Eintrag[] = [];
+    for (const b of r.bloecke) { try { liste.push({ ...(await auf<Inhalt>(k, b.block)), id: b.id, geaendert: b.geaendert }); } catch { /* kaputter Block bleibt unsichtbar */ } }
+    setEintraege(liste);
+  }
+
+  async function einrichten() {
+    if (!passphraseOk(pass1)) { setFehler(`Mindestens ${PASSPHRASE_MIN} Zeichen, gern ein ganzer Satz.`); return; }
+    if (pass1 !== pass2) { setFehler('Die beiden Eingaben sind verschieden.'); return; }
+    setBusy(true); setFehler('');
+    const inhalt = zufall(32); const wiederRoh = zufall(32);
+    try {
+      const salz = neuesSalz();
+      const pass_block = await einpacken(await ausPassphrase(pass1, salz, ITERATIONEN), inhalt);
+      const wieder_block = await einpacken(await ausWiederherstellung(wiederRoh), inhalt);
+      await api('/api/ablage', { method: 'POST', body: JSON.stringify({ salz, iterationen: ITERATIONEN, pass_block, wieder_block }) });
+      setKey(await inhaltsSchluessel(inhalt));
+      setWieder(wiederText(wiederRoh)); setPass1(''); setPass2(''); setEintraege([]); setBestaetigt(false); setPhase('wiederZeigen');
+    } catch (e) { fehlerOderZu(e); }
+    finally { inhalt.fill(0); wiederRoh.fill(0); setBusy(false); }
+  }
+
+  async function entsperren() {
+    if (!kopf?.salz || !kopf.iterationen || !kopf.pass_block) return;
+    setBusy(true); setFehler('');
+    try {
+      let k: CryptoKey;
+      try { k = await auspacken(await ausPassphrase(pass1, kopf.salz, kopf.iterationen), kopf.pass_block); }
+      catch { setFehler('Die Passphrase stimmt nicht.'); return; }
+      await laden(k); setKey(k); setPass1(''); setPhase('offen');
+    } catch (e) { fehlerOderZu(e); }
+    finally { setBusy(false); }
+  }
+
+  async function mitWiederherstellung() {
+    if (!kopf?.wieder_block) return;
+    const roh = wiederAusText(wieder);
+    if (!roh) { setFehler('Der Schlüssel hat 52 Zeichen in Vierergruppen. Bitte prüfen.'); return; }
+    setBusy(true); setFehler('');
+    try {
+      let k: CryptoKey;
+      try { k = await auspacken(await ausWiederherstellung(roh), kopf.wieder_block); }
+      catch { setFehler('Dieser Wiederherstellungsschlüssel passt nicht.'); return; }
+      setKey(k); setWieder(''); setPhase('neuePass');
+      // Den Wiederherstellungsschlüssel nur bis zur neuen Passphrase im Speicher halten, danach überschreiben
+      wiederRef.current = roh;
+    } catch (e) { fehlerOderZu(e); }
+    finally { setBusy(false); }
+  }
+  const wiederRef = useRef<Uint8Array | null>(null);
+
+  async function passphraseSetzen() {
+    if (!passphraseOk(pass1)) { setFehler(`Mindestens ${PASSPHRASE_MIN} Zeichen, gern ein ganzer Satz.`); return; }
+    if (pass1 !== pass2) { setFehler('Die beiden Eingaben sind verschieden.'); return; }
+    if (!kopf?.wieder_block || !wiederRef.current || !key) return;
+    setBusy(true); setFehler('');
+    try {
+      // Den rohen Inhaltsschlüssel bekommt nur, wer den Wiederherstellungsschlüssel hat: aus dem eingepackten Block lesen
+      const roh = await rohInhalt(wiederRef.current, kopf.wieder_block);
+      const salz = neuesSalz();
+      const pass_block = await einpacken(await ausPassphrase(pass1, salz, ITERATIONEN), roh);
+      roh.fill(0);
+      await api('/api/ablage', { method: 'PUT', body: JSON.stringify({ salz, iterationen: ITERATIONEN, pass_block }) });
+      wiederRef.current.fill(0); wiederRef.current = null;
+      setPass1(''); setPass2('');
+      await laden(key); setPhase('offen'); setToast('Neue Passphrase gilt');
+    } catch (e) { fehlerOderZu(e); }
+    finally { setBusy(false); }
+  }
+
+  async function allesLoeschen() {
+    if (!window.confirm('Passphrase und Wiederherstellungsschlüssel verloren? Dann lässt sich nichts retten. Alles wird gelöscht, danach richtest du neu ein.')) return;
+    try { await api('/api/ablage?bestaetigt=alles-loeschen', { method: 'DELETE' }); await kopfLaden(); setToast('Gelöscht'); }
+    catch (e) { fehlerOderZu(e); }
+  }
+
+  async function speichern(inhalt: Inhalt, id?: string) {
+    if (!key) return;
+    try {
+      const block = await zu(key, inhalt);
+      if (id) await api(`/api/ablage/eintraege/${id}`, { method: 'PUT', body: JSON.stringify({ block }) });
+      else await api('/api/ablage/eintraege', { method: 'POST', body: JSON.stringify({ block }) });
+      await laden(key);
+    } catch (e) { fehlerOderZu(e); }
+  }
+  async function loeschen(x: Eintrag) {
+    if (!window.confirm('Diesen Eintrag löschen?')) return;
+    try { await api(`/api/ablage/eintraege/${x.id}`, { method: 'DELETE' }); if (key) await laden(key); }
+    catch (e) { fehlerOderZu(e); }
+  }
+
+  /** Verschlüsselter Export: alles, was der Server hat, als Datei. Ohne Passphrase oder Wiederherstellungsschlüssel unlesbar. */
+  async function exportieren() {
+    try {
+      const k = await api<Kopf>('/api/ablage');
+      const b = await api<{ bloecke: { id: string; block: string; geaendert: string }[] }>('/api/ablage/eintraege');
+      const datei = { format: 'life.ablage.export.v1', salz: k.salz, iterationen: k.iterationen, pass_block: k.pass_block, wieder_block: k.wieder_block, bloecke: b.bloecke };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(datei)], { type: 'application/json' }));
+      const a = document.createElement('a'); a.href = url; a.download = `ablage-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) { fehlerOderZu(e); }
+  }
+
+  const fehlerZeile = fehler ? <p className="tr-fehler" role="alert">{fehler}</p> : null;
+  return (
+    <main className="wrap ablage">
+      <TopBar title="Ablage" back={{ label: 'Leben', href: '/leben' }} />
+      <header className="head"><span className="eyebrow">Nur auf diesem Gerät lesbar</span><h1 className="title">Ablage<i>.</i></h1></header>
+
+      {phase === 'laedt' ? <p className="loading">Lädt …</p> : null}
+
+      {phase === 'riegel' ? (
+        <section className="gsec" aria-label="Öffnen">
+          <div className="group pad tr-form">
+            <p className="tr-satz">Life verschlüsselt alles hier auf deinem Gerät, bevor es zum Server geht. Der Server, Backups, Claude und andere Konten sehen nur Unlesbares.</p>
+            <button type="button" className="btn primary wide" onClick={faceId} disabled={busy}>{busy ? 'Prüft …' : 'Mit Face ID öffnen'}</button>
+            {fehlerZeile}
+          </div>
+        </section>
+      ) : null}
+
+      {phase === 'einrichten' || phase === 'neuePass' ? (
+        <section className="gsec" aria-label={phase === 'einrichten' ? 'Einrichten' : 'Neue Passphrase'}>
+          <div className="group pad tr-form">
+            <p className="tr-warn">{phase === 'einrichten'
+              ? <><b>Wichtig:</b> Niemand kann die Passphrase zurücksetzen. Nach dem Einrichten bekommst du einen Wiederherstellungsschlüssel zum Ausdrucken. Ohne beides ist der Inhalt verloren.</>
+              : <>Der Wiederherstellungsschlüssel passt. Leg jetzt eine neue Passphrase fest.</>}</p>
+            <label className="field">Passphrase, mindestens {PASSPHRASE_MIN} Zeichen
+              <input type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} {...PRIVAT} autoComplete="new-password" aria-label="Passphrase" />
+            </label>
+            <label className="field">Noch einmal
+              <input type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} {...PRIVAT} autoComplete="new-password" aria-label="Passphrase wiederholen" />
+            </label>
+            <button type="button" className="btn primary wide" onClick={phase === 'einrichten' ? einrichten : passphraseSetzen} disabled={busy || !pass1 || !pass2}>{busy ? 'Schlüssel wird berechnet …' : phase === 'einrichten' ? 'Einrichten' : 'Passphrase speichern'}</button>
+            {fehlerZeile}
+          </div>
+        </section>
+      ) : null}
+
+      {phase === 'wiederZeigen' ? (
+        <section className="gsec" aria-label="Wiederherstellungsschlüssel">
+          <div className="group pad tr-form">
+            <p className="tr-warn"><b>Einmal ausdrucken oder abschreiben, offline aufbewahren.</b> Life zeigt diesen Schlüssel nie wieder. Mit ihm kommst du hinein, wenn die Passphrase weg ist. Kein Foto, keine Cloud.</p>
+            <p className="tr-schluessel" aria-label="Schlüssel">{wieder}</p>
+            <div className="tr-reihe">
+              <button type="button" className="chipbtn" onClick={() => window.print()}>Drucken</button>
+            </div>
+            <label className="tr-check"><input type="checkbox" checked={bestaetigt} onChange={(e) => setBestaetigt(e.target.checked)} />Ich habe den Schlüssel sicher notiert</label>
+            <button type="button" className="btn primary wide" disabled={!bestaetigt} onClick={() => { setWieder(''); setPhase('offen'); }}>Weiter</button>
+          </div>
+        </section>
+      ) : null}
+
+      {phase === 'entsperren' ? (
+        <section className="gsec" aria-label="Entsperren">
+          <div className="group pad tr-form">
+            <label className="field">Passphrase
+              <input type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} {...PRIVAT} autoComplete="current-password" aria-label="Passphrase" autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') entsperren(); }} />
+            </label>
+            <button type="button" className="btn primary wide" onClick={entsperren} disabled={busy || !pass1}>{busy ? 'Entsperrt …' : 'Entsperren'}</button>
+            {fehlerZeile}
+            <button type="button" className="linkbtn tr-vergessen" onClick={() => { setFehler(''); setPhase('wiederEingeben'); }}>Passphrase vergessen?</button>
+          </div>
+        </section>
+      ) : null}
+
+      {phase === 'wiederEingeben' ? (
+        <section className="gsec" aria-label="Wiederherstellen">
+          <div className="group pad tr-form">
+            <label className="field">Wiederherstellungsschlüssel
+              <textarea rows={3} value={wieder} onChange={(e) => setWieder(e.target.value)} {...PRIVAT} aria-label="Wiederherstellungsschlüssel" placeholder="XXXX-XXXX-…" />
+            </label>
+            <button type="button" className="btn primary wide" onClick={mitWiederherstellung} disabled={busy || !wieder.trim()}>{busy ? 'Prüft …' : 'Öffnen'}</button>
+            {fehlerZeile}
+            <button type="button" className="linkbtn tr-vergessen" onClick={() => { setFehler(''); setWieder(''); setPhase('entsperren'); }}>Zurück zur Passphrase</button>
+            <button type="button" className="linkbtn tr-vergessen tr-gefahr" onClick={allesLoeschen}>Beides verloren: alles löschen</button>
+          </div>
+        </section>
+      ) : null}
+
+      {phase === 'offen' && key ? <Offen eintraege={eintraege} onSpeichern={speichern} onLoeschen={loeschen} onSperren={() => sperren('Gesperrt')} onExport={exportieren} onFehler={(m) => setToast(m, 'err')} /> : null}
+      {toast}
+    </main>
+  );
+}
+
+/** Den rohen Inhaltsschlüssel nur für das Neu-Einpacken: mit dem Wiederherstellungsschlüssel auspacken, danach sofort löschen. */
+async function rohInhalt(wiederRoh: Uint8Array, wiederBlock: string): Promise<Uint8Array> {
+  const huelle = await ausWiederherstellung(wiederRoh);
+  const roh = Uint8Array.from(atob(wiederBlock), (c) => c.charCodeAt(0));
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: roh.slice(0, 12) as Uint8Array<ArrayBuffer> }, huelle, roh.slice(12) as Uint8Array<ArrayBuffer>));
+}
+
+function Offen({ eintraege, onSpeichern, onLoeschen, onSperren, onExport, onFehler }: {
+  eintraege: Eintrag[]; onSpeichern: (i: Inhalt, id?: string) => Promise<void>; onLoeschen: (e: Eintrag) => void; onSperren: () => void; onExport: () => void; onFehler: (m: string) => void;
+}) {
+  const [ansicht, setAnsicht] = useState<'plan' | 'notiz' | 'aufgabe'>('plan');
+  const [titel, setTitel] = useState('');
+  const [text, setText] = useState('');
+  const [meilenstein, setMeilenstein] = useState(false);
+  const [tag, setTag] = useState('');
+  const [offen, setOffen] = useState<string | null>(null);
+  const [entwurf, setEntwurf] = useState('');
+  const plan = eintraege.find((e): e is PlanBlock & { id: string; geaendert: string } => e.art === 'plan');
+  const notizen = eintraege.filter((e): e is Notiz & { id: string; geaendert: string } => e.art === 'notiz').sort((a, b) => b.geaendert.localeCompare(a.geaendert));
+  const aufgaben = eintraege.filter((e): e is Aufgabe & { id: string; geaendert: string } => e.art === 'aufgabe')
+    .sort((a, b) => Number(!!a.erledigt) - Number(!!b.erledigt) || (a.datum ?? '9').localeCompare(b.datum ?? '9'));
+
+  async function neu() {
+    if (ansicht === 'notiz' && text.trim()) await onSpeichern({ art: 'notiz', titel: titel.trim().slice(0, 120), text: text.slice(0, 50_000) });
+    else if (ansicht === 'aufgabe' && titel.trim()) await onSpeichern({ art: 'aufgabe', titel: titel.trim().slice(0, 200), erledigt: false, meilenstein, datum: /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : undefined });
+    else return;
+    setTitel(''); setText(''); setMeilenstein(false); setTag('');
+  }
+
+  /** Eine Plan-Datei einlesen. Sie wird im Browser gelesen und verschlüsselt, die Datei selbst geht nirgendwohin. */
+  async function planEinlesen(f: File | undefined) {
+    if (!f) return;
+    if (f.size > 60_000) { onFehler('Die Datei ist zu groß.'); return; }
+    try {
+      const daten = JSON.parse(await f.text());
+      if (!daten || typeof daten !== 'object' || Array.isArray(daten) || typeof daten.titel !== 'string') { onFehler('Das ist keine Plan-Datei.'); return; }
+      await onSpeichern({ art: 'plan', daten, haken: plan?.haken ?? {} }, plan?.id);
+    } catch { onFehler('Die Datei lässt sich nicht lesen.'); }
+  }
+
+  return (
+    <>
+      <div className="tr-leiste">
+        <nav className="plan-um tr-drei" aria-label="Ansicht">
+          {([['plan', 'Plan'], ['notiz', 'Notizen'], ['aufgabe', 'Aufgaben']] as const).map(([k, l]) => <button key={k} type="button" aria-current={ansicht === k ? 'page' : undefined} onClick={() => setAnsicht(k)}>{l}</button>)}
+        </nav>
+        <button type="button" className="chipbtn" onClick={onSperren}>Sperren</button>
+      </div>
+
+      {ansicht === 'plan' ? (
+        plan ? <PlanAnsicht plan={plan.daten} haken={plan.haken} onHaken={(h) => onSpeichern({ ...plan, haken: h }, plan.id)} />
+          : (
+            <section className="gsec" aria-label="Plan einlesen">
+              <div className="group pad tr-form">
+                <p className="tr-satz">Lies deine Plan-Datei ein. Life liest sie hier im Browser und speichert sie nur verschlüsselt. Danach kannst du die Datei auf deinem Gerät löschen.</p>
+                <label className="btn primary wide tr-datei">Plan-Datei wählen<input type="file" accept="application/json,.json" onChange={(e) => planEinlesen(e.target.files?.[0])} /></label>
+              </div>
+            </section>
+          )
+      ) : null}
+
+      {ansicht !== 'plan' ? (
+        <section className="gsec" aria-label={ansicht === 'notiz' ? 'Neue Notiz' : 'Neue Aufgabe'}>
+          <div className="group pad tr-form">
+            {ansicht === 'notiz' ? <>
+              <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Titel (darf leer bleiben)" aria-label="Titel" maxLength={120} {...PRIVAT} />
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Gedanke" aria-label="Gedanke" {...PRIVAT} />
+            </> : <>
+              <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Aufgabe oder Meilenstein" aria-label="Aufgabe" maxLength={200} {...PRIVAT} onKeyDown={(e) => { if (e.key === 'Enter') neu(); }} />
+              <div className="tr-reihe">
+                <label className="tr-check"><input type="checkbox" checked={meilenstein} onChange={(e) => setMeilenstein(e.target.checked)} />Meilenstein</label>
+                <input type="date" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Datum" />
+              </div>
+            </>}
+            <button type="button" className="btn primary" onClick={neu} disabled={ansicht === 'notiz' ? !text.trim() : !titel.trim()}>Verschlüsselt speichern</button>
+          </div>
+        </section>
+      ) : null}
+
+      {ansicht === 'notiz' ? (
+        <section className="gsec" aria-label="Notizen">
+          {!notizen.length ? <p className="muted small">Noch keine Notizen.</p> : (
+            <div className="group">
+              {notizen.map((x) => (
+                <div key={x.id} className="tr-notiz">
+                  <button type="button" className="cell tr-notiz-kopf" aria-expanded={offen === x.id} onClick={() => { setOffen(offen === x.id ? null : x.id); setEntwurf(x.text); }}>
+                    <span className="lbl">{x.titel || x.text.slice(0, 60)}<small>{new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(new Date(x.geaendert))}</small></span>
+                  </button>
+                  {offen === x.id ? (
+                    <div className="pad tr-form">
+                      <textarea value={entwurf} onChange={(e) => setEntwurf(e.target.value)} rows={8} aria-label="Notiz bearbeiten" {...PRIVAT} />
+                      <div className="tr-reihe">
+                        <button type="button" className="btn primary" disabled={entwurf === x.text} onClick={() => onSpeichern({ art: 'notiz', titel: x.titel, text: entwurf.slice(0, 50_000) }, x.id)}>Speichern</button>
+                        <button type="button" className="chipbtn" onClick={() => onLoeschen(x)}>Löschen</button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {ansicht === 'aufgabe' ? (
+        <section className="gsec" aria-label="Aufgaben">
+          {!aufgaben.length ? <p className="muted small">Noch keine Aufgaben.</p> : (
+            <div className="group">
+              {aufgaben.map((x) => (
+                <div key={x.id} className={'cell static tr-aufgabe' + (x.erledigt ? ' erledigt' : '')}>
+                  <input type="checkbox" className="tr-haken" checked={!!x.erledigt} aria-label={`Erledigt: ${x.titel}`} onChange={() => onSpeichern({ art: 'aufgabe', titel: x.titel, meilenstein: x.meilenstein, datum: x.datum, erledigt: !x.erledigt }, x.id)} />
+                  <span className="lbl">{x.titel}{x.meilenstein || x.datum ? <small>{x.meilenstein ? 'Meilenstein' : ''}{x.meilenstein && x.datum ? ' · ' : ''}{x.datum ? tagText(x.datum) : ''}</small> : null}</span>
+                  <button type="button" className="chipbtn" onClick={() => onLoeschen(x)} aria-label={`Löschen: ${x.titel}`}>Löschen</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <section className="gsec">
+        <div className="group">
+          <button type="button" className="cell tr-zeile" onClick={onExport}><span className="lbl">Verschlüsselt exportieren<small>Datei mit allem, nur mit Passphrase oder Wiederherstellungsschlüssel lesbar</small></span></button>
+        </div>
+      </section>
+      <p className="gnote">Geht die App in den Hintergrund oder passiert {LEERLAUF_MIN} Minuten nichts, ist die Ablage zu. Dann brauchst du wieder Face ID und Passphrase.</p>
+    </>
+  );
+}

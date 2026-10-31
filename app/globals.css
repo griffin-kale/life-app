@@ -1479,3 +1479,51 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .chat-experte { display: block; margin-bottom: 4px; font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #F2CC5B; }
 .sz-coach { margin: 0; padding: 10px 12px; border-radius: 12px; background: rgb(var(--sand-rgb) / .14); color: var(--ink); font-size: .875rem; }
 .mz-zeile { gap: 10px; }
+
+/* Tresor (0.30) */
+.plan-um button { display: grid; place-items: center; min-height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; }
+.plan-um button[aria-current='page'] { background: var(--ink); color: var(--night); }
+.tr-satz { margin: 0 0 14px; color: var(--muted); line-height: 1.45; }
+.tr-form { display: grid; gap: 12px; }
+.tr-form input:not([type='checkbox']), .tr-form textarea { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: rgb(var(--ink-rgb) / .04); color: var(--ink); font: inherit; font-size: 1rem; }
+.tr-form textarea { resize: vertical; line-height: 1.45; }
+.tr-form .field { display: grid; gap: 6px; font-size: .875rem; color: var(--muted); }
+.tr-warn { margin: 0; padding: 12px; border-radius: 12px; background: rgb(var(--sand-rgb) / .14); color: var(--ink); font-size: .875rem; line-height: 1.45; }
+.tr-check { display: flex; align-items: center; gap: 10px; font-size: .9375rem; color: var(--ink); }
+.tr-check input, .tr-haken { width: 22px; height: 22px; accent-color: var(--sand); flex: 0 0 auto; }
+.tr-fehler { margin: 0; color: var(--warn); font-size: .875rem; }
+.tr-vergessen { justify-self: start; }
+.tr-leiste { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tr-leiste .plan-um { flex: 1; }
+.tr-reihe { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tr-reihe input[type='date'] { width: auto; }
+.tr-aufgabe { gap: 12px; }
+.tr-aufgabe.erledigt .lbl { color: var(--faint); text-decoration: line-through; }
+.tr-notiz + .tr-notiz { border-top: 1px solid var(--line); }
+.tr-notiz-kopf { width: 100%; border: 0; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.tr-drei { grid-template-columns: repeat(3, 1fr); }
+.tr-schluessel { margin: 0; padding: 14px; border-radius: 12px; background: rgb(var(--ink-rgb) / .06); font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1.0625rem; letter-spacing: .04em; line-height: 1.7; word-spacing: .3em; overflow-wrap: anywhere; user-select: all; }
+.tr-gefahr { color: var(--warn); }
+.tr-datei { position: relative; overflow: hidden; }
+.tr-datei input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.tr-zeile { width: 100%; border: 0; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.pl { display: grid; gap: 4px; }
+.pl-kopf { display: grid; gap: 8px; }
+.pl-titel { margin: 0; font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.5rem; line-height: 1.15; }
+.pl-count { margin: 0; color: var(--muted); }
+.pl-count b { font-size: 1.75rem; color: var(--ink); margin-right: 4px; }
+.pl-ziel { margin: 0; line-height: 1.45; }
+.pl-legende { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 8px; font-size: .75rem; color: var(--muted); }
+.pl-legende span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: currentColor; }
+.pl-l0 { color: var(--k-zeit); } .pl-l1 { color: var(--k-geld); } .pl-l2 { color: var(--k-koerper); } .pl-l3 { color: var(--k-mental); }
+.pl-kat { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.pl-kat.gate .lbl { color: var(--warn); }
+.pl-balken { display: grid; gap: 3px; }
+.pl-balken i { display: block; height: 6px; border-radius: 3px; background: currentColor; min-width: 2px; }
+.pl-teil { margin-top: 10px; }
+.pl-rhythmus { display: grid; gap: 6px; }
+.pl-frage { margin: 0; font-size: .9375rem; }
+.pl-optionen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pl-liste { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.4; }
+@media print { body * { visibility: hidden; } .tr-schluessel, .tr-schluessel * { visibility: visible; } .tr-schluessel { position: absolute; top: 40px; left: 40px; color: #000; background: none; } }
+.lb-titel { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
