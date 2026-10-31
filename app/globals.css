@@ -1426,20 +1426,19 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .plan-um a:active { opacity: .6; }
 
 /* Leben (0.28): vier Konten mit je einem direkten Weg */
-.lb-konten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lb-konten { display: grid; gap: 10px; }
 .lb-konto { display: grid; align-content: space-between; gap: 10px; padding: 14px; border-radius: 18px; background: var(--panel); box-shadow: var(--card-shadow); }
-.lb-konto:first-child { grid-column: 1 / -1; }
 .lb-kopf { display: grid; gap: 6px; color: var(--ink); text-decoration: none; }
 .lb-kopf:active { opacity: .6; }
 .lb-kopf .ck-name { color: var(--c); }
 .lb-kopf b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 2rem; line-height: 1; }
 .lb-kopf b small { font-family: var(--sans); font-size: .8125rem; color: var(--muted); margin-left: 4px; }
 .lb-text { font-size: .875rem; color: var(--muted); line-height: 1.35; }
-.lb-aktion { justify-self: start; }
-@media (min-width: 768px) { .lb-konten { grid-template-columns: repeat(4, minmax(0, 1fr)); } .lb-konto:first-child { grid-column: auto; } }
+.lb-aktion { justify-self: start; text-decoration: none; }
+@media (min-width: 768px) { .lb-konten { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Schnellzugriffe auf Heute (0.28): Deep Work breit, vier Wege darunter */
-.sz-bereich { display: grid; gap: 8px; }
+.schnell-bereich { display: grid; gap: 8px; }
 .sz-dw { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 16px 10px 10px; border-radius: 18px; background: var(--sand); color: var(--night); text-decoration: none; transition: transform 120ms ease-out; }
 .sz-dw:active { transform: scale(.98); }
 .sz-dw-play { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--night); color: var(--sand); }

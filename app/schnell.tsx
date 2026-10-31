@@ -18,7 +18,7 @@ const Symbol = ({ w }: { w: Weg }) => (
 
 export function Schnellzugriff({ onGedanke, sache }: { onGedanke: () => void; sache?: { id: string; titel: string } | null }) {
   return (
-    <section className="sz-bereich" aria-label="Schnellzugriffe">
+    <section className="schnell-bereich" aria-label="Schnellzugriffe">
       <Link href={sache ? `/fokus?item=${sache.id}` : '/fokus'} className="sz-dw">
         <span className="sz-dw-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" /></svg></span>
         <span className="sz-dw-text"><b>Deep Work starten</b><small>{sache ? sache.titel : 'Timer, Musik und deine Liste im Vollbild'}</small></span>
