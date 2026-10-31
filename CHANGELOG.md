@@ -2,6 +2,17 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.31.0] – 2026-10-31
+
+Die Ablage wird ein lebendes Dokument (Peter, 31.10.2026: „wie kann ich das nachhalten und weiterentwickeln“).
+
+### Neu
+- **Vier Reiter statt einer langen Seite:** Heute (tägliche Gewohnheiten, Abendfrage, Woche als Quote, nächster Meilenstein), Woche (Wochengewohnheiten, Wochenaufgaben, Wochenblick), Weg (Meilensteine, Jahresziele, Phasen als Zeitleiste), Kompass (Ziel, Kategorien, Prinzipien, rote Linien, Gedanken).
+- **In der App pflegen:** Gewohnheiten, Meilensteine, Jahresziele und Wochenaufgaben anlegen, abhaken und entfernen. Was im Wochenblick unter „Was zählt nächste Woche?“ steht, wird dort zur Wochenaufgabe.
+- **Neue Fassung einlesen:** Life zeigt vorher, was neu, geändert oder weg ist, und übernimmt erst nach deinem Okay. Haken und Reflexionen bleiben, frühere Fassungen liegen verschlüsselt im Verlauf und lassen sich zurückholen. Der Plan lässt sich als JSON herunterladen, mit Warnung, weil die Datei unverschlüsselt ist.
+- **Reflexionen:** Abendfrage täglich (Wochenquote statt Kette), Wochenblick sonntags, Annahmen prüfen im Quartal (hält, wackelt, falsch), Jahresbewertung im Oktober mit einem Regler je Kategorie und Vergleich zum Vorjahr.
+- **Neutraler Hinweis auf Heute:** Ab 18 Uhr steht „Eine Frage ist noch offen“, solange die Abendfrage fehlt. Der Server kennt dafür nur das Datum der letzten Antwort.
+
 ## [0.30.1] – 2026-10-31
 
 ### Geändert
