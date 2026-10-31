@@ -41,7 +41,9 @@ test('Sitzung: ein Challenge-Cookie gilt nie als Sitzung, Sitzungen ohne Kennung
   assert.equal(await readChallenge(challenge, 'login'), 'abc');
   assert.equal(await readChallenge(challenge, 'register'), null);
   const s = await signSession({ sid: 'a'.repeat(32), userId: 'peter' });
-  assert.deepEqual(await readSession(s.value), { sid: 'a'.repeat(32), userId: 'peter' });
+  const gelesen = await readSession(s.value);
+  assert.deepEqual({ sid: gelesen?.sid, userId: gelesen?.userId }, { sid: 'a'.repeat(32), userId: 'peter' });
+  assert.equal(typeof gelesen?.iat, 'number'); // für die Verlängerung bei Nutzung (0.31.2)
   assert.equal(await readChallenge(s.value, 'login'), null);
   const alt = await new SignJWT({ sub: 'peter' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('30d').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
   assert.equal(await validSession(alt), false);
