@@ -1300,3 +1300,49 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
 .sz-blatt-bereich { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .sz-zahl { display: grid; gap: 6px; font-size: .8125rem; color: var(--muted); }
 .sz-zahl input { width: 9em; background: var(--field); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 1rem; color: var(--ink); }
+
+/* Liste auf Heute (0.27): Fortschritt als Balken, kein Punktestand */
+.liste { display: grid; gap: 8px; }
+.li-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.li-kopf .glabel { margin: 0; }
+.li-kopf.klein { font-size: .8125rem; font-weight: 600; color: var(--muted); padding: 4px 4px 0; }
+.li-stand { font-size: .8125rem; color: var(--faint); }
+.li-balken { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 0 2px; }
+.li-balken i { height: 6px; border-radius: 3px; background: var(--panel-2); }
+.li-balken i.an { background: var(--ok); }
+.li-mehr { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 4px; color: var(--muted); font-size: .875rem; text-decoration: none; }
+.li-mehr span:last-child { display: inline-flex; align-items: center; gap: 4px; color: var(--sky); font-weight: 600; }
+.li-mehr svg { width: 14px; height: 14px; }
+.anker { display: block; scroll-margin-top: 72px; }
+
+/* Fokus (0.27): Ring als Timer auf der dunklen Karte, Musik darunter */
+.fk-titel { overflow-wrap: anywhere; }
+.fk-karte { display: grid; gap: 14px; padding: 18px 16px; border-radius: 24px; background: var(--hero); color: var(--hero-ink); box-shadow: 0 20px 40px -26px rgb(0 40 120 / .7); }
+.fk-ring { position: relative; width: min(220px, 70vw); aspect-ratio: 1; margin: 0 auto; display: grid; place-items: center; text-align: center; }
+.fk-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.fk-spur { fill: none; stroke: rgb(255 255 255 / .14); stroke-width: 10; }
+.fk-wert { fill: none; stroke: var(--k-geld); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.fk-wert.pause { stroke: var(--ok); }
+.fk-ring b { display: block; font-family: var(--serif); font-weight: var(--serif-w); font-size: 2.75rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.fk-ring small { display: block; margin-top: 6px; font-size: .75rem; color: var(--hero-muted); max-width: 12em; }
+.fk-musik { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: rgb(255 255 255 / .1); }
+.fk-musik > div { flex: 1; min-width: 0; display: grid; }
+.fk-musik b { font-size: .9375rem; }
+.fk-musik small { font-size: .75rem; color: var(--hero-muted); overflow-wrap: anywhere; }
+.fk-musik .chipbtn { background: rgb(255 255 255 / .14); color: var(--hero-ink); }
+.fk-play { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%; border: 0; background: var(--hero-ink); color: #001D51; display: grid; place-items: center; cursor: pointer; }
+.fk-play svg { width: 18px; height: 18px; }
+.fk-play:disabled { opacity: .4; }
+.fk-laut { display: grid; gap: 6px; font-size: .75rem; color: var(--hero-muted); }
+.fk-laut input { width: 100%; accent-color: var(--k-geld); }
+.fk-ende { background: rgb(255 255 255 / .12); color: var(--hero-ink); }
+.fk-start, .fk-bewerten, .fk-test { display: grid; gap: 10px; }
+.fk-start .btn svg { width: 16px; height: 16px; }
+.fk-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+.fk-balken { display: grid; gap: 8px; }
+.fk-zeile { display: grid; grid-template-columns: 6.5em 1fr 4.5em; gap: 10px; align-items: center; font-size: .875rem; }
+.fk-zeile small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.fk-spur-h { height: 10px; border-radius: 5px; background: var(--panel-2); overflow: hidden; }
+.fk-spur-h i { display: block; height: 100%; border-radius: 5px; background: var(--k-mental); }
+@media (prefers-reduced-motion: reduce) { .fk-wert { transition: none; } }
+.fk-titel { font-size: clamp(1.6rem, 7vw, 2.2rem); line-height: 1.08; text-wrap: balance; }
