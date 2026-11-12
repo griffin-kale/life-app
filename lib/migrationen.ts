@@ -112,6 +112,23 @@ export const MIGRATIONEN: Migration[] = [
         user_id text primary key, hash text not null, fehl int not null default 0, geaendert timestamptz not null default now())`;
     },
   },
+  {
+    nr: 11, name: 'Die Hunderter: 100 Tage mit Standards, Leben-Aufgaben und Jokern (0.32)',
+    run: async (tx) => {
+      await tx`create table if not exists hunderter (
+        id bigserial primary key, user_id text not null, start date not null, erstellt timestamptz not null default now())`;
+      await tx`create index if not exists hunderter_user on hunderter (user_id, id desc)`;
+      await tx`create table if not exists hunderter_joker (
+        hunderter_id bigint not null references hunderter(id) on delete cascade, user_id text not null, tag date not null,
+        primary key (hunderter_id, tag))`;
+      await tx`create table if not exists hunderter_tage (
+        hunderter_id bigint not null references hunderter(id) on delete cascade, user_id text not null, tag date not null,
+        content int not null default 0, hand jsonb not null default '{}'::jsonb, leben jsonb,
+        fazit text not null default '', bremsen text[] not null default '{}', abgeschlossen boolean not null default false,
+        primary key (hunderter_id, tag))`;
+      await tx`alter table fokus_bloecke add column if not exists bereich text`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */
