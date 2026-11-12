@@ -1,9 +1,10 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TabBar, TopBar, api, taskTitle, useToast, type Item, type Stand } from '../ui';
 import { Blaetter, type BlaetterSteuerung } from '../blaetter';
 import { BOEGEN } from '@/lib/fragen';
+import { HunderterMorgen } from '../hunderter';
 
 const ERHOLUNG = (BOEGEN.morgen.fragen[0] as Extract<(typeof BOEGEN.morgen.fragen)[number], { typ: 'skala' }>).werte;
 const WOHIN: [string, string][] = [['jetzt', 'Heute'], ['woche', 'Diese Woche'], ['geparkt', 'Parken']];
@@ -21,6 +22,7 @@ export default function Morgen() {
   const [toast, setToast] = useToast();
   const blatt = useRef<BlaetterSteuerung>(null);
   const router = useRouter();
+  const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
   useEffect(() => { api<Stand>('/api/heute').then(setSt).catch((e) => setToast((e as Error).message, 'err')); }, [setToast]);
 
   const jetzt = (st?.items ?? []).filter((i) => i.stapel === 'jetzt' && i.status !== 'erledigt').sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99));
@@ -75,6 +77,7 @@ export default function Morgen() {
     <main className="wrap">
       <TopBar title="Morgen" back={{ label: 'Heute', href: '/' }} />
       <header className="head"><span className="eyebrow">Zwei Minuten für den Tag</span><h1 className="title">Guten Morgen<i>.</i></h1></header>
+      <HunderterMorgen onFehler={fehler} />
       {st ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Morgen" /></div> : <p className="loading">Lädt …</p>}
       {toast}
       <TabBar />

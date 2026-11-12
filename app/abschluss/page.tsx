@@ -1,9 +1,10 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TabBar, TaskRow, TopBar, api, taskTitle, useToast, type Item, type Stand } from '../ui';
 import { Blaetter, type BlaetterSteuerung } from '../blaetter';
 import { BOEGEN, type Frage } from '@/lib/fragen';
+import { HunderterAbschluss } from '../hunderter';
 
 const fragen = BOEGEN.abend.fragen;
 const TAG = (fragen.find((f) => f.id === 'tag') as Extract<Frage, { typ: 'skala' }>).werte;
@@ -24,6 +25,8 @@ export default function Abschluss() {
   const [toast, setToast] = useToast();
   const blatt = useRef<BlaetterSteuerung>(null);
   const router = useRouter();
+  const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
+  const ok = useCallback((m: string) => setToast(m, 'ok'), [setToast]);
   const laden = () => api<Stand>('/api/heute').then(setSt).catch((e) => setToast((e as Error).message, 'err'));
   useEffect(() => { laden(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -85,6 +88,7 @@ export default function Abschluss() {
     <main className="wrap">
       <TopBar title="Abschluss" back={{ label: 'Heute', href: '/' }} />
       <header className="head"><span className="eyebrow">Zwei Minuten, dann ist der Tag zu</span><h1 className="title">Abschluss<i>.</i></h1></header>
+      <HunderterAbschluss onFehler={fehler} onOk={ok} />
       {st ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Abschluss" /></div> : <p className="loading">Lädt …</p>}
       {toast}
       <TabBar />

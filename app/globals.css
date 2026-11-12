@@ -1584,3 +1584,75 @@ section[aria-label="Mehr zur Woche"] .cell .val > span { overflow: hidden; text-
   main.heute-desk .coach-panel .coach-eingabe { position: sticky; bottom: 0; z-index: 1; background: #04112E; }
   main.heute-desk .spalte-rechts > :not(.coach-panel) { flex: 0 1 auto; min-height: 0; max-height: 38%; overflow-y: auto; }
 }
+
+/* Die Hunderter (0.32, Peter 12.11.2026): Kacheln fürs Geschäft, Leben als Liste. Hälfte grün, voll sand. */
+.hu-karte { gap: 12px; }
+.hu-kopf { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 8px 12px; }
+.hu-tag { display: flex; align-items: baseline; gap: 6px; }
+.hu-tag b { font-family: var(--serif); font-weight: var(--serif-w); font-size: 1.6rem; line-height: 1; }
+.hu-tag span { color: var(--muted); }
+.hu-wert { display: grid; justify-items: end; gap: 1px; }
+.hu-wert b { font-size: 1.35rem; font-weight: 650; line-height: 1; }
+.hu-wert b small { font-size: .8rem; margin-left: 1px; }
+.hu-wert span { font-size: .75rem; color: var(--muted); }
+.hu-wert.zaehlt span { color: var(--ok); }
+.hu-wert.voll span { color: var(--sand); }
+.hu-balken { grid-column: 1 / -1; position: relative; height: 8px; border-radius: 4px; background: var(--line); }
+.hu-balken i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--muted); transition: width 300ms ease-out; }
+.hu-wert.zaehlt + .hu-balken i { background: var(--ok); }
+.hu-wert.voll + .hu-balken i { background: var(--sand); }
+.hu-balken em { position: absolute; left: 80%; top: -3px; bottom: -3px; width: 2px; background: var(--ok); border-radius: 1px; }
+.hu-kacheln { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hu-kachel { position: relative; display: grid; min-height: 84px; border-radius: 14px; border: 0; padding: 0; background: rgb(var(--tint-rgb) / .07); color: var(--ink); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+button.hu-kachel { padding: 10px; align-content: space-between; }
+.hu-kachel.leer { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); }
+.hu-kachel.halb { background: color-mix(in srgb, var(--ok) 20%, transparent); }
+.hu-kachel.voll { background: color-mix(in srgb, var(--sand) 26%, transparent); }
+.hu-start { display: grid; align-content: space-between; gap: 6px; padding: 10px 10px 34px; color: inherit; text-decoration: none; min-height: 100%; box-sizing: border-box; }
+.hu-name { font-size: .875rem; font-weight: 600; }
+.hu-kachel b { font-size: 1.25rem; font-weight: 650; line-height: 1; }
+.hu-kachel b small { font-size: .8rem; color: var(--muted); font-weight: 500; }
+.hu-los { display: inline-flex; align-items: center; gap: 4px; font-size: .8125rem; color: var(--muted); }
+.hu-los svg { width: 14px; height: 14px; }
+.hu-hand { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 2px; }
+.hu-hand button { width: 30px; height: 30px; border-radius: 9px; border: 0; background: rgb(var(--tint-rgb) / .12); color: var(--ink); font: inherit; font-size: 1rem; line-height: 1; cursor: pointer; }
+.hu-hand button:disabled { opacity: .35; cursor: default; }
+.hu-leben { list-style: none; margin: 0; padding: 0; display: grid; }
+.hu-leben li { display: flex; align-items: center; gap: 12px; min-height: 46px; border-top: 1px solid var(--line); }
+.hu-leben li:first-child { border-top: 0; }
+.hu-haken { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--c); background: transparent; color: var(--on-accent); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.hu-haken.an { background: var(--c); }
+.hu-haken svg { width: 16px; height: 16px; }
+.hu-punkt { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.hu-ltext { display: grid; gap: 1px; font-size: .9375rem; line-height: 1.3; }
+.hu-ltext small { font-size: .6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
+.hu-ltext.fertig { color: var(--muted); text-decoration: line-through; }
+.hu-status { margin: 0; padding: 10px 12px; border-radius: 12px; background: rgb(var(--tint-rgb) / .07); font-size: .875rem; line-height: 1.4; }
+.hu-status.gut { background: color-mix(in srgb, var(--ok) 18%, transparent); }
+.hu-mehr { display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: var(--sky); font-size: .875rem; text-decoration: none; }
+.hu-mehr svg { width: 14px; height: 14px; }
+.hu-zeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hu-zeile .grow { flex: 1; min-width: 12rem; }
+.hu-zeile input { flex: 1; min-width: 9rem; width: auto; }
+.hu-raster { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.hu-zelle { aspect-ratio: 1; border-radius: 5px; display: grid; place-items: center; font-size: .625rem; color: var(--faint); box-shadow: inset 0 0 0 1px var(--hair); }
+.hu-zelle.voll { background: var(--sand); box-shadow: none; color: var(--on-accent); }
+.hu-zelle.zaehlt { background: var(--ok); box-shadow: none; color: var(--on-accent); }
+.hu-zelle.nicht { background: rgb(var(--tint-rgb) / .22); box-shadow: none; }
+.hu-zelle.heute { box-shadow: inset 0 0 0 2px var(--ink); color: var(--ink); font-weight: 700; }
+.hu-legende { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); }
+.hu-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.hu-legende i { width: 12px; height: 12px; aspect-ratio: auto; border-radius: 3px; }
+.hu-quote { display: grid; grid-template-columns: 7.5rem 1fr 3rem; align-items: center; gap: 10px; font-size: .875rem; }
+.hu-quote small { text-align: right; color: var(--muted); }
+.hu-spur { position: relative; height: 8px; border-radius: 4px; background: var(--line); }
+.hu-spur i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--muted); }
+.hu-spur i.gut { background: var(--ok); }
+.hu-zaehler { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hu-zaehler .pad { gap: 2px; padding: 12px; }
+.hu-zaehler b { font-size: 1.15rem; font-weight: 650; }
+.hu-zaehler small { color: var(--muted); font-size: .75rem; }
+.hu-joker { list-style: none; margin: 0; padding: 0; display: grid; }
+.hu-joker li { display: flex; align-items: center; gap: 8px; min-height: 40px; border-top: 1px solid var(--line); }
+.hu-joker li:first-child { border-top: 0; }
+.hu-joker .grow { flex: 1; }
