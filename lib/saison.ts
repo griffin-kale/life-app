@@ -3,6 +3,7 @@ import { ensureSchema, getSetting, proNutzer, setSetting, sql } from './db';
 import { Hinweis } from './fehler';
 import { standAus } from './standort';
 import { heuteBerlin } from './zeit';
+import { hunderterZeilen } from './hunderter';
 import {
   BEREICH_TITEL, BEREICHE_S, HINDERNISSE, imPlan, naechsterMontag, pruefeHebelVorschlaege, saisonEnde, saisonName, saisonWoche,
   vorschlaegeAus, wennDannSatz, zielAnteil, type Bewertung, type HebelArt, type SaisonEingabe, type SBereich, type Vorschlag,
@@ -142,6 +143,9 @@ export async function zieleText(userId: string): Promise<string> {
 
 /** Zeilen für Coach und Sortieren: Leitsatz, Woche, Ziele mit Hebeln und Wenn-dann. Ohne Datum, nur die Woche der Saison. */
 export async function saisonZeilen(userId: string): Promise<string[]> {
+  // Laufen die Hunderter, stehen sie vorn (0.32). Sie ersetzen die Saison bis zu ihrem Ende (Peter, 12.11.2026).
+  const hundert = await hunderterZeilen(userId).catch(() => [] as string[]);
+  if (hundert.length) return hundert;
   const s = await aktuelleSaison(userId);
   if (!s || s.woche < 1) return [];
   return [

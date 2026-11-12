@@ -15,6 +15,7 @@ import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
 import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
 import { CockpitKacheln, KontenHeute, Tagesstreifen, useCockpit } from './cockpit';
+import { HunderterKarte } from './hunderter';
 
 /** Auf iPad und Mac steht rechts unter dem Coach nur, was in den Tag passt. Alles andere links, damit die Seite nicht scrollt (Peter, 31.10.2026). */
 const RECHTS: Baustein[] = ['streifen', 'kalender'];
@@ -219,6 +220,7 @@ export default function Heute() {
     menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
   };
   const reihe = bausteine.filter((b) => b !== 'kompass');
+  const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
 
   return (
     <main className={'wrap breit' + (breit ? ' heute-desk' : '')}>
@@ -230,13 +232,14 @@ export default function Heute() {
 
       {breit ? (
         <div className="heute-spalten">
-          <div className="spalte">{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
+          <div className="spalte"><HunderterKarte onFehler={fehler} />{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
           <div className="spalte spalte-rechts">
             <aside className="hero coach coach-panel" aria-label="Coach">{coachInhalt}</aside>
             {reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
           </div>
         </div>
       ) : <>
+        <HunderterKarte onFehler={fehler} />
         {reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
         <CoachLeiste stand={ci} onOeffnen={gedanke} />
         {coachModus === 'feld' ? <CoachFeld stand={ci} onSenden={senden} wartet={!!wartet} onGespraech={() => setCoachModus('blatt')} onZu={() => setCoachModus('zu')} onFehler={(m) => setToast(m, 'err')} /> : null}

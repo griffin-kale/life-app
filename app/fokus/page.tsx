@@ -9,9 +9,10 @@ import { useCockpit } from '../cockpit';
 import {
   BEWERTUNG, BEWERTUNG_NAME, LAENGEN, MUSIK, MUSIK_NAME, TEST_TAGE, phase, uhr, type Bewertung, type Musik, type TestStand,
 } from '@/lib/fokus-regeln';
+import { BEREICHE_H, BEREICH_KURZ, BEREICH_NAME, type HBereich } from '@/lib/hunderter-regeln';
 import type { Block } from '@/lib/fokus';
 
-type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null; jetzt: number };
+type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null; hunderter?: boolean; jetzt: number };
 type PipFenster = Window & { document: Document };
 type DocPip = { requestWindow: (o: { width: number; height: number }) => Promise<PipFenster> };
 
@@ -31,6 +32,7 @@ export default function DeepWork() {
   const [d, setD] = useState<Antwort | null>(null);
   const [st, setSt] = useState<Stand | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
+  const [bereich, setBereich] = useState<HBereich | null>(null);
   const [laenge, setLaenge] = useState(0);
   const [musik, setMusik] = useState<Musik>('klassik');
   const [jetzt, setJetzt] = useState(() => Date.now());
@@ -56,6 +58,9 @@ export default function DeepWork() {
     heuteLaden();
     const id = new URLSearchParams(window.location.search).get('item');
     if (id && /^[0-9a-f-]{36}$/i.test(id)) setItemId(id);
+    // Die Hunderter starten Deep Work mit Bereich und 50 + 10 (0.32)
+    const br = new URLSearchParams(window.location.search).get('bereich') as HBereich | null;
+    if (br && BEREICHE_H.includes(br)) { setBereich(br); setLaenge(1); }
     setPipGeht('documentPictureInPicture' in window);
   }, [laden, heuteLaden, setToast]);
   useEffect(() => { const t = setInterval(() => setJetzt(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -65,7 +70,7 @@ export default function DeepWork() {
   const jetztListe = (st?.items ?? []).filter((i) => i.stapel === 'jetzt' && i.status !== 'erledigt').sort((x, y) => (x.rang ?? 99) - (y.rang ?? 99));
   const aktuellId = b?.itemId ?? itemId ?? jetztListe[0]?.id ?? null;
   const aktuell: Item | null = (st?.items ?? []).find((i) => i.id === aktuellId) ?? null;
-  const sache = b?.titel || (aktuell ? taskTitle(aktuell) : '');
+  const sache = b?.titel || (bereich && !itemId ? `Hunderter: ${BEREICH_NAME[bereich]}` : aktuell ? taskTitle(aktuell) : '');
   const naechste = jetztListe.find((i) => i.id !== aktuellId) ?? null;
   const ab = minutenBerlin();
   const termin = c?.streifen.find((s) => s.quelle === 'kalender' && s.von >= ab) ?? null;
@@ -107,7 +112,7 @@ export default function DeepWork() {
     m.spielen(gewaehlt); // noch im Tippen, sonst blockt das iPhone den Ton
     setBusy(true);
     try {
-      const r = await api<{ block: Block; jetzt: number }>('/api/fokus', { method: 'POST', body: JSON.stringify({ aktion: 'start', itemId: aktuellId, minuten, pause, musik: dd.naechste ? 'test' : musik }) });
+      const r = await api<{ block: Block; jetzt: number }>('/api/fokus', { method: 'POST', body: JSON.stringify({ aktion: 'start', itemId: bereich && !itemId ? null : aktuellId, bereich, minuten, pause, musik: dd.naechste ? 'test' : musik }) });
       if (r.block.musik !== gewaehlt) m.spielen(r.block.musik);
       setVersatz(r.jetzt - Date.now());
       setD({ ...dd, block: r.block }); setBewerten(false); setBewertung(null); setErledigt(false);
@@ -227,6 +232,11 @@ export default function DeepWork() {
             {!b ? (
               <div className="dw-wahl" role="radiogroup" aria-label="Länge">
                 {LAENGEN.map(([f, p], i) => <button key={f} type="button" role="radio" aria-checked={laenge === i} onClick={() => setLaenge(i)}>{f} + {p}</button>)}
+              </div>
+            ) : null}
+            {!b && d?.hunderter ? (
+              <div className="dw-wahl" role="radiogroup" aria-label="Bereich der Hunderter">
+                {BEREICHE_H.map((x) => <button key={x} type="button" role="radio" aria-checked={bereich === x} onClick={() => { setBereich(bereich === x ? null : x); if (bereich !== x) setLaenge(1); }}>{BEREICH_KURZ[x]}</button>)}
               </div>
             ) : null}
             {naechste ? <div className="dw-zeile"><span className="grow">{taskTitle(naechste)}</span><small>danach</small></div> : null}

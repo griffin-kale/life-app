@@ -1,15 +1,16 @@
 import { ensureSchema, getSetting, setSetting, sql } from './db';
 import { Hinweis } from './fehler';
 import { heuteBerlin } from './zeit';
+import { BEREICHE_H, BEREICH_NAME, type HBereich } from './hunderter-regeln';
 import {
   BEWERTUNG, MUSIK, TEST_TAGE, laengeOk, naechsteTestMusik, testAuswerten, type Bewertung, type Musik, type TestStand,
 } from './fokus-regeln';
 
 /** Fokusblöcke pro Mensch. Die Bewertung bleibt in Life und geht nie an Claude. */
 
-export type Block = { id: number; itemId: string | null; titel: string; start: string; minuten: number; pause: number; musik: Musik; test: boolean; ende: string | null; bewertung: Bewertung | null };
-type Zeile = { id: number; item_id: string | null; titel: string; start: Date; minuten: number; pause: number; musik: Musik; test: boolean; ende: Date | null; bewertung: Bewertung | null };
-const block = (z: Zeile): Block => ({ id: z.id, itemId: z.item_id, titel: z.titel, start: z.start.toISOString(), minuten: z.minuten, pause: z.pause, musik: z.musik, test: z.test, ende: z.ende?.toISOString() ?? null, bewertung: z.bewertung });
+export type Block = { id: number; itemId: string | null; bereich: string | null; titel: string; start: string; minuten: number; pause: number; musik: Musik; test: boolean; ende: string | null; bewertung: Bewertung | null };
+type Zeile = { id: number; item_id: string | null; bereich: string | null; titel: string; start: Date; minuten: number; pause: number; musik: Musik; test: boolean; ende: Date | null; bewertung: Bewertung | null };
+const block = (z: Zeile): Block => ({ id: z.id, itemId: z.item_id, bereich: z.bereich ?? null, titel: z.titel, start: z.start.toISOString(), minuten: z.minuten, pause: z.pause, musik: z.musik, test: z.test, ende: z.ende?.toISOString() ?? null, bewertung: z.bewertung });
 const TEST = (u: string) => `musiktest:${u}`;
 
 /** Der laufende Block: noch nicht beendet und jünger als Fokus plus Pause plus eine Stunde Kulanz. */
@@ -46,16 +47,18 @@ export async function testStarten(userId: string): Promise<void> { await setSett
 export async function testBeenden(userId: string): Promise<void> { await setSetting(TEST(userId), ''); }
 
 /** Startet einen Block. Im laufenden Test wählt Life die Musik, damit der Vergleich fair bleibt. */
-export async function starten(userId: string, e: { itemId: string | null; minuten: number; pause: number; musik: Musik | 'test' }): Promise<Block> {
+export async function starten(userId: string, e: { itemId: string | null; bereich?: HBereich | null; minuten: number; pause: number; musik: Musik | 'test' }): Promise<Block> {
   await ensureSchema();
   if (!laengeOk(e.minuten, e.pause)) throw new Hinweis('Diese Länge gibt es nicht.');
   if (await laufend(userId)) throw new Hinweis('Es läuft schon ein Fokusblock.');
+  const bereich = e.bereich && BEREICHE_H.includes(e.bereich) ? e.bereich : null;
   let titel = '';
   if (e.itemId) {
     const [it] = await sql<{ titel: string | null; schritt: string | null; text: string }[]>`select titel, schritt, text from items where id = ${e.itemId} and user_id = ${userId}`;
     if (!it) throw new Hinweis('Diese Aufgabe gibt es nicht.');
     titel = (it.schritt || it.titel || it.text).slice(0, 120);
   }
+  if (!titel && bereich) titel = `Hunderter: ${BEREICH_NAME[bereich]}`;
   const start = await testStart(userId);
   // Der Test läuft vom Starttag an genau 14 Kalendertage, danach wählt wieder Peter
   const imTest = !!start && e.musik === 'test' && (Date.parse(heuteBerlin() + 'T00:00:00Z') - Date.parse(start + 'T00:00:00Z')) / 86_400_000 < TEST_TAGE;
@@ -66,8 +69,8 @@ export async function starten(userId: string, e: { itemId: string | null; minute
   }
   if (!MUSIK.includes(musik)) throw new Hinweis('Diese Musik gibt es nicht.');
   const [z] = await sql<Zeile[]>`
-    insert into fokus_bloecke (user_id, item_id, titel, minuten, pause, musik, test)
-    values (${userId}, ${e.itemId}, ${titel}, ${e.minuten}, ${e.pause}, ${musik}, ${imTest}) returning *`;
+    insert into fokus_bloecke (user_id, item_id, bereich, titel, minuten, pause, musik, test)
+    values (${userId}, ${e.itemId}, ${bereich}, ${titel}, ${e.minuten}, ${e.pause}, ${musik}, ${imTest}) returning *`;
   return block(z);
 }
 
