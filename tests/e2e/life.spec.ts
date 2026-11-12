@@ -1409,3 +1409,39 @@ test('Zwei Menschen: jeder sieht nur seine eigenen Einträge, Einstellungen und 
 
   await peter.close(); await zweite.close();
 });
+
+test('Die Hunderter: starten, Content, Phase, Leben, Joker, Raster', async ({ page, context }) => {
+  await anmelden(context);
+  // Ein Lauf auf frischer Datenbank startet heute, sonst sind die Hunderter schon da
+  const vorher = await (await page.request.get('/api/hunderter')).json();
+  if (!vorher.heute) {
+    await page.goto('/hunderter');
+    await page.getByRole('radio', { name: 'Heute' }).click();
+    await page.getByRole('button', { name: 'Hunderter starten' }).click();
+    await expect(page.getByText(/Tag 1 von 100/)).toBeVisible();
+  }
+  await page.goto('/');
+  const karte = page.getByRole('region', { name: 'Die Hunderter' });
+  await expect(karte.getByText('Tag 1')).toBeVisible();
+  await expect(karte.getByText('25 Liegestütze in zwei Sätzen')).toBeVisible();
+  await karte.getByRole('button', { name: /^Content/ }).click();
+  await expect(karte.getByRole('button', { name: /^Content: 50 Pieces/ })).toBeVisible();
+  for (const b of ['Shop', 'Mail und Briefe', 'Förderung', 'Plattform', 'Admin und System']) {
+    await karte.getByRole('button', { name: `${b}: eine Phase nachtragen` }).click();
+    await expect(karte.getByRole('link', { name: new RegExp(`^${b}: 1 von 2`) })).toBeVisible();
+  }
+  await expect(karte.getByText(/fehlt: 5 Leben-Aufgaben/)).toBeVisible();
+  for (const l of await karte.locator('.hu-haken').all()) { await l.click(); await expect(l).toHaveAttribute('aria-pressed', 'true'); }
+  await expect(karte.getByText('Der Tag zählt. Alles darüber ist Bonus.')).toBeVisible();
+  await expect(karte.getByText('80%')).toBeVisible();
+  // Deep Work mit Bereich startet mit 50 + 10
+  await karte.getByRole('link', { name: /^Plattform: 1 von 2/ }).click();
+  await expect(page.getByRole('radio', { name: '50 + 10' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('radio', { name: 'Plattform' })).toHaveAttribute('aria-checked', 'true');
+  // Joker rückwirkend geht nicht, in der Zukunft schon
+  const gestern = await page.request.post('/api/hunderter', { data: { aktion: 'joker', tag: '2020-01-01', setzen: true }, headers: { origin: TEST_ENV.PUBLIC_ORIGIN } });
+  expect(gestern.status()).toBe(409);
+  await page.goto('/hunderter');
+  await expect(page.locator('.hu-raster .hu-zelle.zaehlt, .hu-raster .hu-zelle.voll')).toHaveCount(1);
+  await expect(page.getByText(/10 von 10 frei/)).toBeVisible();
+});
