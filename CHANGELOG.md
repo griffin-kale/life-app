@@ -2,6 +2,26 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.32.0] – 2026-11-12
+
+Die Hunderter: 100 Tage Vollgas fürs Geschäft, ohne das Leben zu zerhauen (Peter, 12.11.2026, Entwürfe im Artefakt „Life Hunderter Entwürfe“, Variante Mischung).
+
+### Neu
+- **Karte „Die Hunderter“ auf Heute.** Tag X von 100, Tageswert mit Linie bei 80 %, sechs Kacheln: Content (Tippen zählt 0 → 50 → 100) und fünf Bereiche (Shop, Mail und Briefe, Förderung, Plattform, Admin und System) mit je zwei Phasen. Ein Tipp auf einen Bereich startet Deep Work mit 50 + 10, Plus und Minus tragen Phasen von Hand nach.
+- **Fünf Leben-Aufgaben am Tag**, je eine für Körper, Sozial, Mental, Geld und Zeit, 2 bis 10 Minuten. Claude verordnet sie einmal am Tag mit Blick auf den Kalender (nur Wochentag, Namen als Platzhalter), ohne Wiederholung der letzten drei Tage. Antwortet Claude nicht, greifen feste Ersatzaufgaben. Kein Tausch.
+- **Wertung:** Die Hälfte eines Standards zählt 80 %, voll 100 %. Der Tag zählt, wenn jeder Standard mindestens die Hälfte hat und alle fünf Leben-Aufgaben erledigt sind.
+- **Zehn Joker.** Ein Joker-Tag zählt nicht und hängt einen Tag hinten an. Planen geht jederzeit, für heute nur bis 10 Uhr, rückwirkend nie.
+- **Seite /hunderter:** Raster der 100 Tage (voll, zählt, zählt nicht, heute), Quote pro Bereich, Zähler für Phasen, Content-Pieces und Leben-Aufgaben, häufigste Bremsen, Joker planen und zurücknehmen. Ohne laufende Hunderter steht dort der Start (heute oder morgen).
+- **Morgen** zeigt die verordneten Aufgaben und den Joker für heute. **Abschluss** zeigt den Tag, fragt klickbar, was gebremst hat, dazu freiwillig ein Satz.
+- **Deep Work** kennt den Bereich (Spalte `bereich` an `fokus_bloecke`). Ab 45 Minuten Fokus zählt ein Block als Phase.
+- Coach und Sortieren bekommen während der Hunderter deren Stand statt der Saison.
+
+### Geändert
+- Eigenes `favicon.ico`, damit der Browser keine 404 mehr meldet (der Ende-zu-Ende-Test schlug deshalb gelegentlich fehl).
+
+### Technik
+- Migration 11: Tabellen `hunderter`, `hunderter_joker`, `hunderter_tage`, Spalte `fokus_bloecke.bereich`. Regeln ohne Datenbank in `lib/hunderter-regeln.ts`, Tests in `tests/unit/hunderter.test.ts`, ein Ende-zu-Ende-Test.
+
 ## [0.31.2] – 2026-10-31
 
 Die Ablage geht auf dem iPhone auf, und die Anmeldung hält länger (Peter, 31.10.2026).
