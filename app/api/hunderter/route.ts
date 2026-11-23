@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { oeffentlich } from '@/lib/fehler';
-import { abschliessen, anlegen, contentSetzen, heuteStand, joker, lebenAbhaken, phaseHand, uebersicht } from '@/lib/hunderter';
-import { BEREICHE_H, KONTEN_L, istTag, type HBereich, type LKonto } from '@/lib/hunderter-regeln';
+import { abschliessen, anlegen, hakenSetzen, heuteStand, joker, lebenAbhaken, phaseHand, uebersicht } from '@/lib/hunderter';
+import { FORMAT_START, KONTEN_L, istTag, pruefeFormat, type LKonto } from '@/lib/hunderter-regeln';
+
+const KEY = /^[a-z][a-z0-9]{0,11}$/;
 import { mitNutzer } from '@/lib/sitzung';
 import { heuteBerlin } from '@/lib/zeit';
 
-/** Die Hunderter: Stand heute, mit ?ganz=1 dazu Raster und Zähler der ganzen Saison. */
+/** Challenge (früher „Die Hunderter“): Stand heute, mit ?ganz=1 dazu Raster und Zähler der ganzen Saison. */
 export async function GET(req: NextRequest) {
   const { aus, uid } = await mitNutzer(); if (aus) return aus;
   try {
@@ -13,7 +15,7 @@ export async function GET(req: NextRequest) {
     const [heute, saison] = await Promise.all([heuteStand(uid), ganz ? uebersicht(uid) : Promise.resolve(null)]);
     return NextResponse.json({ heute, saison, datum: heuteBerlin() });
   } catch (e) {
-    return NextResponse.json({ error: oeffentlich(e, 'Die Hunderter lassen sich gerade nicht laden.', 'hunderter') }, { status: 500 });
+    return NextResponse.json({ error: oeffentlich(e, 'Die Challenge lässt sich gerade nicht laden.', 'hunderter') }, { status: 500 });
   }
 }
 
@@ -24,15 +26,22 @@ export async function POST(req: NextRequest) {
   const falsch = () => NextResponse.json({ error: 'Ungültige Angaben.' }, { status: 400 });
   try {
     switch (b.aktion) {
-      case 'anlegen':
+      case 'anlegen': {
         if (!istTag(b.start)) return falsch();
-        await anlegen(b.start, uid); break;
+        // Ohne Format gelten Name, Länge und Standards der ersten Hunderter
+        const f = b.format === undefined ? FORMAT_START : pruefeFormat(b.format);
+        if (typeof f === 'string') return NextResponse.json({ error: f }, { status: 400 });
+        await anlegen(b.start, f, uid); break;
+      }
       case 'content':
         if (![0, 1, 2].includes(b.n)) return falsch();
-        await contentSetzen(b.n, uid); break;
+        await hakenSetzen('content', b.n, uid); break;
+      case 'haken':
+        if (typeof b.key !== 'string' || !KEY.test(b.key) || ![0, 1, 2].includes(b.n)) return falsch();
+        await hakenSetzen(b.key, b.n, uid); break;
       case 'phase':
-        if (!BEREICHE_H.includes(b.bereich) || (b.delta !== 1 && b.delta !== -1)) return falsch();
-        await phaseHand(b.bereich as HBereich, b.delta, uid); break;
+        if (typeof b.bereich !== 'string' || !KEY.test(b.bereich) || (b.delta !== 1 && b.delta !== -1)) return falsch();
+        await phaseHand(b.bereich, b.delta, uid); break;
       case 'leben':
         if (!KONTEN_L.includes(b.konto) || typeof b.erledigt !== 'boolean') return falsch();
         await lebenAbhaken(b.konto as LKonto, b.erledigt, uid); break;

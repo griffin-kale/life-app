@@ -84,7 +84,7 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
 
   const abends = stunde() >= 17 && !!c?.abend;
   // Wochenstart und Standortbestimmung stehen schon als Knopf da, nicht noch einmal als Punkt
-  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Die Wochenrunde')) && !(c?.standortEtappe && o.startsWith('Die Standortbestimmung')));
+  const offen = (c?.offen ?? []).filter((o) => !(c?.wochenstartOffen && o.startsWith('Der Wochenrückblick')) && !(c?.standortEtappe && o.startsWith('Der Standort-Check')));
   const k = c ? (abends ? c.abend : c.morgen) : null;
   return (
     <>
@@ -105,8 +105,8 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
       ) : null}
       <div className="coach-eingabe">
         <div className="chat-vorschlaege">
-          {c?.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standortbestimmung</Link> : null}
-          {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenrunde</Link> : null}
+          {c?.standortEtappe ? <Link href={`/stand/${c.standortEtappe}`} className="chat-chip">Standort-Check</Link> : null}
+          {c?.wochenstartOffen ? <Link href="/wochenstart" className="chat-chip">Wochenrückblick</Link> : null}
           {VORSCHLAEGE.map((v) => <button key={v} type="button" className="chat-chip" disabled={chat.denkt} onClick={() => chat.fragen(v)}>{v}</button>)}
         </div>
         <Eingabe onSenden={onSenden} fokus={fokus} onFehler={onFehler} onExperte={(t) => chat.fragen(t, true)} />

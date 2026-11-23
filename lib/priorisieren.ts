@@ -63,7 +63,7 @@ async function lauf(modus: 'tag' | 'nachtrag', uid: string): Promise<void> {
     `Heute ist ${wochentag()}.`,
     'Was gerade zählt (von Peter, mit Engpass, Prioritäten, Leitsatz):\n' + (kontext || 'nicht angegeben'),
     'Peters Ziele:\n' + (ziele || 'nicht angegeben'),
-    saison.length ? 'Peters Saison (zwölf Wochen, Ziele mit Hebeln). Was einen Hebel trägt, kommt nach vorn:\n' + saison.join('\n') : '',
+    saison.length ? 'Peters Saison (zwölf Wochen, Ziele mit Routinen). Was eine Routine trägt, kommt nach vorn:\n' + saison.join('\n') : '',
     stand.length ? 'Aus Peters Standortbestimmung (Quartalsziele, Wochenziel, was liegen bleibt):\n' + stand.join('\n') : '',
     team ? 'Wem Peter etwas geben kann:\n' + team : 'Team: nicht angegeben. Schlage "delegieren" nur vor, wenn der Eintrag selbst eine Person nennt.',
     [

@@ -14,8 +14,8 @@ export function Merkzettel({ onToast }: { onToast: (t: string, k?: 'ok' | 'err')
     catch (e) { onToast((e as Error).message, 'err'); }
   }
   return (
-    <section className="gsec" aria-label="Was der Coach sich merkt">
-      <h2 className="glabel">Was der Coach sich merkt</h2>
+    <section className="gsec" aria-label="Was der Coach weiß">
+      <h2 className="glabel">Was der Coach weiß</h2>
       <div className="group">
         {p === null ? <p className="cell static muted small">Lädt …</p>
           : !p.length ? <p className="cell static muted small">Noch nichts. Sag dem Coach etwas Festes, etwa deine Wohlfühlsumme, dann steht es hier.</p>
@@ -26,7 +26,7 @@ export function Merkzettel({ onToast }: { onToast: (t: string, k?: 'ok' | 'err')
             </div>
           ))}
       </div>
-      <p className="gnote">Der Coach liest den Merkzettel bei jeder Antwort, Namen nur als Platzhalter. Er merkt sich etwas, sobald du etwas Festes sagst, und Life zeigt dir „✓ Gemerkt“.</p>
+      <p className="gnote">Der Coach liest diese Liste bei jeder Antwort, Namen nur als Platzhalter. Er merkt sich etwas, sobald du etwas Festes sagst, und Life zeigt dir „✓ Gemerkt“.</p>
     </section>
   );
 }

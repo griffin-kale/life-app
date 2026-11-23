@@ -9,7 +9,7 @@ export const KONTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
 export type Konto = (typeof KONTEN)[number];
 export const BEREICHE = ['geschaeft', ...KONTEN] as const;
 export type Bereich = (typeof BEREICHE)[number];
-export const BEREICH_NAME: Record<Bereich, string> = { geschaeft: 'Geschäft', zeit: 'Zeit', sozial: 'Sozial', mental: 'Mental', koerper: 'Körper', geld: 'Geld' };
+export const BEREICH_NAME: Record<Bereich, string> = { geschaeft: 'Arbeit', zeit: 'Zeit', sozial: 'Menschen', mental: 'Ruhe', koerper: 'Körper', geld: 'Geld' };
 
 export type StandFrage =
   | { id: string; frage: string; typ: 'zahl'; konto: Konto; nachfrage: string; platzhalter: string }

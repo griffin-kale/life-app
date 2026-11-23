@@ -56,12 +56,12 @@ export function aktionPruefen(roh: unknown, sparziele: string[], k: AktionKontex
   if (art === 'merken') {
     const text = klartext(a.text, 200);
     if (text.length < 3) return null;
-    if (k.merkzettel >= MERK_MAX) return { fehler: `Der Merkzettel ist voll (${MERK_MAX} Punkte). Streich unter Einstellungen etwas.` };
+    if (k.merkzettel >= MERK_MAX) return { fehler: `Der Coach weiß schon ${MERK_MAX} Dinge. Streich unter Einstellungen etwas.` };
     return { art: 'merken', text };
   }
   if (art === 'vergessen') {
     const nr = Number(a.nr);
-    if (!Number.isInteger(nr) || nr < 1 || nr > k.merkzettel) return { fehler: 'Diesen Punkt gibt es auf dem Merkzettel nicht.' };
+    if (!Number.isInteger(nr) || nr < 1 || nr > k.merkzettel) return { fehler: 'Diesen Punkt kennt der Coach nicht.' };
     return { art: 'vergessen', nr };
   }
   if (art === 'festhalten') {
@@ -114,7 +114,7 @@ export function aktionenPruefen(roh: { aktionen?: unknown; aktion?: unknown }, s
 /** Die Bestätigung, die Life unter die Antwort des Coachs setzt. */
 export function bestaetigung(a: CoachAktion): string {
   if (a.art === 'merken') return `✓ Gemerkt: ${a.text}`;
-  if (a.art === 'vergessen') return `✓ Vom Merkzettel gestrichen: Punkt ${a.nr}.`;
+  if (a.art === 'vergessen') return `✓ Vergessen: Punkt ${a.nr}.`;
   if (a.art === 'festhalten') return `✓ Im Logbuch festgehalten: ${a.text.length > 80 ? a.text.slice(0, 79) + '…' : a.text}`;
   if (a.art === 'wochenziel') return `✓ Wochenziel gesetzt: ${a.text}`;
   if (a.art === 'saison_vorschlag') return `✓ ${a.ziele.length} ${a.ziele.length === 1 ? 'Ziel liegt' : 'Ziele liegen'} im Blatt „Neue Saison“ bereit: Plan → Saison → Neue Saison anlegen.`;

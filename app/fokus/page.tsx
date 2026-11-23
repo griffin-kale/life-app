@@ -9,10 +9,9 @@ import { useCockpit } from '../cockpit';
 import {
   BEWERTUNG, BEWERTUNG_NAME, LAENGEN, MUSIK, MUSIK_NAME, TEST_TAGE, phase, uhr, type Bewertung, type Musik, type TestStand,
 } from '@/lib/fokus-regeln';
-import { BEREICHE_H, BEREICH_KURZ, BEREICH_NAME, type HBereich } from '@/lib/hunderter-regeln';
 import type { Block } from '@/lib/fokus';
 
-type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null; hunderter?: boolean; jetzt: number };
+type Antwort = { block: Block | null; heute: { bloecke: number; minuten: number }; test: TestStand | null; naechste: Musik | null; standards?: { key: string; name: string; kurz: string }[]; jetzt: number };
 type PipFenster = Window & { document: Document };
 type DocPip = { requestWindow: (o: { width: number; height: number }) => Promise<PipFenster> };
 
@@ -32,7 +31,7 @@ export default function DeepWork() {
   const [d, setD] = useState<Antwort | null>(null);
   const [st, setSt] = useState<Stand | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
-  const [bereich, setBereich] = useState<HBereich | null>(null);
+  const [bereich, setBereich] = useState<string | null>(null);
   const [laenge, setLaenge] = useState(0);
   const [musik, setMusik] = useState<Musik>('klassik');
   const [jetzt, setJetzt] = useState(() => Date.now());
@@ -58,9 +57,9 @@ export default function DeepWork() {
     heuteLaden();
     const id = new URLSearchParams(window.location.search).get('item');
     if (id && /^[0-9a-f-]{36}$/i.test(id)) setItemId(id);
-    // Die Hunderter starten Deep Work mit Bereich und 50 + 10 (0.32)
-    const br = new URLSearchParams(window.location.search).get('bereich') as HBereich | null;
-    if (br && BEREICHE_H.includes(br)) { setBereich(br); setLaenge(1); }
+    // Fokus-Standards der Challenge starten den Fokus mit Standard und 50 + 10 (0.32, seit 0.33 frei benannt)
+    const br = new URLSearchParams(window.location.search).get('bereich');
+    if (br && /^[a-z][a-z0-9]{0,11}$/.test(br)) { setBereich(br); setLaenge(1); }
     setPipGeht('documentPictureInPicture' in window);
   }, [laden, heuteLaden, setToast]);
   useEffect(() => { const t = setInterval(() => setJetzt(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -70,7 +69,8 @@ export default function DeepWork() {
   const jetztListe = (st?.items ?? []).filter((i) => i.stapel === 'jetzt' && i.status !== 'erledigt').sort((x, y) => (x.rang ?? 99) - (y.rang ?? 99));
   const aktuellId = b?.itemId ?? itemId ?? jetztListe[0]?.id ?? null;
   const aktuell: Item | null = (st?.items ?? []).find((i) => i.id === aktuellId) ?? null;
-  const sache = b?.titel || (bereich && !itemId ? `Hunderter: ${BEREICH_NAME[bereich]}` : aktuell ? taskTitle(aktuell) : '');
+  const standard = d?.standards?.find((x) => x.key === bereich) ?? null;
+  const sache = b?.titel || (standard && !itemId ? standard.name : aktuell ? taskTitle(aktuell) : '');
   const naechste = jetztListe.find((i) => i.id !== aktuellId) ?? null;
   const ab = minutenBerlin();
   const termin = c?.streifen.find((s) => s.quelle === 'kalender' && s.von >= ab) ?? null;
@@ -98,7 +98,7 @@ export default function DeepWork() {
   useEffect(() => {
     if (!('mediaSession' in navigator) || !b || !m.spielt) return;
     try {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: `${sache || 'Deep Work'} · noch ${restMin} Min.`, artist: `Life · Deep Work · ${MUSIK_NAME[m.art]}`, album: m.titel ?? '' });
+      navigator.mediaSession.metadata = new MediaMetadata({ title: `${sache || 'Fokus'} · noch ${restMin} Min.`, artist: `Life · Fokus · ${MUSIK_NAME[m.art]}`, album: m.titel ?? '' });
       navigator.mediaSession.setActionHandler('pause', () => m.stop());
       navigator.mediaSession.setActionHandler('play', () => m.spielen(m.art));
       navigator.mediaSession.setActionHandler('nexttrack', () => m.naechstes());
@@ -200,15 +200,15 @@ export default function DeepWork() {
   );
 
   return (
-    <main className="dw" aria-label="Deep Work">
+    <main className="dw" aria-label="Fokus">
       <div className="dw-inhalt">
         <div className="dw-kopf">
-          <b>Deep Work</b>
+          <b>Fokus</b>
           <span>{b ? `${MUSIK_NAME[m.spielt ? m.art : b.musik]}${b.test ? ' · Musiktest' : ''}` : d ? `Heute ${d.heute.bloecke} ${d.heute.bloecke === 1 ? 'Block' : 'Blöcke'} · ${d.heute.minuten} Min.` : '…'}</span>
           <span className="dw-werkzeug">
             <button type="button" className="dw-icon nur-gross" onClick={vollbild} aria-label="Vollbild (F)">⛶</button>
             {pipGeht ? <button type="button" className="dw-icon nur-gross" onClick={miniFenster} aria-label={pip ? 'Mini-Fenster schließen' : 'Mini-Fenster'}>▣</button> : null}
-            <button type="button" className="dw-icon" onClick={() => { m.stop(); router.push('/'); }} aria-label="Deep Work verlassen">{Icon.close}</button>
+            <button type="button" className="dw-icon" onClick={() => { m.stop(); router.push('/'); }} aria-label="Fokus verlassen">{Icon.close}</button>
           </span>
         </div>
 
@@ -234,9 +234,9 @@ export default function DeepWork() {
                 {LAENGEN.map(([f, p], i) => <button key={f} type="button" role="radio" aria-checked={laenge === i} onClick={() => setLaenge(i)}>{f} + {p}</button>)}
               </div>
             ) : null}
-            {!b && d?.hunderter ? (
-              <div className="dw-wahl" role="radiogroup" aria-label="Bereich der Hunderter">
-                {BEREICHE_H.map((x) => <button key={x} type="button" role="radio" aria-checked={bereich === x} onClick={() => { setBereich(bereich === x ? null : x); if (bereich !== x) setLaenge(1); }}>{BEREICH_KURZ[x]}</button>)}
+            {!b && d?.standards?.length ? (
+              <div className="dw-wahl" role="radiogroup" aria-label="Standard der Challenge">
+                {d.standards.map((x) => <button key={x.key} type="button" role="radio" aria-checked={bereich === x.key} onClick={() => { setBereich(bereich === x.key ? null : x.key); if (bereich !== x.key) setLaenge(1); }}>{x.kurz}</button>)}
               </div>
             ) : null}
             {naechste ? <div className="dw-zeile"><span className="grow">{taskTitle(naechste)}</span><small>danach</small></div> : null}
@@ -294,7 +294,7 @@ export default function DeepWork() {
         <div className="dw dw-mini">
           <div className="dw-mini-reihe">
             <b>{ph ? uhr(ph.restSek) : `${LAENGEN[laenge][0]}:00`}</b>
-            <span><span className="dw-mini-sache">{sache || 'Deep Work'}</span><small>{termin ? `${hhmm(termin.von)} ${termin.titel}` : ph?.phase === 'pause' ? 'Pause' : MUSIK_NAME[b ? m.art : musik]}</small></span>
+            <span><span className="dw-mini-sache">{sache || 'Fokus'}</span><small>{termin ? `${hhmm(termin.von)} ${termin.titel}` : ph?.phase === 'pause' ? 'Pause' : MUSIK_NAME[b ? m.art : musik]}</small></span>
           </div>
           <div className="dw-unten">
             {b ? <button type="button" onClick={() => (m.spielt ? m.stop() : m.spielen(b.musik))}>{m.spielt ? 'Pause' : 'Musik'}</button> : null}

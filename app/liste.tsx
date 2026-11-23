@@ -30,7 +30,7 @@ export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, lea
         <ul className="tasks group">
           {offen.map((it) => (
             <TaskRow key={it.id} it={it} onToggle={() => onToggle(it)} leaving={leaving === it.id}>
-              <Link href={`/fokus?item=${it.id}`} className="chipbtn" aria-label={`Deep Work: ${taskTitle(it)}`}>{Icon.play}Deep Work</Link>
+              <Link href={`/fokus?item=${it.id}`} className="chipbtn" aria-label={`Fokus: ${taskTitle(it)}`}>{Icon.play}Fokus</Link>
               <button type="button" className="chipbtn" onClick={() => onVor(it)}>{Icon.up}Zur einen Sache</button>
             </TaskRow>
           ))}
@@ -42,7 +42,7 @@ export function Liste({ jetzt, eins, erledigtHeute, zuletzt, woche, geparkt, lea
           <ul className="tasks group">{neu.map((it) => <TaskRow key={it.id} it={it} onToggle={() => onToggle(it)} leaving={leaving === it.id} />)}</ul>
         </>
       ) : null}
-      <Link href="/woche#liste" className="li-mehr"><span>Diese Woche {woche} · Parkplatz {geparkt}</span><span>Ganze Liste{Icon.chevronRight}</span></Link>
+      <Link href="/woche#liste" className="li-mehr"><span>Diese Woche {woche} · Irgendwann {geparkt}</span><span>Ganze Liste{Icon.chevronRight}</span></Link>
     </section>
   );
 }

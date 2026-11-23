@@ -31,7 +31,7 @@ export function ZeitKaufen({ onToast }: { onToast: (t: string, k?: 'ok' | 'err')
           catch (e) { onToast((e as Error).message, 'err'); }
         }}>Auf die Liste</button>
       </div>
-      <p className="gnote">Geld für Zeitersparnis macht laut einer Studie zufriedener als Geld für Dinge. Der Coach bringt die Liste in die Wochenrunde.</p>
+      <p className="gnote">Geld für Zeitersparnis macht laut einer Studie zufriedener als Geld für Dinge. Der Coach bringt die Liste in den Wochenrückblick.</p>
     </section>
   );
 }

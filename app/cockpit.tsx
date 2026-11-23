@@ -54,25 +54,25 @@ export function CockpitKacheln({ c }: { c: Cockpit | null }) {
 
 const ART_NAME: Record<string, string> = { privat: 'Privat', familie: 'Familie', arbeit: 'Arbeit', aufgabe: 'Aufgabe', vorschlag: 'Vorschlag' };
 
-/** Die nächsten drei Blöcke des Tages. Ein Tipp öffnet die Woche mit dem ganzen Tag. */
+/** Als Nächstes (MAYA 0.33): die nächsten drei Blöcke des Tages als eine Zeile, wie im iPhone-Kalender. Ein Tipp öffnet die Woche mit dem ganzen Tag. */
 export function Tagesstreifen({ c, jetzt }: { c: Cockpit | null; jetzt: number | null }) {
   if (!c) return null;
   const s: StreifenBlock[] = c.streifen;
   return (
     <section className="gsec ck-streifen" aria-label="Als Nächstes">
-      <h2 className="glabel">Als Nächstes</h2>
-      <Link href="/woche" className="group ck-liste">
-        {s.length ? s.map((b, i) => {
-          const laeuft = jetzt !== null && b.von <= jetzt && (b.bis ?? b.von + 30) > jetzt;
-          return (
-            <span key={i} className={'ck-block' + (laeuft ? ' laeuft' : '')} style={{ '--c': b.art === 'familie' ? 'var(--k-sozial)' : b.art === 'aufgabe' ? 'var(--k-zeit)' : b.art === 'privat' ? 'var(--k-mental)' : 'var(--sky)' } as React.CSSProperties}>
-              <time className="num">{uhr(b.von)}</time>
-              <span className="ck-text"><b>{b.titel || ART_NAME[b.art] || 'Termin'}</b><small>{b.bis ? `bis ${uhr(b.bis)}` : 'ohne Ende'} · {ART_NAME[b.art] ?? b.art}{laeuft ? ' · läuft' : ''}</small></span>
-            </span>
-          );
-        }) : <span className="ck-block leer"><span className="ck-text"><b>{c.kalender ? 'Heute steht nichts mehr an' : 'Noch kein Kalender verbunden'}</b><small>{c.kalender ? 'Der Rest des Tages gehört dir.' : 'Unter Einstellungen → Kalender liest Life deinen iCloud-Kalender.'}</small></span></span>}
-        <span className="ck-mehr">Ganzer Tag {Icon.chevronRight}</span>
-      </Link>
+      <div className="li-kopf"><h2 className="glabel">Als Nächstes</h2><Link href="/woche" className="li-stand">Ganzer Tag{Icon.chevronRight}</Link></div>
+      {s.length ? (
+        <ul className="ck-chips">
+          {s.map((b, i) => {
+            const laeuft = jetzt !== null && b.von <= jetzt && (b.bis ?? b.von + 30) > jetzt;
+            return (
+              <li key={i} className={'ck-chip' + (laeuft ? ' laeuft' : '')} style={{ '--c': b.art === 'familie' ? 'var(--k-sozial)' : b.art === 'aufgabe' ? 'var(--k-zeit)' : b.art === 'privat' ? 'var(--k-mental)' : 'var(--sky)' } as React.CSSProperties}>
+                <time className="num">{laeuft ? 'jetzt' : uhr(b.von)}</time><span>{b.titel || ART_NAME[b.art] || 'Termin'}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p className="ck-leer">{c.kalender ? 'Heute steht nichts mehr an. Der Rest des Tages gehört dir.' : <>Noch kein Kalender verbunden. <Link href="/einstellungen">Kalender verbinden</Link></>}</p>}
     </section>
   );
 }

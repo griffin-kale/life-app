@@ -6,7 +6,8 @@
 
 export const BEREICHE_S = ['geschaeft', 'zeit', 'koerper', 'mental', 'sozial', 'geld'] as const;
 export type SBereich = (typeof BEREICHE_S)[number];
-export const BEREICH_TITEL: Record<SBereich, string> = { geschaeft: 'Geschäft', zeit: 'Zeit', koerper: 'Körper', mental: 'Ruhe und Geist', sozial: 'Menschen', geld: 'Geld' };
+/** Namen wie in lib/bereiche.ts (0.33, eine Bereichsliste). Ohne Import, damit die Unit-Tests die Datei direkt laden; tests/unit/bereiche.test.ts prüft die Gleichheit. */
+export const BEREICH_TITEL: Record<SBereich, string> = { geschaeft: 'Arbeit', zeit: 'Zeit', koerper: 'Körper', mental: 'Ruhe', sozial: 'Menschen', geld: 'Geld' };
 
 /** Feste Vorschläge, damit jeder Bereich ohne Tippen geht. Eigene Worte gehen immer. */
 export const ZIEL_IDEEN: Record<SBereich, string[]> = {

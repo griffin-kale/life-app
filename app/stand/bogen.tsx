@@ -109,7 +109,7 @@ export function StandBogen({ nr }: { nr: 1 | 2 | 3 }) {
         {fehler ? <p className="gnote bad">{fehler}</p> : null}
         <div className="row-btns st-weiter">
           {nr < 3 ? <Link href={`/stand/${nr + 1}`} className={'btn' + (alleDurch ? ' primary' : '')}>Weiter zu Etappe {nr + 1}</Link> : null}
-          <Link href="/stand" className={'btn' + (nr === 3 && alleDurch ? ' primary' : '')}>Zu deinem Stand</Link>
+          <Link href="/stand" className={'btn' + (nr === 3 && alleDurch ? ' primary' : '')}>Zum Kompass</Link>
           <button type="button" className="linkbtn" onClick={() => setModus('fragen')}>Antworten ändern</button>
         </div>
       </div>

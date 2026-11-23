@@ -46,7 +46,7 @@ test('Standort: Baseline mit Verlauf, Vorschläge übernehmen, Zeilen ohne Datum
   assert.equal(naechsteEtappe({ etappen: { 1: 'x', 2: 'x', 3: 'x' } }), null);
   const z = standZeilen(s, '2026-11-09', 'Drei Erstgespräche').join('\n');
   assert.match(z, /vor 2 Wochen/);
-  assert.match(z, /Geschäft: B/);
+  assert.match(z, /Arbeit: B/);
   assert.match(z, /Wochenziel: Drei Erstgespräche/);
   assert.doesNotMatch(z, /2026/);
 });

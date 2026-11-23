@@ -42,7 +42,7 @@ export function KompassTeil() {
       </section>
 
       {/* Ringe statt Punkte (Peter, 29.10.2026): jedes Konto zeigt Ring und Prozent, der Rest klappt auf */}
-      <section className="gsec" aria-label="Konten">
+      <section className="gsec" aria-label="Lebensbereiche">
         <div className="group">
           {KONTEN.map((x) => (
             <details key={x} id={x} className="konto" aria-label={NAME[x]}>

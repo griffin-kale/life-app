@@ -17,7 +17,7 @@ export default function EtappeSeite() {
     <main className="wrap">
       <TopBar title={e.titel} back={{ label: 'Dein Stand', href: '/stand' }} />
       <header className="head">
-        <span className="eyebrow">Standortbestimmung · Etappe {nr} von 3 · {e.dauer}</span>
+        <span className="eyebrow">Standort-Check · Etappe {nr} von 3 · {e.dauer}</span>
         <h1 className="title">{e.titel}<i>.</i></h1>
         <p className="muted small">{e.kurz}</p>
         <Etappenleiste nr={nr} erledigt={erledigt} />

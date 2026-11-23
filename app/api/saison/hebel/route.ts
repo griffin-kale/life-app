@@ -17,6 +17,6 @@ export async function POST(req: NextRequest) {
   try {
     return NextResponse.json({ vorschlaege: await hebelVorschlagen(ziele, uid) });
   } catch (e) {
-    return NextResponse.json({ error: oeffentlich(e, 'Claude hat gerade keine Vorschläge. Schreib die Hebel selbst dazu.', 'saison') }, { status: 502 });
+    return NextResponse.json({ error: oeffentlich(e, 'Claude hat gerade keine Vorschläge. Schreib die Routinen selbst dazu.', 'saison') }, { status: 502 });
   }
 }

@@ -1,89 +1,43 @@
-/** Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. „Jetzt dran“ und der Fragebogen bleiben immer an.
- *  Der Coach ist seit 0.18 kein Baustein mehr: Er sitzt als Leiste unten und geht als Blatt auf, auf dem Mac steht er rechts. */
-export const BAUSTEINE = ['cockpit', 'streifen', 'konten', 'kompass', 'schnell', 'empfohlen', 'kalender', 'fragebogen', 'festhalten', 'koerper', 'geld', 'menschen', 'jetzt', 'liste', 'naechste', 'erledigt'] as const;
+/**
+ * Bausteine auf „Heute“. Jeder Mensch stellt sie selbst zusammen. Die eine Sache und der Check-in bleiben immer an.
+ * MAYA (0.33, Richtung B, Peter 23.11.2026): höchstens fünf Blöcke im Standard, sieben zur Wahl statt sechzehn.
+ * Der Coach ist kein Baustein: Er sitzt als Leiste unten und geht als Blatt auf, auf dem Mac steht er rechts.
+ */
+export const BAUSTEINE = ['fragebogen', 'jetzt', 'saison', 'streifen', 'liste', 'kalender', 'erledigt'] as const;
 export type Baustein = (typeof BAUSTEINE)[number];
 export const FEST: readonly Baustein[] = ['fragebogen', 'jetzt'];
-/** Life 2.0 (Peter, 27.10.2026): Cockpit oben, die eine Sache, Tagesstreifen, Konten. Seit 0.27 (31.10.2026) die Liste statt „Danach“,
- *  seit 0.28 Deep Work und die vier schnellen Wege direkt unter dem Cockpit. */
-export const STANDARD: Baustein[] = ['cockpit', 'schnell', 'jetzt', 'streifen', 'liste', 'fragebogen', 'konten', 'erledigt'];
+export const STANDARD: Baustein[] = ['fragebogen', 'jetzt', 'saison', 'streifen', 'liste'];
 export const BAUSTEIN_NAME: Record<Baustein, [string, string]> = {
-  cockpit: ['Cockpit', 'Erholung, freie Zeit und Woche auf einen Blick'],
-  streifen: ['Als Nächstes', 'Die nächsten drei Blöcke des Tages'],
-  konten: ['Konten heute', 'Je Konto eine Zeile, was heute zählt'],
-  kompass: ['Wochenringe', 'Klein neben dem Titel'],
-  schnell: ['Deep Work und Schnellzugriffe', 'Deep Work starten, Gedanke, Ausgabe, Essen, Ruhe'],
-  empfohlen: ['Empfohlen für dich', 'Eine Sache, die heute passt, mit einem Tipp'],
-  kalender: ['Kalender', 'Der ganze Tag mit Terminen und freier Zeit'],
-  fragebogen: ['Fragebogen', 'Erscheint, wenn er dran ist'],
-  festhalten: ['Festhalten-Feld', 'Zusätzlich zum Feld im Coach'],
-  koerper: ['Körper kurz', 'Erholung und Schlaf'],
-  geld: ['Geld kurz', 'Wochentöpfe'],
-  menschen: ['Menschen', 'Wer gerade dran ist'],
+  fragebogen: ['Check-in', 'Morgen, Abend und Wochenrückblick, wenn sie dran sind'],
   jetzt: ['Die eine Sache', 'Immer an'],
-  liste: ['Liste', 'Jetzt mit Fortschritt, gerade Festgehaltenes, Fokus starten'],
-  naechste: ['Danach', 'Die anderen von heute, zugeklappt'],
+  saison: ['Saison heute', 'Standards und Leben heute, solange eine Challenge läuft'],
+  streifen: ['Als Nächstes', 'Die nächsten Termine und Blöcke'],
+  liste: ['Liste', 'Was heute noch offen ist, mit Fortschritt'],
+  kalender: ['Kalender', 'Der ganze Tag mit Terminen und freier Zeit'],
   erledigt: ['Heute erledigt', 'Zugeklappt, mit Energie-Bilanz'],
 };
 
-/** Prüft eine gespeicherte oder gesendete Liste: nur bekannte Bausteine, keine doppelt, feste immer dabei. */
+/** Prüft eine gespeicherte oder gesendete Liste: nur bekannte Bausteine, keine doppelt, Check-in vorn und die eine Sache dahinter immer dabei. */
 export function bausteineAus(roh: unknown): Baustein[] {
   const liste = Array.isArray(roh) ? roh : [];
   const aus: Baustein[] = [];
   for (const x of liste) if ((BAUSTEINE as readonly string[]).includes(x as string) && !aus.includes(x as Baustein)) aus.push(x as Baustein);
   if (!aus.length) return [...STANDARD];
-  for (const f of FEST) if (!aus.includes(f)) aus.splice(f === 'jetzt' ? aus.length : 0, 0, f);
+  if (!aus.includes('fragebogen')) aus.unshift('fragebogen');
+  if (!aus.includes('jetzt')) aus.splice(aus.indexOf('fragebogen') + 1, 0, 'jetzt');
   return aus;
 }
 
-/** Neue Bausteine, die eine schon gespeicherte Liste einmal bekommt: ab welchem Stand, welcher Baustein, hinter welchem. */
-const NEU: [number, Baustein, string][] = [[2, 'schnell', 'woche'], [3, 'empfohlen', 'schnell'], [4, 'kalender', 'empfohlen']];
-export const STAND = 10;
+/** Stand der gespeicherten Listen. Ab 11 gilt die Liste von MAYA. */
+export const STAND = 11;
 
-/** Umbau 0.18 (Peter, 26.10.2026): Ringe nach oben, Jetzt dran früh, Kalender, Festhalten-Feld und Tagespunkte runter von Heute. */
-const WEG_5: string[] = ['kalender', 'festhalten', 'woche'];
-const RANG_5: Baustein[] = ['kompass', 'fragebogen', 'jetzt', 'empfohlen', 'schnell', 'naechste', 'koerper', 'geld', 'menschen', 'erledigt'];
-
-/** Umbau 0.19 (Peter, 26.10.2026, The ONE Thing): die eine Sache vor dem Fragebogen, Empfohlen und Schnellzugriffe runter von Heute, Tagespunkte fallen weg. */
-const WEG_6: string[] = ['empfohlen', 'schnell', 'woche'];
-
-/** Setzt neue Bausteine einmal in eine gespeicherte Liste. Gibt null zurück, wenn nichts zu tun ist. */
-export function nachruesten(liste: Baustein[], stand: number): { liste: Baustein[]; stand: number } | null {
+/**
+ * Bringt eine gespeicherte Liste auf den Stand von MAYA (0.33): Standard für alle, Kalender und Erledigt bleiben,
+ * wenn sie vorher an waren. Gibt null zurück, wenn nichts zu tun ist.
+ */
+export function nachruesten(liste: readonly string[], stand: number): { liste: Baustein[]; stand: number } | null {
   if (stand >= STAND) return null;
-  let neu = [...liste];
-  for (const [ab, b, hinter] of NEU) {
-    if (stand >= ab || neu.includes(b)) continue;
-    const i = neu.indexOf(hinter as Baustein); neu.splice(i >= 0 ? i + 1 : 0, 0, b);
-  }
-  if (stand < 5) {
-    neu = neu.filter((b) => !WEG_5.includes(b));
-    if (!neu.includes('kompass')) neu.unshift('kompass');
-    neu.sort((a, b) => RANG_5.indexOf(a) - RANG_5.indexOf(b));
-  }
-  if (stand < 6) {
-    neu = neu.filter((b) => !WEG_6.includes(b));
-    const f = neu.indexOf('fragebogen'), j = neu.indexOf('jetzt');
-    if (f >= 0 && j > f) { neu.splice(j, 1); neu.splice(f, 0, 'jetzt'); }
-  }
-  // 0.20 (Peter, 26.10.2026): Empfohlen ist wieder Standard, direkt unter der einen Sache. Schnellzugriffe sitzen jetzt in der Mitte der Leiste.
-  if (stand < 7 && !neu.includes('empfohlen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'empfohlen');
-  // 0.25 Life 2.0 (Peter, 27.10.2026): Cockpit statt Wochenringen, Tagesstreifen unter der einen Sache, Konten statt Empfohlen.
-  if (stand < 8) {
-    const k = neu.indexOf('kompass');
-    if (k >= 0) neu.splice(k, 1, 'cockpit'); else if (!neu.includes('cockpit')) neu.unshift('cockpit');
-    neu = neu.filter((b) => b !== 'empfohlen');
-    if (!neu.includes('streifen')) neu.splice(neu.indexOf('jetzt') + 1, 0, 'streifen');
-    if (!neu.includes('konten')) { const f = neu.indexOf('fragebogen'); neu.splice(f >= 0 ? f + 1 : neu.indexOf('streifen') + 1, 0, 'konten'); }
-  }
-  // 0.27 (Peter, 31.10.2026): die Liste ersetzt „Danach“ und steht unter dem Tagesstreifen
-  if (stand < 9 && !neu.includes('liste')) {
-    neu = neu.filter((b) => b !== 'naechste');
-    const s = neu.indexOf('streifen'); const j = neu.indexOf('jetzt');
-    neu.splice(s >= 0 ? s + 1 : j >= 0 ? j + 1 : neu.length, 0, 'liste');
-  }
-  // 0.28 Menü (Peter, 31.10.2026): Deep Work und die vier schnellen Wege stehen sichtbar unter dem Cockpit
-  if (stand < 10 && !neu.includes('schnell')) {
-    const c = neu.indexOf('cockpit');
-    neu.splice(c >= 0 ? c + 1 : 0, 0, 'schnell');
-  }
+  const neu: Baustein[] = [...STANDARD];
+  for (const b of ['kalender', 'erledigt'] as const) if (liste.includes(b)) neu.push(b);
   return { liste: neu, stand: STAND };
 }

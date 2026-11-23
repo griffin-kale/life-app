@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TabBar, TopBar, api, useToast } from '../../ui';
 import { Blaetter, type BlaetterSteuerung } from '../../blaetter';
 import { BEREICH_TITEL, BEREICHE_S, HINDERNISSE, ZIEL_IDEEN, plusTage, wennDannSatz, type SBereich, type Vorschlag } from '@/lib/saison-regeln';
+import type { HunderterHeute } from '@/lib/hunderter';
+import { ChallengeNeu } from './challenge';
 
 type Grundlage = { saison: { id: number } | null; start: string; vorschlaege: Vorschlag[]; coach?: { bereich: SBereich; text: string }[] };
 type Wahl = { titel: string; zielwert: string; hebel: string[]; eigeneHebel: string; wenn: string; dann: string };
@@ -12,9 +14,12 @@ const LEITSAETZE = ['Erst das Wichtige, dann das Laute.', 'Weniger, aber besser.
 const leer = (): Wahl => ({ titel: '', zielwert: '', hebel: [], eigeneHebel: '', wenn: HINDERNISSE[0], dann: '' });
 const datum = (t: string) => new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(t + 'T12:00:00Z'));
 
+type ChAntwort = { heute: HunderterHeute | null; datum: string };
+
 /**
- * Blatt „Neue Saison“ (Life 2.0, Phase 2): Zeitraum und Leitsatz, ein Ziel pro Bereich, Hebel und Wenn-dann, Fertig.
- * Alles zum Antippen. Eigene Worte gehen immer, Claude schlägt Hebel vor und sieht dabei nur Platzhalter.
+ * Blatt „Neue Saison“ (Life 2.0, Phase 2; seit 0.33 mit Format): zuerst Ziele oder Challenge.
+ * Ziele: Zeitraum und Leitsatz, ein Ziel pro Bereich, Routinen und Wenn-dann, Fertig. Challenge: siehe challenge.tsx.
+ * Alles zum Antippen. Eigene Worte gehen immer, Claude schlägt Routinen vor und sieht dabei nur Platzhalter.
  */
 export default function NeueSaison() {
   const [g, setG] = useState<Grundlage | null>(null);
@@ -26,13 +31,17 @@ export default function NeueSaison() {
   const [fragt, setFragt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useToast();
+  const [ch, setCh] = useState<ChAntwort | null>(null);
+  const [format, setFormat] = useState<'ziele' | 'challenge' | null>(null);
+  const [wahlFormat, setWahlFormat] = useState<'ziele' | 'challenge'>('ziele');
   const blatt = useRef<BlaetterSteuerung>(null);
   const gefragt = useRef('');
   const router = useRouter();
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('format') === 'challenge') setWahlFormat('challenge');
+    api<ChAntwort>('/api/hunderter').then(setCh).catch(() => setCh({ heute: null, datum: '' }));
     api<Grundlage>('/api/saison').then((x) => {
-      if (x.saison) { router.replace('/ziele'); return; }
       setG(x); setStart(x.start);
       // Ziele, die der Coach vorgeschlagen hat, sind vorgewählt. Peter tippt an, was nicht passt.
       if (x.coach?.length) setWahl(Object.fromEntries(x.coach.map((z) => [z.bereich, { ...leer(), titel: z.text }])));
@@ -137,8 +146,8 @@ export default function NeueSaison() {
     </div>,
 
     <div key="h" className="ws-seite">
-      <h2 className="ws-titel">Hebel und Wenn-dann</h2>
-      {!gewaehlt.length ? <p className="muted small">Wähl zuerst mindestens ein Ziel.</p> : <p className="muted small">Bis zu drei Hebel pro Ziel: regelmäßige Handlungen, die das Ziel tragen.{fragt ? ' Claude macht Vorschläge …' : ''}</p>}
+      <h2 className="ws-titel">Routinen und Wenn-dann</h2>
+      {!gewaehlt.length ? <p className="muted small">Wähl zuerst mindestens ein Ziel.</p> : <p className="muted small">Bis zu drei Routinen pro Ziel: regelmäßige Handlungen, die das Ziel tragen.{fragt ? ' Claude macht Vorschläge …' : ''}</p>}
       {gewaehlt.map((b) => {
         const w = wahl[b]; const v = ideen?.[b];
         const angebot = [...new Set([...(v?.hebel ?? []), ...w.hebel])];
@@ -146,11 +155,11 @@ export default function NeueSaison() {
           <div key={b} className="fb-q sz-blatt-bereich">
             <span className="sz-bereich" style={{ '--k': b === 'geschaeft' ? 'var(--sky)' : `var(--k-${b})` } as React.CSSProperties}>{BEREICH_TITEL[b]}</span>
             <span className="fb-frage">Was trägt „{w.titel}“?</span>
-            <div className="fb-opts stack" role="group" aria-label={`Hebel für ${w.titel}`}>
+            <div className="fb-opts stack" role="group" aria-label={`Routinen für ${w.titel}`}>
               {angebot.map((h) => <button key={h} type="button" aria-pressed={w.hebel.includes(h)} className="fb-chip left" disabled={!w.hebel.includes(h) && w.hebel.length >= 3} onClick={() => hebelUmschalten(b, h)}>{h}</button>)}
             </div>
             <div className="geld-neu">
-              <input value={w.eigeneHebel} onChange={(e) => setze(b, { eigeneHebel: e.target.value })} placeholder="Etwas dazu sagen: eigener Hebel" aria-label={`Eigener Hebel für ${w.titel}`} maxLength={80}
+              <input value={w.eigeneHebel} onChange={(e) => setze(b, { eigeneHebel: e.target.value })} placeholder="Etwas dazu sagen: eigene Routine" aria-label={`Eigene Routine für ${w.titel}`} maxLength={80}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); eigenenHebel(b); } }} />
               <button type="button" className="chipbtn" disabled={!w.eigeneHebel.trim() || w.hebel.length >= 3} onClick={() => eigenenHebel(b)}>Dazu</button>
             </div>
@@ -170,18 +179,43 @@ export default function NeueSaison() {
       <ul className="ws-liste">
         <li>Ab {start ? datum(start) : '…'}, zwölf Wochen</li>
         <li>Leitsatz: {leitsatz.trim() || 'keiner'}</li>
-        {gewaehlt.map((b) => <li key={b}><b>{BEREICH_TITEL[b]}:</b> {wahl[b].titel}{wahl[b].zielwert ? ` (Ziel ${wahl[b].zielwert})` : ''} · {wahl[b].hebel.length} {wahl[b].hebel.length === 1 ? 'Hebel' : 'Hebel'}</li>)}
+        {gewaehlt.map((b) => <li key={b}><b>{BEREICH_TITEL[b]}:</b> {wahl[b].titel}{wahl[b].zielwert ? ` (Ziel ${wahl[b].zielwert})` : ''} · {wahl[b].hebel.length} {wahl[b].hebel.length === 1 ? 'Routine' : 'Routinen'}</li>)}
       </ul>
       <button type="button" className="btn primary wide" onClick={anlegen} disabled={busy || !gewaehlt.length || !start}>{busy ? 'Speichert …' : 'Saison anlegen'}</button>
       {!gewaehlt.length ? <p className="muted small">Wähl mindestens ein Ziel.</p> : null}
     </div>,
   ] : [];
 
+  // Was gerade läuft, lässt sich nicht doppelt anlegen
+  const zieleLaeuft = !!g?.saison;
+  const challengeLaeuft = !!ch?.heute && !!ch.datum && ch.datum <= ch.heute.ende;
+  // Läuft eines der beiden Formate schon, ist das andere vorgewählt
+  useEffect(() => { if (zieleLaeuft && !challengeLaeuft) setWahlFormat('challenge'); else if (challengeLaeuft && !zieleLaeuft) setWahlFormat('ziele'); }, [zieleLaeuft, challengeLaeuft]);
+  const vorher = ch?.heute ? { name: ch.heute.name, standards: ch.heute.standards.map(({ key, name, art }) => ({ key, name, art })) } : null;
+  const option = (f: 'ziele' | 'challenge', titel: string, chip: string, text: string, gesperrt: string | null) => (
+    <button type="button" role="radio" aria-checked={wahlFormat === f} disabled={!!gesperrt} className="ch-format" onClick={() => setWahlFormat(f)}>
+      <span className="ch-fkopf"><b>{titel}</b><span className="chip">{chip}</span></span>
+      <span className="muted small">{gesperrt ?? text}</span>
+    </button>
+  );
+
   return (
     <main className="wrap">
       <TopBar title="Neue Saison" back={{ label: 'Plan', href: '/ziele' }} />
-      <header className="head"><span className="eyebrow">Zwölf Wochen, wenige Ziele</span><h1 className="title">Neue Saison<i>.</i></h1></header>
-      {g ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Neue Saison" onSeite={seite} /></div> : <p className="loading">Lädt …</p>}
+      <header className="head"><span className="eyebrow">{format === 'challenge' ? 'Jeden Tag, mit Jokern' : format === 'ziele' ? 'Zwölf Wochen, wenige Ziele' : 'Wie willst du die nächsten Wochen angehen?'}</span><h1 className="title">Neue Saison<i>.</i></h1></header>
+      {!g || !ch ? <p className="loading">Lädt …</p>
+        : format === 'challenge' ? <ChallengeNeu heute={ch.datum} vorher={vorher} />
+        : format === 'ziele' ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Neue Saison" onSeite={seite} /></div>
+        : (
+          <div className="group pad ws-seite">
+            <h2 className="ws-titel">Format</h2>
+            <div className="ch-formate" role="radiogroup" aria-label="Format">
+              {option('ziele', 'Ziele', '12 Wochen', 'Ein Ziel pro Lebensbereich. Pro Woche ein paar Routinen, die dich hinbringen. Im Wochenrückblick schaust du, ob du auf Kurs bist.', zieleLaeuft ? 'Läuft schon. Die Ziele stehen unter Plan → Saison.' : null)}
+              {option('challenge', 'Challenge', 'jeden Tag', 'Ein paar Standards, die du jeden Tag schaffst, dazu eine kleine Aufgabe pro Lebensbereich. Ein Tag zählt ab der Hälfte. Joker fangen schlechte Tage ab.', challengeLaeuft ? `„${ch.heute!.name}“ läuft schon bis zum ${ch.heute!.ende.split('-').reverse().join('.')}.` : null)}
+            </div>
+            <button type="button" className="btn primary wide" disabled={(wahlFormat === 'ziele' && zieleLaeuft) || (wahlFormat === 'challenge' && challengeLaeuft)} onClick={() => setFormat(wahlFormat)}>Weiter</button>
+          </div>
+        )}
       {toast}
       <TabBar />
     </main>

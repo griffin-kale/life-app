@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const b = await req.json().catch(() => ({}));
   if (!id || !BEWERTUNGEN.includes(b.bewertung)) return NextResponse.json({ error: 'Ungültige Angaben.' }, { status: 400 });
   try {
-    if (!(await hebelBewerten(id, montagVon(heuteBerlin()), b.bewertung as Bewertung, uid))) return NextResponse.json({ error: 'Hebel nicht gefunden.' }, { status: 404 });
+    if (!(await hebelBewerten(id, montagVon(heuteBerlin()), b.bewertung as Bewertung, uid))) return NextResponse.json({ error: 'Routine nicht gefunden.' }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Die Bewertung ließ sich nicht speichern.', 'saison') }, { status: 500 }); }
 }
@@ -25,9 +25,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { aus, uid } = await mitNutzer(); if (aus) return aus;
   const id = await nummer(params);
-  if (!id) return NextResponse.json({ error: 'Hebel nicht gefunden.' }, { status: 404 });
+  if (!id) return NextResponse.json({ error: 'Routine nicht gefunden.' }, { status: 404 });
   try {
-    if (!(await hebelWeg(id, uid))) return NextResponse.json({ error: 'Hebel nicht gefunden.' }, { status: 404 });
+    if (!(await hebelWeg(id, uid))) return NextResponse.json({ error: 'Routine nicht gefunden.' }, { status: 404 });
     return NextResponse.json({ ok: true });
-  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Der Hebel ließ sich nicht entfernen.', 'saison') }, { status: 500 }); }
+  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Die Routine ließ sich nicht entfernen.', 'saison') }, { status: 500 }); }
 }

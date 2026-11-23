@@ -57,7 +57,7 @@ export default function Morgen() {
     </div>,
     <div key="g" className="ws-seite">
       <h2 className="ws-titel">Was von gestern übrig ist</h2>
-      {jetzt.length ? <>{jetzt.map(zeile)}<p className="muted small">Was nicht heute sein muss, wandert in die Woche oder auf den Parkplatz.</p></> : <p className="muted small">Nichts liegt übrig. Ein freier Start.</p>}
+      {jetzt.length ? <>{jetzt.map(zeile)}<p className="muted small">Was nicht heute sein muss, wandert in die Woche oder auf Irgendwann.</p></> : <p className="muted small">Nichts liegt übrig. Ein freier Start.</p>}
     </div>,
     <div key="s" className="ws-seite">
       <h2 className="ws-titel">Die eine Sache</h2>
@@ -75,7 +75,7 @@ export default function Morgen() {
 
   return (
     <main className="wrap">
-      <TopBar title="Morgen" back={{ label: 'Heute', href: '/' }} />
+      <TopBar title="Morgen-Check-in" back={{ label: 'Heute', href: '/' }} />
       <header className="head"><span className="eyebrow">Zwei Minuten für den Tag</span><h1 className="title">Guten Morgen<i>.</i></h1></header>
       <HunderterMorgen onFehler={fehler} />
       {st ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Morgen" /></div> : <p className="loading">Lädt …</p>}
