@@ -16,9 +16,10 @@ import { SaisonHeute, Tagesring, useHunderter } from './hunderter';
 /**
  * Heute nach MAYA (0.33, Richtung B, Peter 23.11.2026): Kopf mit Tagesring, Check-in nur wenn fällig, die eine Sache,
  * Saison heute, Als Nächstes, Liste. Fünf Blöcke statt zehn.
- * iPad: links alles, rechts Coach mit Als Nächstes. Mac ab 1280 px: zwei Spalten plus Coach. Die Seite scrollt nicht, jede Spalte für sich (Peter, 31.10.2026).
+ * iPad und kleiner Mac: links alles, rechts Coach mit Als Nächstes. Mac ab 1400 px: zwei Spalten plus Coach. Die Seite scrollt nicht, jede Spalte für sich (Peter, 31.10.2026).
  */
-const RECHTS: Baustein[] = ['streifen', 'kalender'];
+// Rechts unter dem Coach nur „Als Nächstes“ (Peter, 31.10.2026), der ganze Kalender stand dem Coach im Weg (0.33.1)
+const RECHTS: Baustein[] = ['streifen'];
 const LINKS_MAC: Baustein[] = ['fragebogen', 'jetzt', 'streifen', 'kalender'];
 const uhrBerlin = (iso: string) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 
@@ -37,7 +38,8 @@ export default function Heute() {
   const vorschlag = kal?.heute?.bloecke.find((b) => b.art === 'vorschlag') ?? null;
   const [bausteine, setBausteine] = useState<Baustein[]>(() => bausteineAus(null));
   const breit = useBreit(768);
-  const mac = useBreit(1280);
+  // Drei Spalten erst ab 1400 px: auf Peters Mac (1288 px) wurden Spalten mit 270 px zu schmal (0.33.1)
+  const mac = useBreit(1400);
   useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
   const { c: cockpit, laden: cockpitLaden } = useCockpit();
   const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
