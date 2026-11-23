@@ -534,7 +534,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await expect(page.locator('section[aria-label="Angezeigt"]')).toContainText('Kalender');
     await page.getByRole('button', { name: 'Kalender nach oben' }).click();
     // Ohne verbundenen Kalender bleibt der Baustein leer, gespeichert ist er trotzdem
-    expect((await (await page.request.get('/api/heute/bausteine')).json()).bausteine).toEqual(['fragebogen', 'jetzt', 'saison', 'streifen', 'kalender', 'liste']);
+    // Speichern läuft im Hintergrund, deshalb warten statt einmal fragen (in CI war das ein Wettlauf)
+    await expect.poll(async () => (await (await page.request.get('/api/heute/bausteine')).json()).bausteine).toEqual(['fragebogen', 'jetzt', 'saison', 'streifen', 'kalender', 'liste']);
     // Alte Bausteine (Cockpit, Konten, Schnellzugriffe) gibt es nicht mehr und fallen raus
     const r = await page.request.put('/api/heute/bausteine', { headers: H, data: { bausteine: ['coach', 'cockpit', '<script>', 'liste', 'liste'] } });
     expect((await r.json()).bausteine).toEqual(['fragebogen', 'jetzt', 'liste']);
