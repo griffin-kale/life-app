@@ -5,8 +5,8 @@ import { Icon, TaskRow, TimeChip, fTime, taskTitle, type Item } from './ui';
 import { EnergieChips, WennChip } from './wenn';
 
 /** The ONE Thing (Gary Keller): eine Sache, durch die alles andere leichter oder unnötig wird. Alles Weitere liegt eine Ebene tiefer. */
-export function EineSache({ it, frei, leaving, onErledigt, onZeit, onSpaeter, onWenn, sortiert, onNeuSortieren }: {
-  it: Item; frei: { von: string; bis: string } | null; leaving: boolean;
+export function EineSache({ it, frei, leaving, onErledigt, onZeit, onSpaeter, onWenn, sortiert, onNeuSortieren, engpass }: {
+  it: Item; frei: { von: string; bis: string } | null; leaving: boolean; engpass?: React.ReactNode;
   onErledigt: () => void; onZeit: (v: string) => void; onSpaeter: () => void; onWenn: (w: string) => void;
   sortiert: { laeuft: boolean; am: string | null }; onNeuSortieren: () => void;
 }) {
@@ -21,6 +21,8 @@ export function EineSache({ it, frei, leaving, onErledigt, onZeit, onSpaeter, on
   return (
     <section className={'eine-sache' + (leaving ? ' leaving' : '')} aria-label="Die eine Sache">
       <span className="es-kopf">Die eine Sache</span>
+      {/* Engpass in der Karte (0.33.2): so beginnt die Karte auf einer Höhe mit den Karten daneben */}
+      {engpass}
       <Link href={`/eintrag/${it.id}`} className="es-titel">{titel}</Link>
       {it.zeit ? <span className="es-zeit">um {it.zeit}</span>
         : frei ? <button type="button" className="es-frei" aria-label={`Im Kalender frei von ${frei.von} bis ${frei.bis}, als Uhrzeit setzen`} onClick={() => onZeit(frei.von)}>{frei.von}–{frei.bis} frei</button> : null}

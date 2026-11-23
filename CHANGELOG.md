@@ -2,6 +2,11 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.33.2] – 2026-11-23
+
+### Repariert
+- **Saison heute beginnt auf einer Höhe mit den Karten daneben** (Peter, 23.11.2026: „die Bubble ist so leicht runtergesetzt“). Name, Tag und Joker stehen jetzt oben in der Karte statt darüber. Genauso steht der Engpass jetzt in der Karte der einen Sache.
+
 ## [0.33.1] – 2026-11-23
 
 Heute auf Peters Mac repariert (Peter, 23.11.2026, Screenshot bei 1288 × 728: „das geht so nicht“).

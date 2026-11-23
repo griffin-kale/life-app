@@ -89,11 +89,12 @@ export function SaisonHeute({ h, tun }: { h: HunderterHeute | null | undefined; 
   const erledigt = h.leben.filter((l) => l.erledigt).length;
   return (
     <section className="gsec hu" aria-label="Saison heute">
-      <div className="li-kopf">
-        <h2 className="glabel">{h.name} · Tag {h.nr} von {h.tage}</h2>
-        <Link href="/ziele" className="li-stand hu-joker-link">{h.jokerFrei} Joker{Icon.chevronRight}</Link>
-      </div>
+      {/* Kopf in der Karte (0.33.2): so beginnt die Karte auf einer Höhe mit Check-in und Coach daneben */}
       <div className="group pad hu-karte">
+        <div className="li-kopf hu-kopfzeile">
+          <h2 className="glabel">{h.name} · Tag {h.nr} von {h.tage}</h2>
+          <Link href="/ziele" className="li-stand hu-joker-link">{h.jokerFrei} Joker{Icon.chevronRight}</Link>
+        </div>
         <div className={'hu-kacheln n' + Math.min(h.standards.length, 6)}>{h.standards.map((s) => <Kachel key={s.key} s={s} tun={tun} />)}</div>
         <div className="li-kopf klein"><span>Leben heute</span><span className="li-stand">{erledigt} von {h.leben.length || 5}</span></div>
         <LebenReihe h={h} tun={tun} />
