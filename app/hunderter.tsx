@@ -41,23 +41,28 @@ function Kopf({ h }: { h: HunderterHeute }) {
   );
 }
 
-/** Eine Kachel pro Standard. Fokus: Tipp startet Fokus, Plus und Minus tragen nach. Haken: Tipp zählt weiter. */
+/**
+ * Eine Kachel pro Standard (0.33.1: Name und Stand untereinander, damit nichts abgeschnitten wird).
+ * Fokus: Tipp startet Fokus, Plus und Minus tragen nach. Haken: Tipp zählt halb, voll, leer.
+ */
 function Kachel({ s, tun }: { s: StandardStand; tun: (b: Record<string, unknown>) => Promise<boolean> }) {
   const phasen = <span className="hu-phasen" aria-hidden="true"><i className={s.n >= 1 ? 'an' : ''} /><i className={s.n >= 2 ? 'an' : ''} /></span>;
   if (s.art === 'haken') return (
     <button type="button" className={'hu-kachel ' + stufe(s.n)} onClick={() => tun({ aktion: 'haken', key: s.key, n: (s.n + 1) % 3 })}
       aria-label={s.key === 'content' ? `Content: ${s.n === 0 ? 'noch nichts' : s.n === 1 ? '50 Pieces' : '100 Pieces'}. Tippen zählt hoch.` : `${s.name}: ${stufeText(s.n)}. Tippen zählt hoch.`}>
-      <span className="hu-name">{s.kurz}<small>{s.key === 'content' ? `${s.n * 50}/100` : stufeText(s.n)}</small></span>
-      {phasen}
+      <span className="hu-name">{s.kurz}</span>
+      <span className="hu-stand">{s.key === 'content' ? `${s.n * 50} von 100` : stufeText(s.n)}</span>
+      <span className="hu-fuss">{phasen}</span>
     </button>
   );
   return (
     <div className={'hu-kachel ' + stufe(s.n)}>
       <Link href={`/fokus?bereich=${s.key}`} className="hu-start" aria-label={`${s.name}: ${s.n} von 2 Phasen. Fokus starten.`}>
-        <span className="hu-name">{s.kurz}<small>{s.n ? `${Math.min(s.n, 9)}/2` : <span className="hu-los">{Icon.play}Fokus</span>}</small></span>
-        {phasen}
+        <span className="hu-name">{s.kurz}</span>
+        <span className="hu-stand">{s.n ? `${Math.min(s.n, 9)} von 2` : <>{Icon.play}Fokus</>}</span>
       </Link>
-      <span className="hu-hand">
+      <span className="hu-fuss">
+        {phasen}
         <button type="button" onClick={() => tun({ aktion: 'phase', bereich: s.key, delta: -1 })} disabled={s.n < 1} aria-label={`${s.name}: eine Phase zurücknehmen`}>−</button>
         <button type="button" onClick={() => tun({ aktion: 'phase', bereich: s.key, delta: 1 })} aria-label={`${s.name}: eine Phase nachtragen`}>+</button>
       </span>
@@ -98,17 +103,17 @@ export function SaisonHeute({ h, tun }: { h: HunderterHeute | null | undefined; 
   );
 }
 
-/** Die fünf Leben-Aufgaben als Haken nebeneinander, Text darunter. */
+/** Die fünf Leben-Aufgaben als Liste zum Abhaken wie in Erinnerungen (0.33.1: nebeneinander waren sie nicht lesbar). */
 function LebenReihe({ h, tun }: { h: HunderterHeute; tun: (b: Record<string, unknown>) => Promise<boolean> }) {
   if (!h.leben.length) return <p className="muted small">Die Leben-Aufgaben kommen gleich. Lade die Seite neu, falls sie fehlen.</p>;
   return (
-    <ul className="hu-reihe" aria-label="Leben-Aufgaben">
+    <ul className="hu-leben hu-abhaken" aria-label="Leben-Aufgaben">
       {h.leben.map((l) => (
         <li key={l.konto} style={{ '--c': BEREICH_FARBE[l.konto] } as React.CSSProperties}>
           <button type="button" className={'hu-haken' + (l.erledigt ? ' an' : '')} aria-pressed={l.erledigt} aria-label={`${KONTO_NAME[l.konto as LKonto]}: ${l.text}`}
             onClick={() => tun({ aktion: 'leben', konto: l.konto, erledigt: !l.erledigt })}>
             <span className="hu-kreis" aria-hidden="true">{l.erledigt ? Icon.check : null}</span>
-            <span className={'hu-ltext' + (l.erledigt ? ' fertig' : '')} lang="de"><small>{l.name}</small><span className="hu-lsatz">{l.text}</span></span>
+            <span className={'hu-ltext' + (l.erledigt ? ' fertig' : '')}><small>{l.name}</small>{l.text}</span>
           </button>
         </li>
       ))}
@@ -181,12 +186,13 @@ export function HunderterAbschluss({ onFehler, onOk }: { onFehler: (m: string) =
 export function Tagesring({ h }: { h: HunderterHeute | null | undefined }) {
   if (!h || !laeuftHeute(h)) return null;
   const p = h.bewertung.prozent; const r = 21, u = 2 * Math.PI * r;
+  // Bei 0 kein Bogen, sonst zeichnet die runde Kappe einen Punkt
   const farbe = h.bewertung.zaehlt ? (h.bewertung.voll ? 'var(--sand)' : 'var(--ok)') : 'var(--k-arbeit)';
   return (
     <Link href="/ziele" className="tagesring" aria-label={`Tageswert ${p} Prozent, ${h.bewertung.zaehlt ? 'der Tag zählt' : 'zählt noch nicht'}`}>
       <svg viewBox="0 0 50 50" aria-hidden="true">
         <circle cx="25" cy="25" r={r} fill="none" stroke="var(--line)" strokeWidth="5" />
-        <circle cx="25" cy="25" r={r} fill="none" stroke={farbe} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(u * p) / 100} ${u}`} transform="rotate(-90 25 25)" />
+        {p > 0 ? <circle cx="25" cy="25" r={r} fill="none" stroke={farbe} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(u * p) / 100} ${u}`} transform="rotate(-90 25 25)" /> : null}
       </svg>
       <b className="num">{p}</b>
     </Link>

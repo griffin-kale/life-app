@@ -2,13 +2,30 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.33.1] – 2026-11-23
+
+Heute auf Peters Mac repariert (Peter, 23.11.2026, Screenshot bei 1288 × 728: „das geht so nicht“).
+
+### Repariert
+- **Kacheln der Challenge** schnitten Namen und Stand ab („Plattform ▶ F“, „Content 0/100“). Jetzt stehen Name und Stand untereinander, Balken und Plus und Minus darunter. Die Zahl der Kacheln pro Reihe richtet sich nach der Breite.
+- **Leben heute** war nebeneinander nicht lesbar, die Aufgaben endeten mit „…“. Jetzt eine Liste zum Abhaken wie in Erinnerungen, jede Aufgabe ganz.
+- **Drei Spalten erst ab 1400 px.** Bei 1288 px waren die Spalten nur 270 px breit. Darunter steht links der Tag, rechts der Coach mit „Als Nächstes“. Der ganze Kalender steht links, damit der Coach Platz hat.
+- **Coach ohne Leerflächen:** Die offenen Punkte wurden auf die ganze Höhe gestreckt. Jetzt stehen sie oben, das Feld unten. Nach 17 Uhr heißt der Kopf „Coach · Abend“, auch wenn der Abendtext noch fehlt.
+- **Tagesring bei 0** zeigt keinen Punkt mehr oben.
+- **Check-in-Karte** bricht in schmalen Spalten um, der Knopf steht dann unter dem Text.
+- **„Fokus starten“** bricht nicht mehr in zwei Zeilen.
+
+### Technik
+- Der Ende-zu-Ende-Test legt sechs Standards an wie bei Peter und macht mit `SCREENSHOTS=1` Bilder von Heute, Saison, Leben und Neue Saison in fünf Größen (1288 × 728, 1440 × 900, iPad quer und hoch, iPhone), hell und dunkel.
+- Der Test der Ablage sucht im verschlüsselten Text nur noch nach langen Wörtern. Kurze wie „plan“ kamen in zufälligem Base64 gelegentlich vor und ließen den Test scheitern.
+
 ## [0.33.0] – 2026-11-23
 
 Life nach MAYA: so neu wie nötig, so vertraut wie möglich (Peter, 23.11.2026, Entwürfe im Canvas „Life nach MAYA – Entwürfe“, Richtung B „Life, aufgeräumt“, Konzept im Projekt unter `claude/MAYA-KONZEPT.md`). Maßstab: Ein fremder Mensch versteht Life ohne Erklärung.
 
 ### Geändert
 - **Heute hat fünf Blöcke statt zehn:** Tagesring oben rechts, Check-in nur wenn fällig, die eine Sache, Saison heute, Als Nächstes, Liste. Cockpit, Konten heute, Schnellzugriffe und „Heute erledigt“ sind runter von Heute. „Heute anpassen“ bietet sieben Bausteine statt sechzehn, Kalender und Erledigt lassen sich dazuschalten. Gespeicherte Listen bekommen den neuen Standard einmal, Kalender und Erledigt bleiben, wenn sie an waren.
-- **Mac ab 1280 px:** drei Spalten (Tag, Saison und Liste, Coach), die Seite scrollt nicht, jede Spalte für sich.
+- **Mac ab 1400 px** (seit 0.33.1, vorher 1280): drei Spalten (Tag, Saison und Liste, Coach), die Seite scrollt nicht, jede Spalte für sich.
 - **Als Nächstes** ist eine Zeile mit drei Terminen wie im iPhone-Kalender, „Ganzer Tag“ führt in die Woche.
 - **Eine Bereichsliste für ganz Life:** Arbeit, Körper, Ruhe, Menschen, Geld, Zeit. Vorher hießen dieselben Dinge mal Geschäft, Sozial, Mental oder „Ruhe und Geist“. Leben zeigt jetzt alle sechs, jeder mit einem direkten Weg.
 - **Neue Wörter:** Fokus statt Deep Work, Routinen statt Hebel, Irgendwann statt Parkplatz, Morgen-Check-in und Abend-Check-in statt Morgen und Abschluss, Wochenrückblick statt Wochenrunde, Kompass statt Stand, Standort-Check statt Standortbestimmung, „Was der Coach weiß“ statt Merkzettel, Lebensbereiche statt Konten. Das gilt auch für Mitteilungen, Fehlermeldungen und das, was der Coach liest. Pfade bleiben gleich.

@@ -88,7 +88,7 @@ export function CoachInhalt({ stand, chat, spuren, onSenden, fokus, kompakt, war
   const k = c ? (abends ? c.abend : c.morgen) : null;
   return (
     <>
-      <span className="hero-kopf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg>Coach · {abends ? 'Abend' : 'Morgen'}</span>
+      <span className="hero-kopf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" /></svg>Coach · {stunde() >= 17 ? 'Abend' : 'Morgen'}</span>
       {c?.warnungen.length ? <ul className="hero-warn">{c.warnungen.map((w) => <li key={w}>{w}</li>)}</ul> : null}
       {offen.length ? <ul className="hero-offen" aria-label="Noch offen">{offen.map((o) => <li key={o}>{o}</li>)}</ul> : null}
       {k?.text ? <p className="coach-text">{k.text}</p> : stand.warten ? <p className="note working">Der Coach schreibt …</p> : null}

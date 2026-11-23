@@ -1039,7 +1039,8 @@ test('Ganzer Ablauf auf dem iPhone', async ({ page, context }) => {
     await sql.end();
     expect(roh.length).toBeGreaterThanOrEqual(5);
     const alles = roh.map((r) => r.block + Buffer.from(r.block, 'base64').toString('latin1')).join(' ') + kopfRoh[0].pass_block;
-    expect(alles).not.toMatch(/geheim|Langfristplan|Jahresziel|Erfunden|Gewohnheit|Meilenstein|notiz|plan|woche/i);
+    // Nur lange Wörter aus den Testdaten: kurze wie „plan“ tauchen in zufälligem Base64 gelegentlich auf (Test schlug am 23.11. deshalb fehl)
+    expect(alles).not.toMatch(/geheim|Langfristplan|Jahresziel|Erfunden|Gewohnheit|Meilenstein|Notiz für/);
     expect((await page.request.post('/api/ablage/eintraege', { headers: H, data: { block: '<b>klartext</b>' } })).status()).toBe(400);
     // Verschlüsselter Export: Datei ohne Klartext
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Verschlüsselt exportieren/ }).click()]);
@@ -1435,6 +1436,10 @@ test('Challenge (früher die Hunderter): Format wählen, Standards, Leben, Joker
     await page.getByLabel('Eigener Standard').fill('Plattform bauen');
     await page.getByLabel('Eigener Standard').press('Enter');
     await expect(page.getByRole('list', { name: 'Standards' }).locator('li')).toHaveCount(3);
+    // Sechs Standards wie bei Peter, damit Kacheln auch voll in schmale Spalten passen müssen
+    for (const n of ['Akquise', 'Content', 'Schreiben']) await page.getByRole('button', { name: `+ ${n}` }).click();
+    await expect(page.getByRole('list', { name: 'Standards' }).locator('li')).toHaveCount(6);
+    await expect(page.getByRole('button', { name: '+ Training' })).toBeDisabled();
     await page.getByRole('button', { name: 'Challenge starten' }).click();
     await page.waitForURL('/ziele');
     await expect(page.locator('.sz-saison').first()).toContainText('Winter-Challenge');
@@ -1448,11 +1453,13 @@ test('Challenge (früher die Hunderter): Format wählen, Standards, Leben, Joker
   // Haken zählt per Tipp, Fokus-Standards tragen von Hand nach
   await karte.getByRole('button', { name: /^Lesen: offen/ }).click();
   await expect(karte.getByRole('button', { name: /^Lesen: Hälfte/ })).toBeVisible();
-  for (const b of ['Fokus Arbeit', 'Plattform bauen']) {
+  await karte.getByRole('button', { name: /^Content: offen/ }).click();
+  for (const b of ['Fokus Arbeit', 'Plattform bauen', 'Akquise', 'Schreiben']) {
     await karte.getByRole('button', { name: `${b}: eine Phase nachtragen` }).click();
     await expect(karte.getByRole('link', { name: new RegExp(`^${b}: 1 von 2`) })).toBeVisible();
   }
   await expect(karte.getByText(/fehlt: 5 Leben-Aufgaben/)).toBeVisible();
+  await expect(karte.locator('.hu-kachel')).toHaveCount(6);
   for (const l of await karte.locator('.hu-haken').all()) { await l.click(); await expect(l).toHaveAttribute('aria-pressed', 'true'); }
   await expect(karte.getByText('Der Tag zählt. Alles darüber ist Bonus.')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Tageswert 80 Prozent, der Tag zählt/ })).toBeVisible();
@@ -1475,13 +1482,18 @@ test('Challenge (früher die Hunderter): Format wählen, Standards, Leben, Joker
   await expect(page.getByText(/7 von 7 frei/)).toBeVisible();
   if (process.env.SCREENSHOTS) {
     await page.screenshot({ path: 'test-results/design/saison-challenge.png', fullPage: true });
-    // Heute mit laufender Challenge auf Mac (drei Spalten, ohne Scrollen) und iPad hochkant
-    for (const [g, w, h] of [['mac', 1440, 900], ['ipad', 834, 1112]] as const) {
-      await page.setViewportSize({ width: w, height: h });
-      await page.goto('/'); await page.waitForTimeout(600);
-      await page.screenshot({ path: `test-results/design/${g}-heute-saison.png` });
+    // Heute mit laufender Challenge auf allen Größen, hell und dunkel (0.33.1: Peters Mac hat 1288 × 728)
+    for (const t of ['dark', 'light']) {
+      await context.addCookies([{ name: 'life-thema', value: t, url: TEST_ENV.PUBLIC_ORIGIN }]);
+      for (const [g, w, h] of [['mac-klein', 1288, 728], ['mac', 1440, 900], ['ipad-quer', 1180, 820], ['ipad', 834, 1112], ['iphone', 390, 844]] as const) {
+        await page.setViewportSize({ width: w, height: h });
+        for (const [p2, n] of [['/', 'heute'], ['/ziele', 'saison'], ['/leben', 'leben'], ['/ziele/neu?format=challenge', 'neu']] as const) {
+          await page.goto(p2); await page.waitForTimeout(500);
+          await page.screenshot({ path: `test-results/design/pruef-${g}-${n}-${t}.png` });
+        }
+      }
     }
-    await page.goto('/ziele/neu'); await page.waitForTimeout(400);
-    await page.screenshot({ path: 'test-results/design/ipad-neue-saison.png' });
+    await context.addCookies([{ name: 'life-thema', value: 'dark', url: TEST_ENV.PUBLIC_ORIGIN }]);
+    await page.setViewportSize({ width: 390, height: 844 });
   }
 });
