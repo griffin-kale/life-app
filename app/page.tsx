@@ -160,9 +160,9 @@ export default function Heute() {
     ),
     jetzt: (
       <div className="eins-bereich">
-        {engpassZeile}
+        {eins ? null : engpassZeile}
         {st === null ? <div className="loading">Lädt …</div>
-          : eins ? <EineSache key={eins.id} it={eins} frei={vorschlag && !eins.zeit ? { von: hhmm(vorschlag.von), bis: hhmm(vorschlag.bis) } : null} leaving={leaving === eins.id}
+          : eins ? <EineSache key={eins.id} it={eins} engpass={engpassZeile} frei={vorschlag && !eins.zeit ? { von: hhmm(vorschlag.von), bis: hhmm(vorschlag.bis) } : null} leaving={leaving === eins.id}
               onErledigt={() => toggle(eins)} onZeit={(v) => zeit(eins, v)} onSpaeter={() => spaeter(eins, true)} onWenn={(w) => act(() => patch(eins.id, { wenn: w }))}
               sortiert={{ laeuft: st.laeuft, am: st.sortiertAm }} onNeuSortieren={neuSortieren} />
           : st.laeuft ? <p className="note working">Claude sucht die eine Sache …</p>

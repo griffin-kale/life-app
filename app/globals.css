@@ -1730,3 +1730,6 @@ button.hu-kachel { padding: 10px; align-content: space-between; }
 .es-knoepfe > * { white-space: nowrap; }
 .hu .li-kopf .glabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hu .li-kopf .hu-joker-link { flex: none; white-space: nowrap; }
+.hu-kopfzeile { margin: -4px 0 2px; }
+.hu-kopfzeile .glabel { padding: 0; }
+.eine-sache .engpass-zeile { margin: -2px 0 2px; padding: 0; }
