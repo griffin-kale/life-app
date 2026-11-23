@@ -5,30 +5,27 @@ import { Icon, TabBar, TopBar, api, isPending, taskTitle, useBreit, useToast, ty
 import { Liste } from './liste';
 import { FrageOffen } from './frage-offen';
 import { RitualKarte } from './rituale';
-import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, Empfohlen, useCheckins, useCoachChat, type Spur } from './coach';
+import { CoachBlatt, CoachFeld, CoachInhalt, CoachLeiste, useCheckins, useCoachChat, type Spur } from './coach';
 import { KalenderHeute, useKalender } from './kalender';
-import { MiniRinge } from './ringe';
-import { Danach, EineSache, Erledigt } from './eine-sache';
-import { useSprache } from './sprache';
+import { EineSache, Erledigt } from './eine-sache';
 import { hhmm } from '@/lib/kalender-regeln';
-import { GeldKurz, KoerperKurz, MenschenKurz, useKurz } from './kurz';
-import { Schnellzugriff } from './schnell';
 import { bausteineAus, type Baustein } from '@/lib/heute-bausteine';
-import { CockpitKacheln, KontenHeute, Tagesstreifen, useCockpit } from './cockpit';
-import { HunderterKarte } from './hunderter';
+import { Tagesstreifen, useCockpit } from './cockpit';
+import { SaisonHeute, Tagesring, useHunderter } from './hunderter';
 
-/** Auf iPad und Mac steht rechts unter dem Coach nur, was in den Tag passt. Alles andere links, damit die Seite nicht scrollt (Peter, 31.10.2026). */
+/**
+ * Heute nach MAYA (0.33, Richtung B, Peter 23.11.2026): Kopf mit Tagesring, Check-in nur wenn fällig, die eine Sache,
+ * Saison heute, Als Nächstes, Liste. Fünf Blöcke statt zehn.
+ * iPad: links alles, rechts Coach mit Als Nächstes. Mac ab 1280 px: zwei Spalten plus Coach. Die Seite scrollt nicht, jede Spalte für sich (Peter, 31.10.2026).
+ */
 const RECHTS: Baustein[] = ['streifen', 'kalender'];
+const LINKS_MAC: Baustein[] = ['fragebogen', 'jetzt', 'streifen', 'kalender'];
 const uhrBerlin = (iso: string) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number; naechstes: number; anteil: number }; tage: { tag: string; wert: number | null }[] };
 
 const nachZeit = (a: Item, b: Item) => (a.zeit && b.zeit ? a.zeit.localeCompare(b.zeit) : a.zeit ? -1 : b.zeit ? 1 : (a.rang ?? 99) - (b.rang ?? 99));
 
 export default function Heute() {
   const [st, setSt] = useState<Stand | null>(null);
-  const [text, setText] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
   const [leaving, setLeaving] = useState<string | null>(null);
   const [toast, setToast] = useToast();
   const ci = useCheckins();
@@ -38,21 +35,19 @@ export default function Heute() {
   const [coachFokus, setCoachFokus] = useState(0);
   const { k: kal } = useKalender();
   const vorschlag = kal?.heute?.bloecke.find((b) => b.art === 'vorschlag') ?? null;
-  const [kompass, setKompass] = useState<KompassKurz | null>(null);
-  useEffect(() => { api<KompassKurz>('/api/kompass').then(setKompass).catch(() => {}); }, []);
-  const ringe = kompass?.jetzt.ringe ?? null;
   const [bausteine, setBausteine] = useState<Baustein[]>(() => bausteineAus(null));
   const breit = useBreit(768);
+  const mac = useBreit(1280);
   useEffect(() => { api<{ bausteine: Baustein[] }>('/api/heute/bausteine').then((r) => setBausteine(bausteineAus(r.bausteine))).catch(() => {}); }, []);
-  const kurz = useKurz(bausteine);
   const { c: cockpit, laden: cockpitLaden } = useCockpit();
+  const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
+  const { h: challenge, tun: challengeTun } = useHunderter(fehler);
   // Uhrzeit erst im Browser setzen, damit Server und Browser dasselbe zeichnen
   const [minuten, setMinuten] = useState<number | null>(null);
   useEffect(() => {
     const setzen = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':'); setMinuten(Number(p[0]) * 60 + Number(p[1])); };
     setzen(); const t = setInterval(setzen, 60_000); return () => clearInterval(t);
   }, []);
-  const sprache = useSprache(text, setText, (m) => setToast(m, 'err'));
 
   const load = useCallback(async () => { setSt(await api<Stand>('/api/heute')); }, []);
   useEffect(() => { load().catch((e) => setToast((e as Error).message, 'err')); }, [load, setToast]);
@@ -62,7 +57,6 @@ export default function Heute() {
     const t = setTimeout(() => load().catch(() => {}), 2500);
     return () => clearTimeout(t);
   }, [st, load]);
-  useEffect(() => { if (!done) return; const t = setTimeout(() => setDone(false), 1400); return () => clearTimeout(t); }, [done]);
 
   function patch(id: string, body: Record<string, unknown>) {
     return api<Item & { verdraengt?: string | null }>(`/api/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -97,13 +91,6 @@ export default function Heute() {
     act(() => api('/api/heute', { method: 'POST' }));
   }
 
-  /** Hält einen Gedanken fest. Claude ordnet ihn im Hintergrund ein. */
-  async function festhalten(t: string) {
-    try {
-      const r = await api<{ id: string }>('/api/items', { method: 'POST', body: JSON.stringify({ text: t }) });
-      await load(); return !!r.id;
-    } catch (e) { setToast('Nicht gespeichert. ' + (e as Error).message, 'err'); return false; }
-  }
   /** Ein Feld für alles: festhalten, dann nachsehen, ob Claude den Text als Frage an den Coach erkennt. */
   async function senden(t: string) {
     try {
@@ -131,11 +118,6 @@ export default function Heute() {
     const t = setTimeout(runde, 900);
     return () => { aus = true; clearTimeout(t); };
   }, [wartet, load, chat.neuLaden, setToast]);
-  async function save() {
-    const t = text.trim(); if (!t || busy) return;
-    sprache.stop(); setBusy(true);
-    try { if (await festhalten(t)) { setText(''); setDone(true); } } finally { setBusy(false); }
-  }
 
   const today = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   const items = st?.items ?? [];
@@ -170,32 +152,9 @@ export default function Heute() {
     ? <Link href="/einstellungen" className="engpass-zeile" aria-label={`Engpass: ${st.engpass}`}>{zielscheibe}<span>{st.engpass}</span></Link>
     : st ? <Link href="/einstellungen" className="engpass-zeile leer">{zielscheibe}<span>Engpass festlegen</span>{Icon.chevronRight}</Link> : null;
   const eins = [...jetzt].sort((a, b) => (a.rang ?? 99) - (b.rang ?? 99))[0] ?? null;
-  const danach = jetzt.filter((x) => x !== eins);
-  const bloecke: Partial<Record<Baustein, React.ReactNode>> = {
-    cockpit: <CockpitKacheln c={cockpit} />,
-    streifen: <Tagesstreifen c={cockpit} jetzt={minuten} />,
-    konten: <KontenHeute c={cockpit} />,
+  const bloecke: Record<Baustein, React.ReactNode> = {
     fragebogen: (
 <><RitualKarte art={ci.zeige === 'morgen' || ci.zeige === 'abend' ? ci.zeige : null} wochenrunde={!!ci.coach?.wochenstartOffen && !ci.zeige} /><FrageOffen /></>
-    ),
-    festhalten: (
-<><section className="capture compact" aria-label="Festhalten">
-        <textarea value={text} onChange={(e) => { setText(e.target.value); if (done) setDone(false); }} placeholder="Was geht dir durch den Kopf?" aria-label="Gedanke, Aufgabe, Zitat oder Link"
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } }} />
-        <div className="row">
-          <span className={'hint' + (sprache.hoert ? ' live' : '')} aria-live="polite">{sprache.hoert ? <><span className="rec" />Ich höre zu</> : null}</span>
-          <span className="tools">
-            {sprache.geht ? (
-              <button type="button" className={'btn mic' + (sprache.hoert ? ' on' : '')} onClick={sprache.umschalten} aria-pressed={sprache.hoert} aria-label={sprache.hoert ? 'Aufnahme beenden' : 'Sprechen'}>
-                {sprache.hoert ? Icon.stop : Icon.mic}
-              </button>
-            ) : null}
-            <button type="button" className={'btn primary' + (done ? ' done' : '')} onClick={save} disabled={(!text.trim() && !done) || busy}>
-              {done ? <>{Icon.check}Festgehalten</> : busy ? 'Speichert …' : 'Festhalten'}
-            </button>
-          </span>
-        </div>
-      </section></>
     ),
     jetzt: (
       <div className="eins-bereich">
@@ -209,38 +168,36 @@ export default function Heute() {
         {st?.fehler ? <p className="gnote bad">Sortieren hat nicht geklappt: {st.fehler}</p> : null}
       </div>
     ),
-    naechste: <Danach items={danach} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
+    saison: <SaisonHeute h={challenge} tun={challengeTun} />,
+    streifen: <Tagesstreifen c={cockpit} jetzt={minuten} />,
     liste: <Liste jetzt={jetzt} eins={eins} erledigtHeute={st?.erledigtHeute ?? []} zuletzt={st?.zuletzt ?? []} woche={items.filter((i) => i.stapel === 'woche').length} geparkt={items.filter((i) => i.stapel === 'geparkt').length} leaving={leaving} onToggle={toggle} onVor={(it) => act(() => patch(it.id, { eineSache: true }))} />,
     erledigt: <Erledigt items={st?.erledigtHeute ?? []} onToggle={toggle} onEnergie={(it, n) => act(() => patch(it.id, { energie: n }))} />,
-    schnell: <Schnellzugriff onGedanke={gedanke} sache={eins ? { id: eins.id, titel: taskTitle(eins) } : null} />,
-    empfohlen: <Empfohlen stand={ci} />,
     kalender: <KalenderHeute />,
-    koerper: kurz.koerper ? <KoerperKurz k={kurz.koerper} /> : null,
-    geld: kurz.geld ? <GeldKurz g={kurz.geld} /> : null,
-    menschen: kurz.menschen ? <MenschenKurz m={kurz.menschen} /> : null,
   };
-  const reihe = bausteine.filter((b) => b !== 'kompass');
-  const fehler = useCallback((m: string) => setToast(m, 'err'), [setToast]);
+  const zeige = (liste: Baustein[]) => liste.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>);
+  const coachSpalte = <aside className="hero coach coach-panel" aria-label="Coach">{coachInhalt}</aside>;
 
   return (
     <main className={'wrap breit' + (breit ? ' heute-desk' : '')}>
       <TopBar title="Heute" profil />
       <header className="head">
         <span className="eyebrow">{today}</span>
-        <div className="titel-zeile"><h1 className="title">Heute<i>.</i></h1>{bausteine.includes('kompass') && ringe && kompass ? <MiniRinge ringe={ringe} level={kompass.gesamt.level} /> : null}</div>
+        <div className="titel-zeile"><h1 className="title">Heute<i>.</i></h1><Tagesring h={challenge} /></div>
       </header>
 
-      {breit ? (
+      {breit && mac ? (
+        <div className="heute-spalten drei">
+          <div className="spalte">{zeige(bausteine.filter((b) => LINKS_MAC.includes(b)))}</div>
+          <div className="spalte">{zeige(bausteine.filter((b) => !LINKS_MAC.includes(b)))}</div>
+          <div className="spalte spalte-rechts">{coachSpalte}</div>
+        </div>
+      ) : breit ? (
         <div className="heute-spalten">
-          <div className="spalte"><HunderterKarte onFehler={fehler} />{reihe.filter((b) => !RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}</div>
-          <div className="spalte spalte-rechts">
-            <aside className="hero coach coach-panel" aria-label="Coach">{coachInhalt}</aside>
-            {reihe.filter((b) => RECHTS.includes(b)).map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
-          </div>
+          <div className="spalte">{zeige(bausteine.filter((b) => !RECHTS.includes(b)))}</div>
+          <div className="spalte spalte-rechts">{coachSpalte}{zeige(bausteine.filter((b) => RECHTS.includes(b)))}</div>
         </div>
       ) : <>
-        <HunderterKarte onFehler={fehler} />
-        {reihe.map((b) => <Fragment key={b}>{bloecke[b]}</Fragment>)}
+        {zeige(bausteine)}
         <CoachLeiste stand={ci} onOeffnen={gedanke} />
         {coachModus === 'feld' ? <CoachFeld stand={ci} onSenden={senden} wartet={!!wartet} onGespraech={() => setCoachModus('blatt')} onZu={() => setCoachModus('zu')} onFehler={(m) => setToast(m, 'err')} /> : null}
         {coachModus === 'blatt' ? <CoachBlatt onZu={() => setCoachModus('zu')}>{coachInhalt}</CoachBlatt> : null}

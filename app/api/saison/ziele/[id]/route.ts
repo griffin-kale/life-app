@@ -37,5 +37,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     if (!(await hebelDazu(id, titel, uid))) return NextResponse.json({ error: 'Ziel nicht gefunden.' }, { status: 404 });
     return NextResponse.json({ ok: true });
-  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Der Hebel ließ sich nicht speichern.', 'saison') }, { status: 409 }); }
+  } catch (e) { return NextResponse.json({ error: oeffentlich(e, 'Die Routine ließ sich nicht speichern.', 'saison') }, { status: 409 }); }
 }

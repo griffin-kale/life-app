@@ -5,31 +5,36 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon, TabBar, TopBar, api, useToast } from '../ui';
 import { MiniRinge } from '../ringe';
 import type { SaisonStand, ZielStand } from '@/lib/saison';
+import type { HunderterHeute, HunderterUebersicht } from '@/lib/hunderter';
+import { BEREICH_FARBE, bereichName } from '@/lib/bereiche';
+import { ChallengeAnsicht } from '../challenge-ansicht';
 
 type HeuteZiele = { ziele: { ziel: string; offen: number; erledigt: number }[] };
 type StandKurz = { wochenziel: string; engpass: string };
 type KompassKurz = { jetzt: { ringe: Record<string, number | null> }; gesamt: { level: number } };
 type SaisonAntwort = { saison: SaisonStand | null; start: string };
-
-const BEREICH_FARBE: Record<string, string> = {
-  geschaeft: 'var(--sky)', zeit: 'var(--k-zeit)', koerper: 'var(--k-koerper)', mental: 'var(--k-mental)', sozial: 'var(--k-sozial)', geld: 'var(--k-geld)',
-};
+type ChallengeAntwort = { heute: HunderterHeute | null; saison: HunderterUebersicht | null; datum: string };
 const datum = (t: string, jahr = false) => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', ...(jahr ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(new Date(t + 'T12:00:00Z'));
 const STATUS: Record<string, [string, string]> = { kurs: ['ok', 'auf Kurs'], anpassen: ['an', 'anpassen'], daneben: ['da', 'daneben'] };
 
 /**
- * Ziele (Life 2.0, Phase 2, Peter 29.10.2026): Saison mit Leitsatz und zwölf Wochen, darunter Zielkarten mit Hebeln.
- * Karten ohne Handlungsbedarf klappen zu. Ohne Saison: Einstieg ins Blatt „Neue Saison“ und die bisherige Liste.
+ * Saison (Life 2.0, Phase 2, Peter 29.10.2026; seit 0.33 mit zwei Formaten): Ziele mit zwölf Wochen und Zielkarten mit Routinen,
+ * oder Challenge mit täglichen Standards (früher „Die Hunderter“). Läuft eine Challenge, steht sie oben.
+ * Ohne Saison: Einstieg ins Blatt „Neue Saison“ und die bisherige Liste.
  */
 export default function Ziele() {
   const [s, setS] = useState<SaisonAntwort | null>(null);
   const [h, setH] = useState<HeuteZiele | null>(null);
   const [st, setSt] = useState<StandKurz | null>(null);
   const [k, setK] = useState<KompassKurz | null>(null);
+  const [ch, setCh] = useState<ChallengeAntwort | null>(null);
+  const [jokerTag, setJokerTag] = useState('');
+  const [busy, setBusy] = useState(false);
   const [toast, setToast] = useToast();
   const laden = useCallback(() => api<SaisonAntwort>('/api/saison').then(setS).catch((e) => setToast((e as Error).message, 'err')), [setToast]);
+  const chLaden = useCallback(() => api<ChallengeAntwort>('/api/hunderter?ganz=1').then(setCh).catch(() => setCh({ heute: null, saison: null, datum: '' })), []);
   useEffect(() => {
-    laden();
+    laden(); chLaden();
     api<HeuteZiele>('/api/heute').then(setH).catch(() => {});
     api<StandKurz>('/api/stand').then(setSt).catch(() => {});
     api<KompassKurz>('/api/kompass').then(setK).catch(() => {});
@@ -42,16 +47,27 @@ export default function Ziele() {
     catch (e) { setToast((e as Error).message, 'err'); laden(); }
   }
 
+  async function chTun(body: Record<string, unknown>, ok: string) {
+    setBusy(true);
+    try { await api('/api/hunderter', { method: 'POST', body: JSON.stringify(body) }); await chLaden(); setToast(ok, 'ok'); }
+    catch (e) { setToast((e as Error).message, 'err'); }
+    finally { setBusy(false); }
+  }
+
   const sa = s?.saison ?? null;
-  const eyebrow = !s ? '…' : !sa ? 'Bin ich auf Kurs?' : sa.woche < 1 ? `Saison ${sa.name} · beginnt am ${datum(sa.start)}` : `Saison ${sa.name} · Woche ${sa.woche} von 12`;
+  const c = ch?.saison && ch.datum && ch.datum <= ch.saison.ende ? ch.saison : null;
+  const eyebrow = !s || !ch ? '…' : c ? `${c.name} · Tag ${c.nr || '–'} von ${c.tage}` : !sa ? 'Bin ich auf Kurs?' : sa.woche < 1 ? `Saison ${sa.name} · beginnt am ${datum(sa.start)}` : `Saison ${sa.name} · Woche ${sa.woche} von 12`;
   return (
     <main className="wrap">
       <TopBar title="Plan" profil />
       <header className="head"><span className="eyebrow">{eyebrow}</span><h1 className="title">Plan<i>.</i></h1></header>
       <PlanUmschalter an="saison" />
 
-      {!s ? <p className="loading">Lädt …</p> : sa ? (
+      {c && ch ? <ChallengeAnsicht s={c} h={ch.heute} heute={ch.datum} busy={busy} jokerTag={jokerTag} setJokerTag={setJokerTag} tun={chTun} /> : null}
+
+      {!s || !ch ? <p className="loading">Lädt …</p> : sa ? (
         <>
+          {c ? <h2 className="glabel sz-auch">Ziele für zwölf Wochen</h2> : null}
           <section className="sz-saison" aria-label="Saison">
             <div className="sz-zeile"><span>{datum(sa.start)} bis {datum(sa.ende, true)}</span><span>{sa.woche < 1 ? 'startet bald' : sa.woche >= 12 ? 'letzte Woche' : `noch ${12 - sa.woche} Wochen`}</span></div>
             <div className="sz-wochen" role="img" aria-label={sa.woche < 1 ? 'Die Saison hat noch nicht begonnen' : `Woche ${sa.woche} von 12`}>
@@ -75,11 +91,11 @@ export default function Ziele() {
                           <span className="zl-balken" role="progressbar" aria-label={`${z.titel}: ${z.stand} von ${z.zielwert}`} aria-valuenow={z.stand} aria-valuemax={z.zielwert ?? undefined}><i style={{ width: `${Math.round(z.anteil * 100)}%`, background: 'var(--k)' }} /></span>
                           <small>{z.stand} von {z.zielwert}{z.plan ? ` · ${z.plan}` : ''}</small>
                         </>
-                      ) : <small>{z.hebel.length ? `${z.hebel.filter((x) => x.bewertung === 'kurs').length} von ${z.hebel.length} Hebeln auf Kurs` : 'Noch ohne Hebel'}</small>}
+                      ) : <small>{z.hebel.length ? `${z.hebel.filter((x) => x.bewertung === 'kurs').length} von ${z.hebel.length} Routinen auf Kurs` : 'Noch ohne Routinen'}</small>}
                     </summary>
                     <div className="sz-mehr">
                       {z.hebel.length ? (
-                        <ul className="sz-hebel" aria-label="Hebel">
+                        <ul className="sz-hebel" aria-label="Routinen">
                           {z.hebel.map((x) => (
                             <li key={x.id}>
                               <span className={'sz-punkt ' + (x.bewertung ? STATUS[x.bewertung][0] : 'offen')} aria-hidden="true" />
@@ -102,13 +118,13 @@ export default function Ziele() {
                 );
               })}
             </div>
-            {sa.leer.length ? <p className="sz-leer">Ohne Ziel in dieser Saison: {sa.leer.map((b) => ({ geschaeft: 'Geschäft', zeit: 'Zeit', koerper: 'Körper', mental: 'Ruhe und Geist', sozial: 'Menschen', geld: 'Geld' } as Record<string, string>)[b]).join(', ')}. Das ist in Ordnung, wenige Ziele tragen weiter.</p> : null}
+            {sa.leer.length ? <p className="sz-leer">Ohne Ziel in dieser Saison: {sa.leer.map(bereichName).join(', ')}. Das ist in Ordnung, wenige Ziele tragen weiter.</p> : null}
           </section>
         </>
-      ) : (
+      ) : c ? null : (
         <section className="gsec" aria-label="Neue Saison">
           <Link href="/ziele/neu" className="ws-banner">
-            <span><b>Neue Saison anlegen</b><small>Zwölf Wochen ab {datum(s.start)}. Ein Ziel pro Bereich, je drei Hebel, ein Wenn-dann-Plan. Etwa zehn Minuten.</small></span>
+            <span><b>Neue Saison anlegen</b><small>Ziele für zwölf Wochen oder eine Challenge mit täglichen Standards. Etwa zehn Minuten.</small></span>
             {Icon.chevronRight}
           </Link>
           {h?.ziele.length ? (
@@ -137,7 +153,7 @@ export default function Ziele() {
         <Link href="/wochenstart" className="group pad zl-woche">
           <span className="ck-name">Wochenziel</span>
           <b>{st?.wochenziel || 'Noch kein Wochenziel'}</b>
-          <small>{st?.wochenziel ? 'Aus der Wochenrunde' : 'In der Wochenrunde legst du es in zehn Minuten fest'}</small>
+          <small>{st?.wochenziel ? 'Aus dem Wochenrückblick' : 'Im Wochenrückblick legst du es in zehn Minuten fest'}</small>
           {st?.engpass ? <small>Engpass: {st.engpass}</small> : null}
         </Link>
       </section>
@@ -145,8 +161,8 @@ export default function Ziele() {
       <section className="gsec">
         <div className="group">
           <Link className="cell" href="/stand">
-            <span className="lbl">Stand</span>
-            <span className="val">{k ? <MiniRinge ringe={k.jetzt.ringe} anzeige /> : <span>Ringe, Engpass, Richtung</span>}{Icon.chevronRight}</span>
+            <span className="lbl">Kompass</span>
+            <span className="val">{k ? <MiniRinge ringe={k.jetzt.ringe} anzeige /> : <span>Lebensbereiche, Engpass, Richtung</span>}{Icon.chevronRight}</span>
           </Link>
         </div>
       </section>

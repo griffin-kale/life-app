@@ -19,11 +19,11 @@ export default function StandSeite() {
   return (
     <main className="wrap">
       <TopBar title="Stand" back={{ label: 'Leben', href: '/leben' }} />
-      <header className="head"><span className="eyebrow">{b ? `Baseline vom ${datum(b.tag)}` : 'Standortbestimmung'}</span><h1 className="title">Stand<i>.</i></h1></header>
+      <header className="head"><span className="eyebrow">{b ? `Baseline vom ${datum(b.tag)}` : 'Standort-Check'}</span><h1 className="title">Kompass<i>.</i></h1></header>
       {!r ? <p className="loading">Lädt …</p> : <>
         {r.naechste ? (
           <Link href={`/stand/${r.naechste}`} className="ws-banner st-start">
-            <span><b>{r.naechste === 1 ? 'Standortbestimmung starten' : `Weiter mit Etappe ${r.naechste}`}</b><small>{r.etappen[r.naechste - 1].titel}: {r.etappen[r.naechste - 1].kurz} {r.etappen[r.naechste - 1].dauer}</small></span>
+            <span><b>{r.naechste === 1 ? 'Standort-Check starten' : `Weiter mit Etappe ${r.naechste}`}</b><small>{r.etappen[r.naechste - 1].titel}: {r.etappen[r.naechste - 1].kurz} {r.etappen[r.naechste - 1].dauer}</small></span>
             {Icon.chevronRight}
           </Link>
         ) : null}
@@ -62,7 +62,7 @@ export default function StandSeite() {
         <section className="gsec" aria-label="Woche und Tag">
           <h2 className="glabel">Diese Woche und heute</h2>
           <div className="group">
-            <div className="cell static st-zeile"><em>Woche</em><span>{r.wochenziel || leer('Setzt du in Etappe 3 oder in der Wochenrunde')}</span></div>
+            <div className="cell static st-zeile"><em>Woche</em><span>{r.wochenziel || leer('Setzt du in Etappe 3 oder im Wochenrückblick')}</span></div>
             <div className="cell static st-zeile"><em>Heute</em><span>{r.heute || leer('Claude setzt morgens „Jetzt dran“')}</span></div>
           </div>
           <p className="gnote">Alle zwölf Wochen fragt der Coach Etappe 1 nochmal ab, dann siehst du hier, was sich bewegt hat.</p>

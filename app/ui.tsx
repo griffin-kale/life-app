@@ -19,12 +19,12 @@ export type Stand = {
   ziele: { ziel: string; offen: number; erledigt: number }[]; sortiertAm: string | null; fehler: string | null; laeuft: boolean;
 };
 
-export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Parkplatz', streichen: 'Streichen vorgeschlagen' };
+export const STAPEL: Record<string, string> = { jetzt: 'Jetzt', woche: 'Diese Woche', delegieren: 'Delegieren', geparkt: 'Irgendwann', streichen: 'Streichen vorgeschlagen' };
 export const aufwandLabel = (m: number | null) => (m ? (m <= 20 ? '15 Min.' : m <= 90 ? '1 Std.' : 'halber Tag') : null);
 
 export const TYP: Record<string, string> = { gedanke: 'Gedanke', zitat: 'Zitat', video: 'Video', buch: 'Buch', link: 'Artikel' };
 export const KAT: Record<string, string> = { engpass: 'Engpass', entscheidung: 'Entscheidung', aufgabe: 'Aufgabe', projekt: 'Projekt', privat: 'Privat', notiz: 'Notiz', idee: 'Idee', wissen: 'Wissen' };
-export const ART: Record<string, string> = { zeit: 'Zeit', sozial: 'Sozial', mental: 'Mental', koerper: 'Körper', geld: 'Geld' };
+export const ART: Record<string, string> = { zeit: 'Zeit', sozial: 'Menschen', mental: 'Ruhe', koerper: 'Körper', geld: 'Geld' };
 
 const TZ = 'Europe/Berlin';
 const dayKey = (x: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(x);

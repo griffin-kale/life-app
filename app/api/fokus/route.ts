@@ -3,8 +3,7 @@ import { oeffentlich } from '@/lib/fehler';
 import { beenden, fokusHeute, laufend, starten, testBeenden, testNaechste, testStand, testStarten } from '@/lib/fokus';
 import { BEWERTUNG, MUSIK, type Bewertung, type Musik } from '@/lib/fokus-regeln';
 import { mitNutzer } from '@/lib/sitzung';
-import { BEREICHE_H, type HBereich } from '@/lib/hunderter-regeln';
-import { laeuft } from '@/lib/hunderter';
+import { fokusStandards } from '@/lib/hunderter';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -12,8 +11,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function GET() {
   const { aus, uid } = await mitNutzer(); if (aus) return aus;
   try {
-    const [block, heute, test, naechste, hunderter] = await Promise.all([laufend(uid), fokusHeute(uid), testStand(uid), testNaechste(uid), laeuft(uid).catch(() => false)]);
-    return NextResponse.json({ block, heute, test, naechste, hunderter, jetzt: Date.now() });
+    const [block, heute, test, naechste, standards] = await Promise.all([laufend(uid), fokusHeute(uid), testStand(uid), testNaechste(uid), fokusStandards(uid).catch(() => [])]);
+    return NextResponse.json({ block, heute, test, naechste, standards, jetzt: Date.now() });
   } catch (e) {
     return NextResponse.json({ error: oeffentlich(e, 'Der Fokus lässt sich gerade nicht laden.', 'fokus') }, { status: 500 });
   }
@@ -28,7 +27,8 @@ export async function POST(req: NextRequest) {
       const itemId = typeof b.itemId === 'string' && UUID.test(b.itemId) ? b.itemId : null;
       const musik = b.musik === 'test' ? 'test' : MUSIK.includes(b.musik) ? (b.musik as Musik) : null;
       if (!musik || !Number.isInteger(b.minuten) || !Number.isInteger(b.pause)) return NextResponse.json({ error: 'Ungültige Angaben.' }, { status: 400 });
-      const bereich = BEREICHE_H.includes(b.bereich) ? (b.bereich as HBereich) : null;
+      // Nur Fokus-Standards der laufenden Challenge, alles andere startet ohne Standard
+      const bereich = typeof b.bereich === 'string' ? (await fokusStandards(uid)).find((s) => s.key === b.bereich) ?? null : null;
       return NextResponse.json({ block: await starten(uid, { itemId, bereich, minuten: b.minuten, pause: b.pause, musik }), jetzt: Date.now() });
     }
     if (b.aktion === 'ende') {

@@ -151,7 +151,7 @@ export async function saisonZeilen(userId: string): Promise<string[]> {
   return [
     `Saison ${s.name}, Woche ${s.woche} von 12.` + (s.leitsatz ? ` Leitsatz: ${s.leitsatz}` : ''),
     ...s.ziele.map((z) => `- ${z.bereichTitel}: ${z.titel}` + (z.zielwert ? ` (${z.stand} von ${z.zielwert})` : '')
-      + (z.hebel.length ? `. Hebel: ${z.hebel.map((h) => h.titel).join('; ')}` : '') + (z.wennDann ? `. ${z.wennDann}` : '')),
+      + (z.hebel.length ? `. Routinen: ${z.hebel.map((h) => h.titel).join('; ')}` : '') + (z.wennDann ? `. ${z.wennDann}` : '')),
   ];
 }
 
@@ -164,7 +164,7 @@ export async function hebelVorschlagen(ziele: { bereich: SBereich; titel: string
   if (s && saisonWoche(s.start, heuteBerlin()) >= 1) throw new Hinweis('Es läuft schon eine Saison.');
   const prompt = [
     'SAISON HEBEL',
-    'Peter plant eine Saison von zwölf Wochen. Schlage für jedes Ziel genau drei Hebel vor: regelmäßige, konkrete Handlungen, die das Ziel tragen und in einen Kalender passen (mit Wochentag oder Häufigkeit, höchstens 8 Wörter, Verb oder Zeitangabe am Anfang).',
+    'Peter plant eine Saison von zwölf Wochen. Schlage für jedes Ziel genau drei Routinen vor: regelmäßige, konkrete Handlungen, die das Ziel tragen und in einen Kalender passen (mit Wochentag oder Häufigkeit, höchstens 8 Wörter, Verb oder Zeitangabe am Anfang).',
     'Dazu pro Ziel einen Dann-Satz für das genannte Hindernis: was Peter stattdessen tut, kleiner, aber am selben Tag (höchstens 14 Wörter, ohne „Wenn“ und ohne „dann“ am Anfang).',
     'Ziele:',
     ...sauber.map((z) => `- ${z.bereich}: ${z.titel.slice(0, 80)}${z.wenn ? ` | Hindernis: ${z.wenn.slice(0, 80)}` : ''}`),
@@ -200,7 +200,7 @@ export async function hebelDazu(zielId: number, titel: string, userId: string): 
     const [z] = await tx<{ n: number }[]>`
       select (select count(*)::int from hebel h where h.ziel_id = z.id) as n from saison_ziele z where z.id = ${zielId} and z.user_id = ${userId} for update`;
     if (!z) return false;
-    if (z.n >= 3) throw new Hinweis('Ein Ziel hat höchstens drei Hebel.');
+    if (z.n >= 3) throw new Hinweis('Ein Ziel hat höchstens drei Routinen.');
     await tx`insert into hebel (ziel_id, user_id, titel, pos) values (${zielId}, ${userId}, ${titel}, ${z.n})`;
     return true;
   }) as Promise<boolean>;

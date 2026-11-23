@@ -1,7 +1,6 @@
 import { ensureSchema, getSetting, setSetting, sql } from './db';
 import { Hinweis } from './fehler';
 import { heuteBerlin } from './zeit';
-import { BEREICHE_H, BEREICH_NAME, type HBereich } from './hunderter-regeln';
 import {
   BEWERTUNG, MUSIK, TEST_TAGE, laengeOk, naechsteTestMusik, testAuswerten, type Bewertung, type Musik, type TestStand,
 } from './fokus-regeln';
@@ -47,18 +46,19 @@ export async function testStarten(userId: string): Promise<void> { await setSett
 export async function testBeenden(userId: string): Promise<void> { await setSetting(TEST(userId), ''); }
 
 /** Startet einen Block. Im laufenden Test wählt Life die Musik, damit der Vergleich fair bleibt. */
-export async function starten(userId: string, e: { itemId: string | null; bereich?: HBereich | null; minuten: number; pause: number; musik: Musik | 'test' }): Promise<Block> {
+/** bereich: ein Fokus-Standard der laufenden Challenge, von der Route gegen fokusStandards() geprüft. */
+export async function starten(userId: string, e: { itemId: string | null; bereich?: { key: string; name: string } | null; minuten: number; pause: number; musik: Musik | 'test' }): Promise<Block> {
   await ensureSchema();
   if (!laengeOk(e.minuten, e.pause)) throw new Hinweis('Diese Länge gibt es nicht.');
   if (await laufend(userId)) throw new Hinweis('Es läuft schon ein Fokusblock.');
-  const bereich = e.bereich && BEREICHE_H.includes(e.bereich) ? e.bereich : null;
+  const bereich = e.bereich?.key ?? null;
   let titel = '';
   if (e.itemId) {
     const [it] = await sql<{ titel: string | null; schritt: string | null; text: string }[]>`select titel, schritt, text from items where id = ${e.itemId} and user_id = ${userId}`;
     if (!it) throw new Hinweis('Diese Aufgabe gibt es nicht.');
     titel = (it.schritt || it.titel || it.text).slice(0, 120);
   }
-  if (!titel && bereich) titel = `Hunderter: ${BEREICH_NAME[bereich]}`;
+  if (!titel && e.bereich) titel = e.bereich.name.slice(0, 120);
   const start = await testStart(userId);
   // Der Test läuft vom Starttag an genau 14 Kalendertage, danach wählt wieder Peter
   const imTest = !!start && e.musik === 'test' && (Date.parse(heuteBerlin() + 'T00:00:00Z') - Date.parse(start + 'T00:00:00Z')) / 86_400_000 < TEST_TAGE;

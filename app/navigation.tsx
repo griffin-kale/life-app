@@ -20,13 +20,13 @@ const PLAN: Ziel[] = [
   { href: '/woche', name: 'Woche', farbe: 'var(--k-zeit)', pfad: 'M4 7h16M4 12h16M4 17h10' },
   { href: '/ziele', name: 'Saison', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
 ];
-/** Unter Leben: die vier Konten und der Stand, wie auf der Seite Leben am iPhone (Seitenleiste als Baum, Peter 31.10.2026). */
+/** Unter Leben: vier Bereiche mit eigener Seite und der Kompass, wie auf der Seite Leben am iPhone (Seitenleiste als Baum, Peter 31.10.2026). */
 const UEBERBLICK: Ziel[] = [
   { href: '/koerper', name: 'Körper', farbe: 'var(--k-koerper)', pfad: 'M3 12h4l2.5-6 4 12 2.5-6H21' },
   { href: '/koerper/ruhe', name: 'Ruhe', farbe: 'var(--k-mental)', pfad: 'M12 4a8 8 0 1 0 8 8 6 6 0 0 1-8-8z' },
-  { href: '/geld', name: 'Geld', farbe: 'var(--k-geld)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
   { href: '/menschen', name: 'Menschen', farbe: 'var(--k-sozial)', pfad: 'M9 11.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19c.9-2.8 3-4.3 5.5-4.3s4.6 1.5 5.5 4.3M16.5 12a2.5 2.5 0 1 0 0-5M17 14.6c1.8.3 3 1.6 3.5 3.9' },
-  { href: '/stand', name: 'Stand', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
+  { href: '/geld', name: 'Geld', farbe: 'var(--k-geld)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
+  { href: '/stand', name: 'Kompass', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 9l-2 4-4 2 2-4z' },
 ];
 const EINST: Ziel = { href: '/einstellungen', name: 'Einstellungen', farbe: 'var(--faint)', pfad: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8' };
 const PILLE: [string, string, string[]][] = [['/', 'Heute', ['/morgen', '/abschluss']], ['/woche', 'Plan', ['/wochenstart', '/ziele']], ['/leben', 'Leben', ['/koerper', '/geld', '/menschen', '/stand', '/kompass', '/ich', '/mehr', '/einstellungen']], ['/archiv', 'Logbuch', ['/eintrag']]];
@@ -118,7 +118,7 @@ export function Navigation() {
       </aside>
       <div className="werkzeugleiste" role="toolbar" aria-label="Werkzeuge">
         <Link href="/archiv?suche=1" className="wz-suche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg>Suchen<kbd>⌘K</kbd></Link>
-        <Link href="/fokus" className="wz-dw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>Deep Work<kbd>F</kbd></Link>
+        <Link href="/fokus" className="wz-dw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>Fokus<kbd>F</kbd></Link>
         <Link href="/?festhalten=1" className="wz-fest" onClick={(e) => { if (pfad === '/') { e.preventDefault(); festhalten(); } }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Festhalten<kbd>N</kbd></Link>
       </div>
     </>

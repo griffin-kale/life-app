@@ -103,14 +103,14 @@ export default function Wochenstart() {
       {r!.liegen.length ? <><span className="fb-frage">Liegt schon länger</span><ul className="ws-liste">{r!.liegen.map((i) => <li key={i.id}>{i.titel}</li>)}</ul></> : <p className="muted small">Nichts liegt länger als eine Woche.</p>}
     </div>,
     ...(saison ? [<div key="h" className="ws-seite">
-      <h2 className="ws-titel">Wie liefen die Hebel?</h2>
-      <p className="muted small">Je Hebel ein Tipp für diese Woche. Die Zielkarten zeigen die Farbe.</p>
+      <h2 className="ws-titel">Wie liefen die Routinen?</h2>
+      <p className="muted small">Je Routine ein Tipp für diese Woche. Die Zielkarten zeigen die Farbe.</p>
       {saison.ziele.map((z) => (
         <div key={z.id} className="fb-q sz-blatt-bereich">
           <span className="fb-frage">{z.titel}</span>
           {z.hebel.map((h) => (
             <div key={h.id} className="wr-hebel">
-              <div className="wr-hkopf"><span>{h.titel}</span><button type="button" className="chipbtn" aria-label={`Hebel entfernen: ${h.titel}`} onClick={() => hebelWeg(h.id)}>{Icon.close}</button></div>
+              <div className="wr-hkopf"><span>{h.titel}</span><button type="button" className="chipbtn" aria-label={`Routine entfernen: ${h.titel}`} onClick={() => hebelWeg(h.id)}>{Icon.close}</button></div>
               <div className="fb-opts" role="radiogroup" aria-label={h.titel}>
                 {BEW.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={(bewertet[h.id] ?? null) === k} className="fb-chip" onClick={() => bewerten(h.id, k)}>{l}</button>)}
               </div>
@@ -186,13 +186,13 @@ export default function Wochenstart() {
       ))}
     </div>] : []),
     <div key="p" className="ws-seite">
-      <h2 className="ws-titel">Parkplatz</h2>
+      <h2 className="ws-titel">Irgendwann</h2>
       {w.geparkt.length ? w.geparkt.map((g) => (
         <div key={g.id} className="fb-q">
           <span className="fb-frage">{g.titel}</span>
           <div className="fb-opts" role="radiogroup" aria-label={g.titel}>{PARK.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={park[g.id] === k} className="fb-chip" onClick={() => parken(g.id, k)}>{l}</button>)}</div>
         </div>
-      )) : <p className="muted small">Der Parkplatz ist leer.</p>}
+      )) : <p className="muted small">Irgendwann ist leer.</p>}
     </div>,
     <div key="x" className="ws-seite">
       <h2 className="ws-titel">Fertig</h2>
@@ -200,19 +200,19 @@ export default function Wochenstart() {
         <li>Engpass: {engpass === 'neu' && neu.trim() ? neu.trim() : w.engpass || 'nicht festgelegt'}</li>
         <li>Wochenziel: {ziel.trim() || 'nicht festgelegt'}</li>
         <li>Drei Dinge: {fokus.length ? w.kandidaten.filter((k) => fokus.includes(k.id)).map((k) => k.titel).join(' · ') : 'keine gewählt'}</li>
-        <li>Parkplatz: {Object.keys(park).length} von {w.geparkt.length} gesichtet</li>
-        {saison ? <li>Hebel bewertet: {Object.keys(bewertet).length} von {saison.ziele.reduce((n, z) => n + z.hebel.length, 0)}</li> : null}
+        <li>Irgendwann: {Object.keys(park).length} von {w.geparkt.length} gesichtet</li>
+        {saison ? <li>Routinen bewertet: {Object.keys(bewertet).length} von {saison.ziele.reduce((n, z) => n + z.hebel.length, 0)}</li> : null}
         {w.who5Faellig && !w.who5Erledigt ? <li>Wie geht es dir: {wieVollstaendig ? 'beantwortet' : 'übersprungen'}</li> : null}
       </ul>
-      <button type="button" className="btn primary wide" onClick={abschliessen} disabled={busy}>{busy ? 'Speichert …' : 'Wochenrunde abschließen'}</button>
+      <button type="button" className="btn primary wide" onClick={abschliessen} disabled={busy}>{busy ? 'Speichert …' : 'Wochenrückblick abschließen'}</button>
     </div>,
   ] : [];
 
   return (
     <main className="wrap">
-      <TopBar title="Wochenrunde" back={{ label: 'Plan', href: '/woche' }} />
+      <TopBar title="Wochenrückblick" back={{ label: 'Plan', href: '/woche' }} />
       <header className="head"><span className="eyebrow">{w ? `Woche ab ${new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' }).format(new Date(w.montag + 'T12:00:00Z'))}` : '…'}</span><h1 className="title">Wochenrunde<i>.</i></h1></header>
-      {w ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Wochenrunde" /></div> : <p className="loading">Lädt …</p>}
+      {w ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Wochenrückblick" /></div> : <p className="loading">Lädt …</p>}
       {toast}
       <TabBar />
     </main>

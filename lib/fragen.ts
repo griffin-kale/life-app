@@ -30,7 +30,7 @@ export const BOEGEN: Record<Bogen['art'], Bogen> = {
     ],
   },
   woche: {
-    art: 'woche', titel: 'Deine Woche', hinweis: 'Zwei Minuten vor der Wochenrunde. Die ersten fünf Fragen sind der WHO-5 und beziehen sich auf die letzten zwei Wochen.',
+    art: 'woche', titel: 'Deine Woche', hinweis: 'Zwei Minuten vor dem Wochenrückblick. Die ersten fünf Fragen sind der WHO-5 und beziehen sich auf die letzten zwei Wochen.',
     fragen: [
       ...[
         ['who1', 'war ich froh und guter Laune'],
@@ -42,8 +42,8 @@ export const BOEGEN: Record<Bogen['art'], Bogen> = {
         werte: skala(['zu keinem Zeitpunkt', 'ab und zu', 'etwas weniger als die Hälfte der Zeit', 'etwas mehr als die Hälfte der Zeit', 'meistens', 'die ganze Zeit'], 0) })),
       ...[
         ['zeit', 'Zeit: Ich habe über meine Stunden selbst bestimmt.'],
-        ['sozial', 'Sozial: Ich hatte echte Zeit mit Menschen, die mir wichtig sind.'],
-        ['mental', 'Mental: Ich hatte Raum zum Denken und habe etwas gelernt.'],
+        ['sozial', 'Menschen: Ich hatte echte Zeit mit Menschen, die mir wichtig sind.'],
+        ['mental', 'Ruhe: Ich hatte Raum zum Denken und habe etwas gelernt.'],
         ['koerper', 'Körper: Ich habe mich bewegt, gut gegessen und genug geschlafen.'],
         ['geld', 'Geld: Geld hat mir diese Woche keine Sorgen gemacht.'],
       ].map(([id, t]) => ({ id, frage: t, typ: 'skala' as const, pflicht: true, werte: skala(['stimmt nicht', 'eher nicht', 'teils', 'eher', 'stimmt'], 0) })),

@@ -5,7 +5,7 @@
 
 export const KONTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
 export type Konto = (typeof KONTEN)[number];
-export const KONTO_NAME: Record<Konto, string> = { zeit: 'Zeit', sozial: 'Sozial', mental: 'Mental', koerper: 'Körper', geld: 'Geld' };
+export const KONTO_NAME: Record<Konto, string> = { zeit: 'Zeit', sozial: 'Menschen', mental: 'Ruhe', koerper: 'Körper', geld: 'Geld' };
 
 export type Teil = { name: string; ist: number; ziel: number; einheit?: string };
 
@@ -36,7 +36,7 @@ export const MEILENSTEINE: { id: string; name: string; wie: string; erreicht: (s
   { id: 'abend30', name: '30 Abende', wie: '30 Mal die Abendfragen beantworten', konto: 'mental', erreicht: (s) => s.abende >= 30 },
   { id: 'who60', name: 'Gut im Wind', wie: 'WHO-5 über 60', konto: 'mental', erreicht: (s) => (s.who5Max ?? 0) > 60 },
   { id: 'engpass25', name: 'Engpass-Brecher', wie: '25 Aufgaben mit hohem Hebel erledigen', konto: 'zeit', erreicht: (s) => s.engpassErledigt >= 25 },
-  { id: 'bogen4', name: 'Vier Wochenrunden', wie: 'Vier Wochenbögen ausfüllen', konto: 'zeit', erreicht: (s) => s.wochenboegen >= 4 },
+  { id: 'bogen4', name: 'Vier Wochenrückblicke', wie: 'Vier Wochenbögen ausfüllen', konto: 'zeit', erreicht: (s) => s.wochenboegen >= 4 },
   { id: 'toepfe', name: 'Woche im Rahmen', wie: 'Eine Woche, in der alle Töpfe im Rahmen bleiben', konto: 'geld', erreicht: (s) => s.wochenToepfeImRahmen >= 1 },
   { id: 'notgroschen', name: 'Erster Notgroschen', wie: 'Stufe 3 im Geld-Plan schaffen', konto: 'geld', erreicht: (s) => s.geldStufe > 3 },
   { id: 'perfekt', name: 'Perfekte Woche', wie: 'Alle fünf Ringe in einer Woche schließen', konto: 'alle', erreicht: (s) => s.wochenAlleRinge >= 1 },

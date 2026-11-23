@@ -118,7 +118,7 @@ export async function tick(userId: string) {
       if (p.nachmittag && faellig(uhr, '15:00') && offen.length && offen.length === lage.jetzt.length) await einmal('nachmittag', tag, async () =>
         (await senden({ title: 'Nachmittag', body: `Von „Jetzt dran“ ist noch nichts erledigt. Fang mit „${offen[0].titel}“ an, dreißig Minuten reichen.`, url: '/', tag: 'nachmittag' }, userId)) > 0);
       if (p.wochenstart && lage.wochenstartOffen && zeitBerlin().wochentag === 'Mon' && faellig(uhr, '08:30')) await einmal('wochenstart', tag, async () =>
-        (await senden({ title: 'Wochenrunde', body: 'Zehn Minuten für die Woche: Rückblick, Hebel, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
+        (await senden({ title: 'Wochenrückblick', body: 'Zehn Minuten für die Woche: Rückblick, Routinen, Engpass, drei Dinge.', url: '/wochenstart', tag: 'wochenstart' }, userId)) > 0);
     }
   }
   schritt = 'training';

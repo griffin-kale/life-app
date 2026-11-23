@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Weg = { name: string; href?: string; ereignis?: string; farbe: string; pfad: string };
 const SCHNELL: Weg[] = [
-  { name: 'Deep Work', href: '/fokus', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l2.5 2.5' },
+  { name: 'Fokus', href: '/fokus', farbe: 'var(--k-geld)', pfad: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l2.5 2.5' },
   { name: 'Gedanke', ereignis: 'life-festhalten', farbe: 'var(--k-zeit)', pfad: 'M12 4a6 6 0 0 0-3.5 10.9V17h7v-2.1A6 6 0 0 0 12 4zM9.5 20h5' },
   { name: 'Ausgabe', href: '/geld?erfassen=1', farbe: 'var(--k-koerper)', pfad: 'M5.5 6.5h13A2.5 2.5 0 0 1 21 9v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16V9a2.5 2.5 0 0 1 2.5-2.5zM12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z' },
   { name: 'Essen', href: '/koerper/essen', farbe: 'var(--k-geld)', pfad: 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1.5-3 4-3 7h3v11' },

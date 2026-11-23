@@ -86,10 +86,10 @@ export default function Abschluss() {
 
   return (
     <main className="wrap">
-      <TopBar title="Abschluss" back={{ label: 'Heute', href: '/' }} />
-      <header className="head"><span className="eyebrow">Zwei Minuten, dann ist der Tag zu</span><h1 className="title">Abschluss<i>.</i></h1></header>
+      <TopBar title="Abend-Check-in" back={{ label: 'Heute', href: '/' }} />
+      <header className="head"><span className="eyebrow">Zwei Minuten, dann ist der Tag zu</span><h1 className="title">Abend-Check-in<i>.</i></h1></header>
       <HunderterAbschluss onFehler={fehler} onOk={ok} />
-      {st ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Abschluss" /></div> : <p className="loading">Lädt …</p>}
+      {st ? <div className="group pad"><Blaetter ref={blatt} seiten={seiten} label="Abend-Check-in" /></div> : <p className="loading">Lädt …</p>}
       {toast}
       <TabBar />
     </main>

@@ -2,6 +2,29 @@
 
 Alle Versionen von Life, neueste oben. Nummern nach [Semantic Versioning](https://semver.org/lang/de/): erste Zahl bei Umbrüchen, zweite bei neuen Funktionen, dritte bei Reparaturen.
 
+## [0.33.0] – 2026-11-23
+
+Life nach MAYA: so neu wie nötig, so vertraut wie möglich (Peter, 23.11.2026, Entwürfe im Canvas „Life nach MAYA – Entwürfe“, Richtung B „Life, aufgeräumt“, Konzept im Projekt unter `claude/MAYA-KONZEPT.md`). Maßstab: Ein fremder Mensch versteht Life ohne Erklärung.
+
+### Geändert
+- **Heute hat fünf Blöcke statt zehn:** Tagesring oben rechts, Check-in nur wenn fällig, die eine Sache, Saison heute, Als Nächstes, Liste. Cockpit, Konten heute, Schnellzugriffe und „Heute erledigt“ sind runter von Heute. „Heute anpassen“ bietet sieben Bausteine statt sechzehn, Kalender und Erledigt lassen sich dazuschalten. Gespeicherte Listen bekommen den neuen Standard einmal, Kalender und Erledigt bleiben, wenn sie an waren.
+- **Mac ab 1280 px:** drei Spalten (Tag, Saison und Liste, Coach), die Seite scrollt nicht, jede Spalte für sich.
+- **Als Nächstes** ist eine Zeile mit drei Terminen wie im iPhone-Kalender, „Ganzer Tag“ führt in die Woche.
+- **Eine Bereichsliste für ganz Life:** Arbeit, Körper, Ruhe, Menschen, Geld, Zeit. Vorher hießen dieselben Dinge mal Geschäft, Sozial, Mental oder „Ruhe und Geist“. Leben zeigt jetzt alle sechs, jeder mit einem direkten Weg.
+- **Neue Wörter:** Fokus statt Deep Work, Routinen statt Hebel, Irgendwann statt Parkplatz, Morgen-Check-in und Abend-Check-in statt Morgen und Abschluss, Wochenrückblick statt Wochenrunde, Kompass statt Stand, Standort-Check statt Standortbestimmung, „Was der Coach weiß“ statt Merkzettel, Lebensbereiche statt Konten. Das gilt auch für Mitteilungen, Fehlermeldungen und das, was der Coach liest. Pfade bleiben gleich.
+
+### Neu
+- **Die Hunderter sind ein Format der Saison.** Eine neue Saison beginnt mit der Wahl: Ziele (zwölf Wochen) oder Challenge (jeden Tag). Eine Challenge bekommt einen Namen, eine Länge (30, 66 oder 100 Tage, Joker ein Zehntel, mindestens drei) und bis zu sechs eigene Standards. Ein Standard zählt über Fokusblöcke (zwei Phasen sind voll) oder per Haken (halb, voll). Wer schon eine Challenge hatte, bekommt Name und Standards vorgewählt.
+- **Plan → Saison** zeigt die laufende Challenge mit Raster, Quoten, Zählern und Jokern, darunter die Ziele für zwölf Wochen, falls beides läuft. `/hunderter` leitet dorthin.
+- **Saison heute** auf Heute: Standards als Kacheln mit zwei Balken, Leben heute als fünf runde Haken nebeneinander.
+
+### Technik
+- Migration 12: Spalten `name`, `tage`, `joker`, `standards` an `hunderter`. Ohne Standards gelten die der ersten Hunderter, Peters laufende Challenge läuft unverändert weiter. Tabellen und Dateien heißen intern weiter `hunderter`.
+- `lib/bereiche.ts` ist die eine Bereichsliste. Die Regel-Dateien führen die Namen ohne Import, `tests/unit/bereiche.test.ts` prüft, dass alle gleich heißen.
+- `lib/hunderter-regeln.ts`: `formatAus`, `pruefeFormat`, `pruefeStandards`, Bewertung mit beliebigen Standards. Fokus prüft Standards gegen die laufende Challenge (`fokusStandards`).
+- Die Leben-Aufgaben nennen keine Familie mehr fest im Prompt. Claude bekommt dafür, was der Coach weiß, wie bei allen Aufrufen mit Platzhaltern.
+- `app/kurz.tsx` und `app/schnell.tsx` sind weg, sie hatten nach dem Umbau keine Stelle mehr.
+
 ## [0.32.0] – 2026-11-12
 
 Die Hunderter: 100 Tage Vollgas fürs Geschäft, ohne das Leben zu zerhauen (Peter, 12.11.2026, Entwürfe im Artefakt „Life Hunderter Entwürfe“, Variante Mischung).

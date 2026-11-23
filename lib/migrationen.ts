@@ -129,6 +129,16 @@ export const MIGRATIONEN: Migration[] = [
       await tx`alter table fokus_bloecke add column if not exists bereich text`;
     },
   },
+  {
+    nr: 12, name: 'Challenge als Format der Saison: Name, Länge, Joker und Standards pro Challenge (0.33)',
+    run: async (tx) => {
+      // Ohne Standards (null) gelten die der ersten Hunderter, damit Peters laufende Challenge unverändert weiterläuft.
+      await tx`alter table hunderter add column if not exists name text not null default 'Die Hunderter'`;
+      await tx`alter table hunderter add column if not exists tage int not null default 100`;
+      await tx`alter table hunderter add column if not exists joker int not null default 10`;
+      await tx`alter table hunderter add column if not exists standards jsonb`;
+    },
+  },
 ];
 
 /** Welche Schritte noch fehlen, in aufsteigender Reihenfolge. Prüft, dass jede Nummer nur einmal vorkommt. */

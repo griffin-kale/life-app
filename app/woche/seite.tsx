@@ -18,7 +18,7 @@ function kw(d = new Date()) {
   return Math.ceil(((t.getTime() - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
 }
 
-export const TEILE: Record<string, string> = { ziele: 'Ziele', energie: 'Energie-Bilanz', 'zeit-kaufen': 'Zeit kaufen', parkplatz: 'Parkplatz' };
+export const TEILE: Record<string, string> = { ziele: 'Ziele', energie: 'Energie-Bilanz', 'zeit-kaufen': 'Zeit kaufen', parkplatz: 'Irgendwann' };
 
 /** Woche (Life 2.0): Wofür ist diese Woche da? Drei Dinge der Woche, sieben Tage mit Terminen, Rhythmen, darunter die Stapel.
  *  Energie, Zeit kaufen und Parkplatz haben eigene Seiten. Seit 0.28 heißt die Seite „Plan“ und schaltet auf die Saison um. */
@@ -61,7 +61,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
   useEffect(() => {
     if (teil) return;
     api<Ws>('/api/wochenstart').then(setWs).catch(() => {});
-    if (new URLSearchParams(location.search).get('wochenrunde') === 'fertig') { setToast('Wochenrunde abgeschlossen'); history.replaceState(null, '', '/woche'); }
+    if (new URLSearchParams(location.search).get('wochenrunde') === 'fertig') { setToast('Wochenrückblick abgeschlossen'); history.replaceState(null, '', '/woche'); }
   }, [teil, setToast]);
   const fokus = ws ? ws.fokus.map((id) => ws.kandidaten.find((k) => k.id === id)).filter((k): k is { id: string; titel: string } => !!k) : [];
   const [zk, setZk] = useState<number | null>(null);
@@ -117,7 +117,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
 
       {!teil && ws?.offen ? (
         <Link href="/wochenstart" className="ws-banner">
-          <span><b>Wochenrunde</b><small>Zehn Minuten</small></span>
+          <span><b>Wochenrückblick</b><small>Zehn Minuten</small></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
         </Link>
       ) : null}
@@ -128,9 +128,9 @@ export function WocheSeite({ teil }: { teil?: string }) {
           <div className="group fokus-liste">
             {fokus.map((k, i) => <div key={k.id} className="cell static"><span className="fokus-nr">{i + 1}</span><span className="lbl" style={{ flex: 1 }}>{k.titel}</span></div>)}
           </div>
-          <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrunde öffnen</Link></p>
+          <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrückblick öffnen</Link></p>
         </section>
-      ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrunde öffnen</Link></p> : null}
+      ) : !teil && ws && !ws.offen ? <p className="gnote"><Link href="/wochenstart" className="linkbtn">Wochenrückblick öffnen</Link></p> : null}
 
       {!teil && w ? <WochenKalender w={w} breit={breit} /> : null}
       {!teil && w && !mac ? <Rhythmen w={w} /> : null}
@@ -180,7 +180,7 @@ export function WocheSeite({ teil }: { teil?: string }) {
       {!teil && st ? (
         <section className="gsec" aria-label="Mehr zur Woche">
           <div className="group">
-            <Link className="cell" href="/woche/parkplatz"><span className="lbl">Parkplatz</span><span className="val"><span>{nach('geparkt').length ? `${nach('geparkt').length} geparkt` : 'Ablenkungen parken'}</span>{Icon.chevronRight}</span></Link>
+            <Link className="cell" href="/woche/parkplatz"><span className="lbl">Irgendwann</span><span className="val"><span>{nach('geparkt').length ? `${nach('geparkt').length} geparkt` : 'Ablenkungen parken'}</span>{Icon.chevronRight}</span></Link>
             <Link className="cell" href="/woche/zeit-kaufen"><span className="lbl">Zeit kaufen</span><span className="val"><span>{zk ? `${zk} ${zk === 1 ? 'Idee' : 'Ideen'}` : 'Abgeben'}</span>{Icon.chevronRight}</span></Link>
             <Link className="cell" href="/woche/energie"><span className="lbl">Energie-Bilanz</span><span className="val"><span>{st.kraft && (st.kraft.gab.length || st.kraft.kostete.length) ? `+${st.kraft.gab.length} / −${st.kraft.kostete.length}` : 'Noch leer'}</span>{Icon.chevronRight}</span></Link>
           </div>

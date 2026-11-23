@@ -12,7 +12,7 @@ export function Ring({ wert, farbe, groesse = 64, dicke = 7, label }: { wert: nu
 }
 
 export const FARBE: Record<string, string> = { zeit: 'var(--k-zeit)', sozial: 'var(--k-sozial)', mental: 'var(--k-mental)', koerper: 'var(--k-koerper)', geld: 'var(--k-geld)' };
-export const NAME: Record<string, string> = { zeit: 'Zeit', sozial: 'Sozial', mental: 'Mental', koerper: 'Körper', geld: 'Geld' };
+export const NAME: Record<string, string> = { zeit: 'Zeit', sozial: 'Menschen', mental: 'Ruhe', koerper: 'Körper', geld: 'Geld' };
 export const KONTEN = ['zeit', 'sozial', 'mental', 'koerper', 'geld'] as const;
 
 /** Weg bis zum nächsten Level: Strecke mit Punkt für den Stand und Fahne am Ziel. */
